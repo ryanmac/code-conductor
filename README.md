@@ -397,7 +397,7 @@ MIT - See LICENSE file
 - 🐛 **Found a bug?** [Report it](https://github.com/ryanmac/conductor-score/issues)
 - 💡 **Have an idea?** [Start a discussion](https://github.com/ryanmac/conductor-score/discussions)
 - 🛠️ **Want to contribute?** [See our guide](CONTRIBUTING.md)
-- 🐦 **Share your success** Tweet [@your-handle](https://twitter.com) with #ConductorScore
+- 𝕏 **Share your success** Mention [@ryanmac](https://x.com/ryanmac) with #ConductorScore
 
 **Built for [Conductor.build](https://conductor.build) users who refuse to juggle tasks manually.**
 
