@@ -27,20 +27,20 @@ class HealthChecker:
         for agent_id, work in state.get("active_work", {}).items():
             heartbeat_str = work.get("heartbeat")
             if heartbeat_str:
-                heartbeat = datetime.fromisoformat(heartbeat_str.replace('Z', '+00:00'))
+                heartbeat = datetime.fromisoformat(heartbeat_str.replace("Z", "+00:00"))
                 if (current_time - heartbeat).total_seconds() > timeout:
-                    stale_agents.append({
-                        "agent_id": agent_id,
-                        "last_seen": heartbeat_str,
-                        "task": work.get("task", {}).get("title", "Unknown")
-                    })
+                    stale_agents.append(
+                        {
+                            "agent_id": agent_id,
+                            "last_seen": heartbeat_str,
+                            "task": work.get("task", {}).get("title", "Unknown"),
+                        }
+                    )
 
         if stale_agents:
-            self.issues.append({
-                "type": "stale_agents",
-                "severity": "warning",
-                "agents": stale_agents
-            })
+            self.issues.append(
+                {"type": "stale_agents", "severity": "warning", "agents": stale_agents}
+            )
 
         return len(stale_agents) == 0
 
@@ -54,20 +54,22 @@ class HealthChecker:
             if work.get("status") == "blocked":
                 started = work.get("started_at")
                 if started:
-                    started_time = datetime.fromisoformat(started.replace('Z', '+00:00'))
+                    started_time = datetime.fromisoformat(
+                        started.replace("Z", "+00:00")
+                    )
                     if current_time - started_time > blocked_threshold:
-                        blocked_tasks.append({
-                            "agent_id": agent_id,
-                            "task": work.get("task", {}).get("title", "Unknown"),
-                            "blocked_since": started
-                        })
+                        blocked_tasks.append(
+                            {
+                                "agent_id": agent_id,
+                                "task": work.get("task", {}).get("title", "Unknown"),
+                                "blocked_since": started,
+                            }
+                        )
 
         if blocked_tasks:
-            self.issues.append({
-                "type": "blocked_tasks",
-                "severity": "warning",
-                "tasks": blocked_tasks
-            })
+            self.issues.append(
+                {"type": "blocked_tasks", "severity": "warning", "tasks": blocked_tasks}
+            )
 
         return len(blocked_tasks) == 0
 
@@ -95,19 +97,16 @@ class HealthChecker:
             locked_files = work.get("files_locked", [])
             for file in locked_files:
                 if file in file_locks:
-                    conflicts.append({
-                        "file": file,
-                        "agents": [file_locks[file], agent_id]
-                    })
+                    conflicts.append(
+                        {"file": file, "agents": [file_locks[file], agent_id]}
+                    )
                 else:
                     file_locks[file] = agent_id
 
         if conflicts:
-            self.issues.append({
-                "type": "file_conflicts",
-                "severity": "error",
-                "conflicts": conflicts
-            })
+            self.issues.append(
+                {"type": "file_conflicts", "severity": "error", "conflicts": conflicts}
+            )
 
         return len(conflicts) == 0
 
@@ -122,13 +121,15 @@ class HealthChecker:
                 "completed_tasks": len(state.get("completed_work", [])),
             },
             "issues": self.issues,
-            "warnings": self.warnings
+            "warnings": self.warnings,
         }
 
         if self.issues:
-            report["status"] = "unhealthy" if any(
-                i["severity"] == "error" for i in self.issues
-            ) else "degraded"
+            report["status"] = (
+                "unhealthy"
+                if any(i["severity"] == "error" for i in self.issues)
+                else "degraded"
+            )
 
         return report
 
@@ -139,7 +140,7 @@ class HealthChecker:
             return False
 
         try:
-            with open(self.state_file, 'r') as f:
+            with open(self.state_file, "r") as f:
                 state = json.load(f)
         except Exception as e:
             print(f"❌ Failed to read state file: {e}")
@@ -150,7 +151,7 @@ class HealthChecker:
             self.check_agent_heartbeats(state),
             self.check_blocked_tasks(state),
             self.check_task_queue_health(state),
-            self.check_file_conflicts(state)
+            self.check_file_conflicts(state),
         ]
 
         # Generate and display report
@@ -176,7 +177,7 @@ class HealthChecker:
         state["system_status"]["health_check"] = report
         state["system_status"]["last_updated"] = datetime.utcnow().isoformat()
 
-        with open(self.state_file, 'w') as f:
+        with open(self.state_file, "w") as f:
             json.dump(state, f, indent=2)
 
         return report["status"] != "unhealthy"

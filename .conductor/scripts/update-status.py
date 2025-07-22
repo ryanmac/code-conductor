@@ -9,13 +9,13 @@ from datetime import datetime, timedelta
 
 def load_state():
     """Load workflow state"""
-    state_file = Path('.conductor/workflow-state.json')
+    state_file = Path(".conductor/workflow-state.json")
     if not state_file.exists():
         print("❌ Workflow state file not found")
         sys.exit(1)
 
     try:
-        with open(state_file, 'r') as f:
+        with open(state_file, "r") as f:
             return json.load(f)
     except json.JSONDecodeError:
         print("❌ Invalid workflow state file")
@@ -24,9 +24,9 @@ def load_state():
 
 def save_state(state):
     """Save workflow state"""
-    state_file = Path('.conductor/workflow-state.json')
+    state_file = Path(".conductor/workflow-state.json")
     try:
-        with open(state_file, 'w') as f:
+        with open(state_file, "w") as f:
             json.dump(state, f, indent=2)
     except Exception as e:
         print(f"❌ Failed to save state: {e}")
@@ -35,15 +35,15 @@ def save_state(state):
 
 def update_system_status(state):
     """Update system status with current metrics"""
-    if 'system_status' not in state:
-        state['system_status'] = {}
+    if "system_status" not in state:
+        state["system_status"] = {}
 
-    status = state['system_status']
+    status = state["system_status"]
     current_time = datetime.utcnow()
 
     # Count active and idle agents
-    active_work = state.get('active_work', {})
-    status['active_agents'] = len(active_work)
+    active_work = state.get("active_work", {})
+    status["active_agents"] = len(active_work)
 
     # Count agents by status
     agents_by_status = {}
@@ -51,79 +51,82 @@ def update_system_status(state):
     idle_timeout = 1800  # 30 minutes default
 
     for agent_id, work in active_work.items():
-        work_status = work.get('status', 'unknown')
+        work_status = work.get("status", "unknown")
         agents_by_status[work_status] = agents_by_status.get(work_status, 0) + 1
 
         # Check for stale agents
-        heartbeat_str = work.get('heartbeat')
+        heartbeat_str = work.get("heartbeat")
         if heartbeat_str:
             try:
-                heartbeat = datetime.fromisoformat(heartbeat_str.replace('Z', '+00:00'))
+                heartbeat = datetime.fromisoformat(heartbeat_str.replace("Z", "+00:00"))
                 if (current_time - heartbeat).total_seconds() > idle_timeout:
                     stale_agents.append(agent_id)
             except ValueError:
                 pass
 
-    status['agents_by_status'] = agents_by_status
-    status['stale_agents'] = len(stale_agents)
+    status["agents_by_status"] = agents_by_status
+    status["stale_agents"] = len(stale_agents)
 
     # Count available tasks
-    available_tasks = state.get('available_tasks', [])
-    status['available_tasks'] = len(available_tasks)
+    available_tasks = state.get("available_tasks", [])
+    status["available_tasks"] = len(available_tasks)
 
     # Count tasks by effort
     tasks_by_effort = {}
     tasks_by_skills = {}
 
     for task in available_tasks:
-        effort = task.get('estimated_effort', 'unknown')
+        effort = task.get("estimated_effort", "unknown")
         tasks_by_effort[effort] = tasks_by_effort.get(effort, 0) + 1
 
-        skills = task.get('required_skills', [])
+        skills = task.get("required_skills", [])
         if not skills:
-            tasks_by_skills['general'] = tasks_by_skills.get('general', 0) + 1
+            tasks_by_skills["general"] = tasks_by_skills.get("general", 0) + 1
         else:
             for skill in skills:
                 tasks_by_skills[skill] = tasks_by_skills.get(skill, 0) + 1
 
-    status['tasks_by_effort'] = tasks_by_effort
-    status['tasks_by_skills'] = tasks_by_skills
+    status["tasks_by_effort"] = tasks_by_effort
+    status["tasks_by_skills"] = tasks_by_skills
 
     # Count completed work
-    completed_work = state.get('completed_work', [])
-    status['completed_tasks'] = len(completed_work)
+    completed_work = state.get("completed_work", [])
+    status["completed_tasks"] = len(completed_work)
 
     # Calculate completion rate (last 24 hours)
     day_ago = current_time - timedelta(days=1)
     recent_completions = 0
 
     for work in completed_work:
-        completed_at_str = work.get('completed_at')
+        completed_at_str = work.get("completed_at")
         if completed_at_str:
             try:
-                completed_at = datetime.fromisoformat(completed_at_str.replace('Z', '+00:00'))
+                completed_at = datetime.fromisoformat(
+                    completed_at_str.replace("Z", "+00:00")
+                )
                 if completed_at >= day_ago:
                     recent_completions += 1
             except ValueError:
                 pass
 
-    status['completions_24h'] = recent_completions
+    status["completions_24h"] = recent_completions
 
     # System health indicators
-    status['health'] = {
-        'has_available_tasks': len(available_tasks) > 0,
-        'has_active_agents': len(active_work) > 0,
-        'low_stale_agents': len(stale_agents) < len(active_work) * 0.3,  # Less than 30% stale
-        'recent_activity': recent_completions > 0 or len(active_work) > 0
+    status["health"] = {
+        "has_available_tasks": len(available_tasks) > 0,
+        "has_active_agents": len(active_work) > 0,
+        "low_stale_agents": len(stale_agents)
+        < len(active_work) * 0.3,  # Less than 30% stale
+        "recent_activity": recent_completions > 0 or len(active_work) > 0,
     }
 
     # Overall health score
-    health_checks = list(status['health'].values())
+    health_checks = list(status["health"].values())
     health_score = sum(health_checks) / len(health_checks) if health_checks else 0
-    status['health_score'] = round(health_score, 2)
+    status["health_score"] = round(health_score, 2)
 
     # Update timestamp
-    status['last_updated'] = current_time.isoformat()
+    status["last_updated"] = current_time.isoformat()
 
     return status
 
@@ -137,18 +140,18 @@ def print_status_summary(status):
     print(f"Completed (24h): {status.get('completions_24h', 0)}")
     print(f"Health Score: {status.get('health_score', 0):.0%}")
 
-    if status.get('stale_agents', 0) > 0:
+    if status.get("stale_agents", 0) > 0:
         print(f"⚠️  Stale Agents: {status['stale_agents']}")
 
     # Tasks breakdown
-    tasks_by_effort = status.get('tasks_by_effort', {})
+    tasks_by_effort = status.get("tasks_by_effort", {})
     if tasks_by_effort:
         print("\nTasks by Effort:")
         for effort, count in tasks_by_effort.items():
             print(f"  {effort}: {count}")
 
     # Skills breakdown
-    tasks_by_skills = status.get('tasks_by_skills', {})
+    tasks_by_skills = status.get("tasks_by_skills", {})
     if tasks_by_skills:
         print("\nTasks by Skills:")
         for skill, count in tasks_by_skills.items():

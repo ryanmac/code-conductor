@@ -10,16 +10,17 @@ from datetime import datetime, timedelta
 def get_worktrees():
     """Get list of current git worktrees"""
     try:
-        result = subprocess.run(['git', 'worktree', 'list'],
-                                capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["git", "worktree", "list"], capture_output=True, text=True, check=True
+        )
         worktrees = []
-        for line in result.stdout.strip().split('\n'):
+        for line in result.stdout.strip().split("\n"):
             if line:
                 parts = line.split()
                 if len(parts) >= 2:
                     path = parts[0]
                     branch = parts[1] if len(parts) > 1 else None
-                    worktrees.append({'path': path, 'branch': branch})
+                    worktrees.append({"path": path, "branch": branch})
         return worktrees
     except subprocess.CalledProcessError:
         print("❌ Failed to list git worktrees")
@@ -48,15 +49,20 @@ def is_conductor_worktree(worktree_path):
     path = Path(worktree_path)
 
     # Check if it's in the worktrees directory
-    if 'worktrees' in path.parts:
+    if "worktrees" in path.parts:
         return True
 
     # Check if the branch name follows conductor pattern
     try:
-        result = subprocess.run(['git', 'branch', '--show-current'],
-                                cwd=worktree_path, capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         branch = result.stdout.strip()
-        return branch.startswith('agent-')
+        return branch.startswith("agent-")
     except subprocess.CalledProcessError:
         return False
 
@@ -65,9 +71,9 @@ def remove_worktree(worktree_path, force=False):
     """Remove a git worktree"""
     try:
         # First try git worktree remove
-        cmd = ['git', 'worktree', 'remove', worktree_path]
+        cmd = ["git", "worktree", "remove", worktree_path]
         if force:
-            cmd.append('--force')
+            cmd.append("--force")
 
         result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -93,30 +99,36 @@ def cleanup_worktree_branches():
     """Clean up branches that no longer have worktrees"""
     try:
         # Get all branches
-        result = subprocess.run(['git', 'branch'], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["git", "branch"], capture_output=True, text=True, check=True
+        )
         branches = []
-        for line in result.stdout.split('\n'):
+        for line in result.stdout.split("\n"):
             line = line.strip()
-            if line and not line.startswith('*'):
-                branch = line.replace('*', '').strip()
+            if line and not line.startswith("*"):
+                branch = line.replace("*", "").strip()
                 branches.append(branch)
 
         # Get current worktrees
         worktrees = get_worktrees()
-        worktree_branches = {wt.get('branch') for wt in worktrees if wt.get('branch')}
+        worktree_branches = {wt.get("branch") for wt in worktrees if wt.get("branch")}
 
         # Find orphaned agent branches
         orphaned_branches = []
         for branch in branches:
-            if branch.startswith('agent-') and branch not in worktree_branches:
+            if branch.startswith("agent-") and branch not in worktree_branches:
                 orphaned_branches.append(branch)
 
         # Remove orphaned branches
         removed_count = 0
         for branch in orphaned_branches:
             try:
-                subprocess.run(['git', 'branch', '-D', branch],
-                               capture_output=True, text=True, check=True)
+                subprocess.run(
+                    ["git", "branch", "-D", branch],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
                 print(f"🗑️  Deleted orphaned branch: {branch}")
                 removed_count += 1
             except subprocess.CalledProcessError as e:
@@ -132,14 +144,27 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Clean up abandoned git worktrees")
-    parser.add_argument("--max-age", type=int, default=24,
-                        help="Maximum age in hours for worktrees (default: 24)")
-    parser.add_argument("--force", action="store_true",
-                        help="Force removal of worktrees with uncommitted changes")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Show what would be done without making changes")
-    parser.add_argument("--all", action="store_true",
-                        help="Clean up all conductor worktrees regardless of age")
+    parser.add_argument(
+        "--max-age",
+        type=int,
+        default=24,
+        help="Maximum age in hours for worktrees (default: 24)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force removal of worktrees with uncommitted changes",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Clean up all conductor worktrees regardless of age",
+    )
 
     args = parser.parse_args()
 
@@ -155,8 +180,8 @@ def main():
     # Filter for conductor worktrees
     conductor_worktrees = []
     for wt in worktrees:
-        path = wt['path']
-        if path != '.' and is_conductor_worktree(path):  # Skip main worktree
+        path = wt["path"]
+        if path != "." and is_conductor_worktree(path):  # Skip main worktree
             conductor_worktrees.append(wt)
 
     if not conductor_worktrees:
@@ -168,7 +193,7 @@ def main():
     # Identify stale worktrees
     stale_worktrees = []
     for wt in conductor_worktrees:
-        path = wt['path']
+        path = wt["path"]
         if args.all or is_worktree_stale(path, args.max_age):
             stale_worktrees.append(wt)
 
@@ -188,7 +213,7 @@ def main():
     # Remove stale worktrees
     removed_count = 0
     for wt in stale_worktrees:
-        path = wt['path']
+        path = wt["path"]
         if remove_worktree(path, args.force):
             removed_count += 1
 

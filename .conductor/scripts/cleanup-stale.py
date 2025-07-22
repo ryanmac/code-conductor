@@ -21,7 +21,7 @@ class StaleCleaner:
             return False
 
         try:
-            with open(self.state_file, 'r') as f:
+            with open(self.state_file, "r") as f:
                 state = json.load(f)
         except Exception as e:
             print(f"❌ Failed to read state file: {e}")
@@ -36,7 +36,7 @@ class StaleCleaner:
         for agent_id, work in active_work.items():
             heartbeat_str = work.get("heartbeat")
             if heartbeat_str:
-                heartbeat = datetime.fromisoformat(heartbeat_str.replace('Z', '+00:00'))
+                heartbeat = datetime.fromisoformat(heartbeat_str.replace("Z", "+00:00"))
                 if current_time - heartbeat > self.timeout:
                     agents_to_remove.append(agent_id)
 
@@ -54,11 +54,13 @@ class StaleCleaner:
 
             # Remove agent work
             del active_work[agent_id]
-            self.cleaned_agents.append({
-                "agent_id": agent_id,
-                "task": task.get("title") if task else "Unknown",
-                "last_heartbeat": work.get("heartbeat")
-            })
+            self.cleaned_agents.append(
+                {
+                    "agent_id": agent_id,
+                    "task": task.get("title") if task else "Unknown",
+                    "last_heartbeat": work.get("heartbeat"),
+                }
+            )
 
         # Update state
         if agents_to_remove:
@@ -68,7 +70,7 @@ class StaleCleaner:
             state["system_status"]["last_cleanup"] = current_time.isoformat()
 
             # Write back
-            with open(self.state_file, 'w') as f:
+            with open(self.state_file, "w") as f:
                 json.dump(state, f, indent=2)
 
             print(f"🧹 Cleaned up {len(agents_to_remove)} stale agents")
@@ -82,7 +84,7 @@ class StaleCleaner:
     def clean_old_completed(self, days=7):
         """Archive old completed tasks"""
         try:
-            with open(self.state_file, 'r') as f:
+            with open(self.state_file, "r") as f:
                 state = json.load(f)
         except Exception as e:
             print(f"❌ Failed to read state file: {e}")
@@ -93,7 +95,7 @@ class StaleCleaner:
             # Keep only recent 100 completed tasks
             state["completed_work"] = completed[-100:]
 
-            with open(self.state_file, 'w') as f:
+            with open(self.state_file, "w") as f:
                 json.dump(state, f, indent=2)
 
             print(f"📦 Archived {len(completed) - 100} old completed tasks")
@@ -107,13 +109,13 @@ def main():
         "--timeout",
         type=int,
         default=30,
-        help="Timeout in minutes for stale agents (default: 30)"
+        help="Timeout in minutes for stale agents (default: 30)",
     )
     parser.add_argument(
         "--archive-days",
         type=int,
         default=7,
-        help="Days to keep completed tasks (default: 7)"
+        help="Days to keep completed tasks (default: 7)",
     )
 
     args = parser.parse_args()

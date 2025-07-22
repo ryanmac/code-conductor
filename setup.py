@@ -18,7 +18,7 @@ from datetime import datetime
 class ConductorSetup:
     def __init__(self, auto_mode=False, debug=False):
         self.project_root = Path.cwd()
-        self.conductor_dir = self.project_root / '.conductor'
+        self.conductor_dir = self.project_root / ".conductor"
         self.config = {}
         self.detected_stack = []
         self.auto_mode = auto_mode
@@ -26,10 +26,7 @@ class ConductorSetup:
 
         # Setup logging
         log_level = logging.DEBUG if debug else logging.INFO
-        logging.basicConfig(
-            level=log_level,
-            format='%(message)s'
-        )
+        logging.basicConfig(level=log_level, format="%(message)s")
         self.logger = logging.getLogger(__name__)
 
     def run(self):
@@ -61,7 +58,7 @@ class ConductorSetup:
 
     def check_existing_config(self):
         """Check if already configured"""
-        config_file = self.conductor_dir / 'config.yaml'
+        config_file = self.conductor_dir / "config.yaml"
         return config_file.exists()
 
     def confirm_reconfigure(self):
@@ -71,7 +68,7 @@ class ConductorSetup:
             print("Auto mode: reconfiguring existing setup...")
             return True
         response = self._safe_input("Do you want to reconfigure? [y/N]: ", "n").lower()
-        return response == 'y'
+        return response == "y"
 
     def _safe_input(self, prompt, default=None):
         """Safe input with error handling"""
@@ -84,7 +81,7 @@ class ConductorSetup:
         except EOFError:
             return default
         except Exception as e:
-            if hasattr(self, 'logger'):
+            if hasattr(self, "logger"):
                 self.logger.error(f"❌ Input error: {e}")
             return default
 
@@ -93,14 +90,16 @@ class ConductorSetup:
         print("\n🔍 Detecting project information...")
 
         # Git repository detection
-        if (self.project_root / '.git').exists():
+        if (self.project_root / ".git").exists():
             try:
                 result = subprocess.run(
-                    ['git', 'remote', 'get-url', 'origin'],
-                    capture_output=True, text=True, check=False
+                    ["git", "remote", "get-url", "origin"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
                 )
                 if result.returncode == 0:
-                    self.config['git_remote'] = result.stdout.strip()
+                    self.config["git_remote"] = result.stdout.strip()
                     print(f"✓ Git repository: {self.config['git_remote']}")
             except Exception as e:
                 if self.debug:
@@ -109,31 +108,31 @@ class ConductorSetup:
 
         # Technology stack detection
         tech_indicators = {
-            'package.json': {
-                'tech': 'nodejs',
-                'suggested_roles': ['devops'],
-                'common_patterns': ['frontend', 'backend', 'extension']
+            "package.json": {
+                "tech": "nodejs",
+                "suggested_roles": ["devops"],
+                "common_patterns": ["frontend", "backend", "extension"],
             },
-            'requirements.txt': {
-                'tech': 'python',
-                'suggested_roles': ['devops'],
-                'common_patterns': ['api', 'ml', 'automation']
+            "requirements.txt": {
+                "tech": "python",
+                "suggested_roles": ["devops"],
+                "common_patterns": ["api", "ml", "automation"],
             },
-            'Cargo.toml': {
-                'tech': 'rust',
-                'suggested_roles': ['devops', 'security'],
-                'common_patterns': ['tauri', 'wasm', 'cli']
+            "Cargo.toml": {
+                "tech": "rust",
+                "suggested_roles": ["devops", "security"],
+                "common_patterns": ["tauri", "wasm", "cli"],
             },
-            'pom.xml': {
-                'tech': 'java',
-                'suggested_roles': ['devops'],
-                'common_patterns': ['spring', 'microservice']
+            "pom.xml": {
+                "tech": "java",
+                "suggested_roles": ["devops"],
+                "common_patterns": ["spring", "microservice"],
             },
-            'go.mod': {
-                'tech': 'go',
-                'suggested_roles': ['devops'],
-                'common_patterns': ['api', 'cli', 'microservice']
-            }
+            "go.mod": {
+                "tech": "go",
+                "suggested_roles": ["devops"],
+                "common_patterns": ["api", "cli", "microservice"],
+            },
         }
 
         for file, info in tech_indicators.items():
@@ -142,9 +141,9 @@ class ConductorSetup:
                 print(f"✓ Detected {info['tech']} project")
 
         # Check for specific patterns
-        if (self.project_root / 'manifest.json').exists():
+        if (self.project_root / "manifest.json").exists():
             print("✓ Detected Chrome extension")
-            self.config['has_extension'] = True
+            self.config["has_extension"] = True
 
     def gather_configuration(self):
         """Interactive configuration prompts"""
@@ -158,7 +157,7 @@ class ConductorSetup:
         # Project name
         default_name = self.project_root.name
         try:
-            self.config['project_name'] = self._safe_input(
+            self.config["project_name"] = self._safe_input(
                 f"Project name [{default_name}]: ", default_name
             )
         except Exception as e:
@@ -173,8 +172,9 @@ class ConductorSetup:
         elif (self.project_root / "documentation").exists():
             default_docs = "documentation"
 
-        self.config['docs_directory'] = self._safe_input(
-            f"Documentation directory [{default_docs}]: ", default_docs)
+        self.config["docs_directory"] = self._safe_input(
+            f"Documentation directory [{default_docs}]: ", default_docs
+        )
 
         # Role configuration with hybrid model
         print("\n🎭 Agent Role Configuration")
@@ -184,9 +184,9 @@ class ConductorSetup:
         # Suggest roles based on detected stack
         suggested = set()
         for stack in self.detected_stack:
-            suggested.update(stack['suggested_roles'])
+            suggested.update(stack["suggested_roles"])
 
-        suggested_str = ', '.join(suggested) if suggested else 'none detected'
+        suggested_str = ", ".join(suggested) if suggested else "none detected"
         print(f"\nSuggested specialized roles: {suggested_str}")
 
         print("\nCommon specialized roles:")
@@ -196,16 +196,14 @@ class ConductorSetup:
         print("  - ui-designer: Design system, components")
 
         roles_input = self._safe_input(
-            "\nEnter specialized roles (comma-separated, or press Enter for none): ", "")
+            "\nEnter specialized roles (comma-separated, or press Enter for none): ", ""
+        )
 
         specialized_roles = []
         if roles_input:
-            specialized_roles = [r.strip() for r in roles_input.split(',') if r.strip()]
+            specialized_roles = [r.strip() for r in roles_input.split(",") if r.strip()]
 
-        self.config['roles'] = {
-            'default': 'dev',
-            'specialized': specialized_roles
-        }
+        self.config["roles"] = {"default": "dev", "specialized": specialized_roles}
 
         # Task management approach
         print("\n📋 Task Management Configuration")
@@ -214,23 +212,20 @@ class ConductorSetup:
         print("3. Hybrid - Both approaches")
 
         choice = self._safe_input("Select approach [1]: ", "1")
-        task_approaches = {
-            "1": "github-issues",
-            "2": "json-files",
-            "3": "hybrid"
-        }
-        self.config['task_management'] = task_approaches.get(choice, "github-issues")
+        task_approaches = {"1": "github-issues", "2": "json-files", "3": "hybrid"}
+        self.config["task_management"] = task_approaches.get(choice, "github-issues")
 
         # Concurrent agents
         default_concurrent = "10"
         max_agents = self._safe_input(
-            f"\nMaximum concurrent agents [{default_concurrent}]: ", default_concurrent)
+            f"\nMaximum concurrent agents [{default_concurrent}]: ", default_concurrent
+        )
 
         try:
-            self.config['max_concurrent_agents'] = int(max_agents)
+            self.config["max_concurrent_agents"] = int(max_agents)
         except ValueError:
             print(f"⚠️  Invalid number '{max_agents}', using default: 10")
-            self.config['max_concurrent_agents'] = 10
+            self.config["max_concurrent_agents"] = 10
 
     def _auto_configure(self):
         """Auto-configuration mode with minimal prompts"""
@@ -238,34 +233,31 @@ class ConductorSetup:
         print("-" * 30)
 
         # Use sensible defaults
-        self.config['project_name'] = self.project_root.name
-        self.config['docs_directory'] = "docs"
+        self.config["project_name"] = self.project_root.name
+        self.config["docs_directory"] = "docs"
 
         # Detect roles based on stack
         suggested_roles = set()
         for stack in self.detected_stack:
-            suggested_roles.update(stack['suggested_roles'])
+            suggested_roles.update(stack["suggested_roles"])
 
         # Default to dev only unless devops/security clearly needed
         specialized_roles = []
-        if any('docker' in str(f).lower() for f in self.project_root.glob('*')):
-            specialized_roles.append('devops')
-        if any('security' in str(f).lower() for f in self.project_root.glob('*')):
-            specialized_roles.append('security')
+        if any("docker" in str(f).lower() for f in self.project_root.glob("*")):
+            specialized_roles.append("devops")
+        if any("security" in str(f).lower() for f in self.project_root.glob("*")):
+            specialized_roles.append("security")
 
-        self.config['roles'] = {
-            'default': 'dev',
-            'specialized': specialized_roles
-        }
+        self.config["roles"] = {"default": "dev", "specialized": specialized_roles}
 
         # Smart task management detection
-        if (self.project_root / '.github').exists():
-            self.config['task_management'] = 'github-issues'
+        if (self.project_root / ".github").exists():
+            self.config["task_management"] = "github-issues"
         else:
-            self.config['task_management'] = 'hybrid'
+            self.config["task_management"] = "hybrid"
 
         # Conservative agent count
-        self.config['max_concurrent_agents'] = 5
+        self.config["max_concurrent_agents"] = 5
 
         print(f"✓ Project: {self.config['project_name']}")
         print(f"✓ Roles: dev + {len(specialized_roles)} specialized")
@@ -280,67 +272,65 @@ class ConductorSetup:
             # Ensure directories exist
             self.conductor_dir.mkdir(exist_ok=True)
         except PermissionError:
-            if hasattr(self, 'logger'):
+            if hasattr(self, "logger"):
                 self.logger.error("❌ Permission denied creating .conductor directory")
             print("💡 Try running with sudo or check directory permissions")
             sys.exit(1)
         except Exception as e:
-            if hasattr(self, 'logger'):
+            if hasattr(self, "logger"):
                 self.logger.error(f"❌ Failed to create .conductor directory: {e}")
             sys.exit(1)
 
         # Create config.yaml
         config_data = {
-            'version': '1.0.0',
-            'project_name': self.config['project_name'],
-            'docs_directory': self.config['docs_directory'],
-            'task_management': self.config['task_management'],
-            'roles': self.config['roles'],
-            'conflict_prevention': {
-                'use_worktrees': True,
-                'file_locking': True
+            "version": "1.0.0",
+            "project_name": self.config["project_name"],
+            "docs_directory": self.config["docs_directory"],
+            "task_management": self.config["task_management"],
+            "roles": self.config["roles"],
+            "conflict_prevention": {"use_worktrees": True, "file_locking": True},
+            "github": {
+                "use_issues": self.config["task_management"]
+                in ["github-issues", "hybrid"],
+                "use_actions": True,
             },
-            'github': {
-                'use_issues': self.config['task_management'] in ['github-issues', 'hybrid'],
-                'use_actions': True
+            "agent_settings": {
+                "heartbeat_interval": 600,
+                "idle_timeout": 1800,
+                "max_concurrent": self.config["max_concurrent_agents"],
             },
-            'agent_settings': {
-                'heartbeat_interval': 600,
-                'idle_timeout': 1800,
-                'max_concurrent': self.config['max_concurrent_agents']
-            }
         }
 
-        if 'git_remote' in self.config:
-            config_data['git_remote'] = self.config['git_remote']
+        if "git_remote" in self.config:
+            config_data["git_remote"] = self.config["git_remote"]
 
-        config_file = self.conductor_dir / 'config.yaml'
+        config_file = self.conductor_dir / "config.yaml"
         try:
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
             print(f"✓ Created {config_file}")
         except Exception as e:
-            if hasattr(self, 'logger'):
+            if hasattr(self, "logger"):
                 self.logger.error(f"❌ Failed to create config file: {e}")
             sys.exit(1)
 
         # Initialize workflow state
-        if not (self.conductor_dir / 'workflow-state.json').exists():
+        if not (self.conductor_dir / "workflow-state.json").exists():
             state_data = {
-                'active_work': {},
-                'available_tasks': [],
-                'completed_work': [],
-                'system_status': {
-                    'ci_passing': True,
-                    'deployment_ready': False,
-                    'active_agents': 0,
-                    'idle_agents': 0,
-                    'last_updated': datetime.utcnow().isoformat()
-                }
+                "active_work": {},
+                "available_tasks": [],
+                "completed_work": [],
+                "system_status": {
+                    "ci_passing": True,
+                    "deployment_ready": False,
+                    "active_agents": 0,
+                    "idle_agents": 0,
+                    "last_updated": datetime.utcnow().isoformat(),
+                },
             }
 
-            state_file = self.conductor_dir / 'workflow-state.json'
-            with open(state_file, 'w') as f:
+            state_file = self.conductor_dir / "workflow-state.json"
+            with open(state_file, "w") as f:
                 json.dump(state_data, f, indent=2)
             print(f"✓ Created {state_file}")
 
@@ -348,7 +338,7 @@ class ConductorSetup:
         """Create role definition files"""
         print("\n📄 Creating role definitions...")
 
-        roles_dir = self.conductor_dir / 'roles'
+        roles_dir = self.conductor_dir / "roles"
         roles_dir.mkdir(exist_ok=True)
 
         # Always create the default dev role
@@ -383,14 +373,14 @@ The dev role is the default generalist role that can work on any task without sp
 - PR approved and merged
 """
 
-        dev_file = roles_dir / 'dev.md'
-        with open(dev_file, 'w') as f:
+        dev_file = roles_dir / "dev.md"
+        with open(dev_file, "w") as f:
             f.write(dev_content)
         print(f"✓ Created {dev_file}")
 
         # Create specialized roles
         role_templates = {
-            'devops': """# DevOps Role
+            "devops": """# DevOps Role
 
 ## Overview
 The DevOps role handles CI/CD, infrastructure, deployments, and system reliability.
@@ -420,7 +410,7 @@ The DevOps role handles CI/CD, infrastructure, deployments, and system reliabili
 - Infrastructure changes documented
 - Security scans passing
 """,
-            'security': """# Security Role
+            "security": """# Security Role
 
 ## Overview
 The Security role focuses on application security, vulnerability management, and compliance.
@@ -450,7 +440,7 @@ The Security role focuses on application security, vulnerability management, and
 - Compliance requirements documented
 - Security review completed and approved
 """,
-            'ml-engineer': """# ML Engineer Role
+            "ml-engineer": """# ML Engineer Role
 
 ## Overview
 The ML Engineer role handles machine learning models, data pipelines, and AI integrations.
@@ -480,7 +470,7 @@ The ML Engineer role handles machine learning models, data pipelines, and AI int
 - Model versioning implemented
 - Performance benchmarks documented
 """,
-            'ui-designer': """# UI Designer Role
+            "ui-designer": """# UI Designer Role
 
 ## Overview
 The UI Designer role focuses on user interface, design systems, and user experience.
@@ -509,13 +499,13 @@ The UI Designer role focuses on user interface, design systems, and user experie
 - Component reusability achieved
 - Design consistency maintained
 - Performance metrics met (LCP, FID, CLS)
-"""
+""",
         }
 
-        for role in self.config['roles']['specialized']:
+        for role in self.config["roles"]["specialized"]:
             if role in role_templates:
-                role_file = roles_dir / f'{role}.md'
-                with open(role_file, 'w') as f:
+                role_file = roles_dir / f"{role}.md"
+                with open(role_file, "w") as f:
                     f.write(role_templates[role])
                 print(f"✓ Created {role_file}")
             else:
@@ -538,8 +528,8 @@ Custom role for {role} responsibilities.
 ## Success Metrics
 - [Add success metrics]
 """
-                role_file = roles_dir / f'{role}.md'
-                with open(role_file, 'w') as f:
+                role_file = roles_dir / f"{role}.md"
+                with open(role_file, "w") as f:
                     f.write(custom_content)
                 print(f"✓ Created {role_file} (custom template)")
 
@@ -547,7 +537,7 @@ Custom role for {role} responsibilities.
         """Create GitHub Actions workflows"""
         print("\n🤖 Creating GitHub Actions workflows...")
 
-        workflows_dir = self.project_root / '.github' / 'workflows'
+        workflows_dir = self.project_root / ".github" / "workflows"
         workflows_dir.mkdir(parents=True, exist_ok=True)
 
         # Main conductor workflow
@@ -627,8 +617,8 @@ jobs:
           python .conductor/scripts/generate-summary.py >> $GITHUB_STEP_SUMMARY
 """
 
-        conductor_file = workflows_dir / 'conductor.yml'
-        with open(conductor_file, 'w') as f:
+        conductor_file = workflows_dir / "conductor.yml"
+        with open(conductor_file, "w") as f:
             f.write(conductor_workflow)
         print(f"✓ Created {conductor_file}")
 
@@ -670,13 +660,13 @@ jobs:
           file_pattern: '.conductor/*.json'
 """
 
-        cleanup_file = workflows_dir / 'conductor-cleanup.yml'
-        with open(cleanup_file, 'w') as f:
+        cleanup_file = workflows_dir / "conductor-cleanup.yml"
+        with open(cleanup_file, "w") as f:
             f.write(cleanup_workflow)
         print(f"✓ Created {cleanup_file}")
 
         # Create issue template
-        issue_template_dir = self.project_root / '.github' / 'ISSUE_TEMPLATE'
+        issue_template_dir = self.project_root / ".github" / "ISSUE_TEMPLATE"
         issue_template_dir.mkdir(parents=True, exist_ok=True)
 
         task_template = """name: Conductor Task
@@ -753,8 +743,8 @@ body:
         - Task#456 (User model)
 """
 
-        task_template_file = issue_template_dir / 'conductor-task.yml'
-        with open(task_template_file, 'w') as f:
+        task_template_file = issue_template_dir / "conductor-task.yml"
+        with open(task_template_file, "w") as f:
             f.write(task_template)
         print(f"✓ Created {task_template_file}")
 
@@ -762,11 +752,11 @@ body:
         """Create bootstrap and utility scripts"""
         print("\n⚡ Creating bootstrap scripts...")
 
-        scripts_dir = self.conductor_dir / 'scripts'
+        scripts_dir = self.conductor_dir / "scripts"
         scripts_dir.mkdir(exist_ok=True)
 
         # Bootstrap script
-        bootstrap_content = '''#!/bin/bash
+        bootstrap_content = """#!/bin/bash
 set -e
 
 # Universal Agent Bootstrap Script
@@ -840,10 +830,10 @@ echo "2. Review your task details in the output above"
 echo "3. Implement according to specifications"
 echo "4. Commit and push your changes"
 echo "5. Create a pull request when ready"
-'''
+"""
 
-        bootstrap_file = scripts_dir / 'bootstrap.sh'
-        with open(bootstrap_file, 'w') as f:
+        bootstrap_file = scripts_dir / "bootstrap.sh"
+        with open(bootstrap_file, "w") as f:
             f.write(bootstrap_content)
         os.chmod(bootstrap_file, 0o755)
         print(f"✓ Created {bootstrap_file}")
@@ -969,8 +959,8 @@ if __name__ == "__main__":
     main()
 '''
 
-        task_claim_file = scripts_dir / 'task-claim.py'
-        with open(task_claim_file, 'w') as f:
+        task_claim_file = scripts_dir / "task-claim.py"
+        with open(task_claim_file, "w") as f:
             f.write(task_claim_content)
         os.chmod(task_claim_file, 0o755)
         print(f"✓ Created {task_claim_file}")
@@ -980,11 +970,14 @@ if __name__ == "__main__":
         print("\n✅ Validating setup...")
 
         checks = [
-            (self.conductor_dir / 'config.yaml', "Configuration file"),
-            (self.conductor_dir / 'workflow-state.json', "Workflow state"),
-            (self.conductor_dir / 'scripts' / 'bootstrap.sh', "Bootstrap script"),
-            (self.conductor_dir / 'scripts' / 'task-claim.py', "Task claim script"),
-            (self.project_root / '.github' / 'workflows' / 'conductor.yml', "GitHub workflow"),
+            (self.conductor_dir / "config.yaml", "Configuration file"),
+            (self.conductor_dir / "workflow-state.json", "Workflow state"),
+            (self.conductor_dir / "scripts" / "bootstrap.sh", "Bootstrap script"),
+            (self.conductor_dir / "scripts" / "task-claim.py", "Task claim script"),
+            (
+                self.project_root / ".github" / "workflows" / "conductor.yml",
+                "GitHub workflow",
+            ),
         ]
 
         all_valid = True
@@ -997,7 +990,7 @@ if __name__ == "__main__":
 
         # Check GitHub CLI
         try:
-            result = subprocess.run(['gh', '--version'], capture_output=True)
+            result = subprocess.run(["gh", "--version"], capture_output=True)
             if result.returncode == 0:
                 print("✓ GitHub CLI installed")
             else:
@@ -1017,7 +1010,9 @@ if __name__ == "__main__":
         print("1. Review the generated configuration in .conductor/config.yaml")
         print("2. Customize role definitions in .conductor/roles/ if needed")
         print("3. Commit these changes to your repository")
-        print("4. Create your first tasks via GitHub issues with 'conductor:task' label")
+        print(
+            "4. Create your first tasks via GitHub issues with 'conductor:task' label"
+        )
         print("5. Launch agents using: bash .conductor/scripts/bootstrap.sh [role]")
 
         print("\n💡 Quick Start:")
@@ -1043,18 +1038,14 @@ Examples:
   python setup.py              # Interactive setup
   python setup.py --auto       # Auto-configuration
   python setup.py --debug      # Enable debug logging
-        """
+        """,
     )
     parser.add_argument(
-        '--auto',
-        action='store_true',
-        help='Run in auto-configuration mode (minimal prompts)'
+        "--auto",
+        action="store_true",
+        help="Run in auto-configuration mode (minimal prompts)",
     )
-    parser.add_argument(
-        '--debug',
-        action='store_true',
-        help='Enable debug logging'
-    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
 
@@ -1067,6 +1058,7 @@ Examples:
     except Exception as e:
         if args.debug:
             import traceback
+
             traceback.print_exc()
         else:
             print(f"\n❌ Setup failed: {e}")

@@ -14,25 +14,27 @@ class DependencyChecker:
             "checks_performed": [],
             "dependencies_satisfied": [],
             "blockers": [],
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
     def check_github_api_status(self):
         """Verify GitHub API connectivity"""
         try:
             result = subprocess.run(
-                ['gh', 'api', 'user'],
-                capture_output=True,
-                text=True
+                ["gh", "api", "user"], capture_output=True, text=True
             )
             if result.returncode == 0:
                 self.results["dependencies_satisfied"].append("GitHub API accessible")
                 return True
             else:
-                self.results["blockers"].append("GitHub API authentication failed - run 'gh auth login'")
+                self.results["blockers"].append(
+                    "GitHub API authentication failed - run 'gh auth login'"
+                )
                 return False
         except FileNotFoundError:
-            self.results["blockers"].append("GitHub CLI not installed - visit https://cli.github.com")
+            self.results["blockers"].append(
+                "GitHub CLI not installed - visit https://cli.github.com"
+            )
             return False
         except Exception as e:
             self.results["blockers"].append(f"GitHub CLI error: {e}")
@@ -43,9 +45,7 @@ class DependencyChecker:
         try:
             # Check if we're in a git repo
             result = subprocess.run(
-                ['git', 'rev-parse', '--git-dir'],
-                capture_output=True,
-                text=True
+                ["git", "rev-parse", "--git-dir"], capture_output=True, text=True
             )
             if result.returncode != 0:
                 self.results["blockers"].append("Not in a git repository")
@@ -53,12 +53,12 @@ class DependencyChecker:
 
             # Check for uncommitted changes
             result = subprocess.run(
-                ['git', 'status', '--porcelain'],
-                capture_output=True,
-                text=True
+                ["git", "status", "--porcelain"], capture_output=True, text=True
             )
             if result.stdout.strip():
-                self.results["blockers"].append("Uncommitted changes detected - commit or stash first")
+                self.results["blockers"].append(
+                    "Uncommitted changes detected - commit or stash first"
+                )
                 return False
 
             self.results["dependencies_satisfied"].append("Git repository clean")
@@ -72,12 +72,12 @@ class DependencyChecker:
         """Verify git worktree support"""
         try:
             result = subprocess.run(
-                ['git', 'worktree', 'list'],
-                capture_output=True,
-                text=True
+                ["git", "worktree", "list"], capture_output=True, text=True
             )
             if result.returncode == 0:
-                self.results["dependencies_satisfied"].append("Git worktree support available")
+                self.results["dependencies_satisfied"].append(
+                    "Git worktree support available"
+                )
                 return True
             else:
                 self.results["blockers"].append("Git worktree not supported")
@@ -88,7 +88,7 @@ class DependencyChecker:
 
     def check_python_dependencies(self):
         """Check required Python packages"""
-        required_packages = ['yaml']
+        required_packages = ["yaml"]
         missing = []
 
         for package in required_packages:
@@ -103,14 +103,18 @@ class DependencyChecker:
             )
             return False
         else:
-            self.results["dependencies_satisfied"].append("Python dependencies satisfied")
+            self.results["dependencies_satisfied"].append(
+                "Python dependencies satisfied"
+            )
             return True
 
     def check_conductor_config(self):
         """Verify conductor configuration exists"""
         config_file = Path(".conductor/config.yaml")
         if not config_file.exists():
-            self.results["blockers"].append("Conductor not configured - run 'python setup.py'")
+            self.results["blockers"].append(
+                "Conductor not configured - run 'python setup.py'"
+            )
             return False
 
         self.results["dependencies_satisfied"].append("Conductor configuration found")
