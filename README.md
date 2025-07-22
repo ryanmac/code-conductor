@@ -6,7 +6,7 @@
 
 ## 🚀 **Why Developers Are Switching to Agentic Development**
 
-- ⚡ **"Life-changing" productivity** - Focus on architecture, let agents handle implementation
+- ⚡ **Focus on architecture, let agents handle implementation** - Spend time on what matters most
 - 🎯 **Zero config for 90% of projects** - Auto-detects your stack and configures roles
 - 🔒 **Conflict-free teamwork** - Git worktrees + file locking = no merge hell
 - 🤖 **Smart agent roles** - Generalist "dev" handles most tasks, specialists for complex work
@@ -399,6 +399,6 @@ MIT - See LICENSE file
 - 🛠️ **Want to contribute?** [See our guide](CONTRIBUTING.md)
 - 𝕏 **Share your success** Mention [@ryanmac](https://x.com/ryanmac) with #ConductorScore
 
-**Built for [Conductor.build](https://conductor.build) users who refuse to juggle tasks manually.**
+**Built for [Conductor.build](https://conductor.build) and [Warp](https://www.warp.dev/) users who refuse to juggle tasks manually.**
 
 *Transform your development workflow. One command. Infinite possibilities.* 🎼
