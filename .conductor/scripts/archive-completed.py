@@ -9,13 +9,13 @@ from datetime import datetime, timedelta
 
 def load_state():
     """Load workflow state"""
-    state_file = Path('.conductor/workflow-state.json')
+    state_file = Path(".conductor/workflow-state.json")
     if not state_file.exists():
         print("❌ Workflow state file not found")
         sys.exit(1)
 
     try:
-        with open(state_file, 'r') as f:
+        with open(state_file, "r") as f:
             return json.load(f)
     except json.JSONDecodeError:
         print("❌ Invalid workflow state file")
@@ -24,9 +24,9 @@ def load_state():
 
 def save_state(state):
     """Save workflow state"""
-    state_file = Path('.conductor/workflow-state.json')
+    state_file = Path(".conductor/workflow-state.json")
     try:
-        with open(state_file, 'w') as f:
+        with open(state_file, "w") as f:
             json.dump(state, f, indent=2)
     except Exception as e:
         print(f"❌ Failed to save state: {e}")
@@ -35,8 +35,8 @@ def save_state(state):
 
 def archive_completed_tasks(state, max_age_days=30):
     """Archive completed tasks older than max_age_days"""
-    if 'completed_work' not in state:
-        state['completed_work'] = []
+    if "completed_work" not in state:
+        state["completed_work"] = []
 
     current_time = datetime.utcnow()
     cutoff_date = current_time - timedelta(days=max_age_days)
@@ -45,11 +45,13 @@ def archive_completed_tasks(state, max_age_days=30):
     recent_completed = []
     archived_count = 0
 
-    for work in state['completed_work']:
-        completed_at_str = work.get('completed_at')
+    for work in state["completed_work"]:
+        completed_at_str = work.get("completed_at")
         if completed_at_str:
             try:
-                completed_at = datetime.fromisoformat(completed_at_str.replace('Z', '+00:00'))
+                completed_at = datetime.fromisoformat(
+                    completed_at_str.replace("Z", "+00:00")
+                )
                 if completed_at >= cutoff_date:
                     recent_completed.append(work)
                 else:
@@ -62,10 +64,12 @@ def archive_completed_tasks(state, max_age_days=30):
             recent_completed.append(work)
 
     # Update completed work to only include recent items
-    state['completed_work'] = recent_completed
+    state["completed_work"] = recent_completed
 
     if archived_count > 0:
-        print(f"📦 Archived {archived_count} completed task(s) older than {max_age_days} days")
+        print(
+            f"📦 Archived {archived_count} completed task(s) older than {max_age_days} days"
+        )
     else:
         print("ℹ️  No old completed tasks to archive")
 
@@ -74,23 +78,23 @@ def archive_completed_tasks(state, max_age_days=30):
 
 def clean_stale_active_work(state, stale_timeout_minutes=30):
     """Move stale active work to completed with appropriate status"""
-    if 'active_work' not in state:
-        state['active_work'] = {}
+    if "active_work" not in state:
+        state["active_work"] = {}
 
-    if 'completed_work' not in state:
-        state['completed_work'] = []
+    if "completed_work" not in state:
+        state["completed_work"] = []
 
     current_time = datetime.utcnow()
     stale_cutoff = current_time - timedelta(minutes=stale_timeout_minutes)
 
-    active_work = state['active_work']
+    active_work = state["active_work"]
     stale_agents = []
 
     for agent_id, work in list(active_work.items()):
-        heartbeat_str = work.get('heartbeat')
+        heartbeat_str = work.get("heartbeat")
         if heartbeat_str:
             try:
-                heartbeat = datetime.fromisoformat(heartbeat_str.replace('Z', '+00:00'))
+                heartbeat = datetime.fromisoformat(heartbeat_str.replace("Z", "+00:00"))
                 if heartbeat < stale_cutoff:
                     stale_agents.append(agent_id)
             except ValueError:
@@ -106,11 +110,11 @@ def clean_stale_active_work(state, stale_timeout_minutes=30):
         work = active_work.pop(agent_id)
 
         # Mark as abandoned
-        work['status'] = 'abandoned'
-        work['completed_at'] = current_time.isoformat()
-        work['abandonment_reason'] = 'stale_heartbeat'
+        work["status"] = "abandoned"
+        work["completed_at"] = current_time.isoformat()
+        work["abandonment_reason"] = "stale_heartbeat"
 
-        state['completed_work'].append(work)
+        state["completed_work"].append(work)
         cleaned_count += 1
 
     if cleaned_count > 0:
@@ -124,22 +128,22 @@ def clean_stale_active_work(state, stale_timeout_minutes=30):
 def optimize_state_file(state):
     """Optimize state file by removing redundant data and organizing"""
     # Ensure all required sections exist
-    if 'active_work' not in state:
-        state['active_work'] = {}
-    if 'available_tasks' not in state:
-        state['available_tasks'] = []
-    if 'completed_work' not in state:
-        state['completed_work'] = []
-    if 'system_status' not in state:
-        state['system_status'] = {}
+    if "active_work" not in state:
+        state["active_work"] = {}
+    if "available_tasks" not in state:
+        state["available_tasks"] = []
+    if "completed_work" not in state:
+        state["completed_work"] = []
+    if "system_status" not in state:
+        state["system_status"] = {}
 
     # Sort tasks by creation date (newest first)
-    for task_list in [state['available_tasks'], state['completed_work']]:
+    for task_list in [state["available_tasks"], state["completed_work"]]:
         if isinstance(task_list, list):
-            task_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            task_list.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 
     # Update system status
-    state['system_status']['last_cleanup'] = datetime.utcnow().isoformat()
+    state["system_status"]["last_cleanup"] = datetime.utcnow().isoformat()
 
     print("✨ Optimized state file structure")
 
@@ -150,11 +154,11 @@ def generate_cleanup_report(state, archived_count, cleaned_count):
     print("=" * 30)
 
     current_metrics = {
-        'active_agents': len(state.get('active_work', {})),
-        'available_tasks': len(state.get('available_tasks', [])),
-        'completed_tasks': len(state.get('completed_work', [])),
-        'archived_tasks': archived_count,
-        'cleaned_stale': cleaned_count
+        "active_agents": len(state.get("active_work", {})),
+        "available_tasks": len(state.get("available_tasks", [])),
+        "completed_tasks": len(state.get("completed_work", [])),
+        "archived_tasks": archived_count,
+        "cleaned_stale": cleaned_count,
     }
 
     for metric, value in current_metrics.items():
@@ -166,13 +170,26 @@ def generate_cleanup_report(state, archived_count, cleaned_count):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Archive completed tasks and clean up state")
-    parser.add_argument("--max-age", type=int, default=30,
-                        help="Maximum age in days for completed tasks (default: 30)")
-    parser.add_argument("--stale-timeout", type=int, default=30,
-                        help="Stale timeout in minutes for active work (default: 30)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Show what would be done without making changes")
+    parser = argparse.ArgumentParser(
+        description="Archive completed tasks and clean up state"
+    )
+    parser.add_argument(
+        "--max-age",
+        type=int,
+        default=30,
+        help="Maximum age in days for completed tasks (default: 30)",
+    )
+    parser.add_argument(
+        "--stale-timeout",
+        type=int,
+        default=30,
+        help="Stale timeout in minutes for active work (default: 30)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be done without making changes",
+    )
 
     args = parser.parse_args()
 
@@ -188,7 +205,9 @@ def main():
     archived_count = 0 if args.dry_run else archive_completed_tasks(state, args.max_age)
 
     # Clean stale active work
-    cleaned_count = 0 if args.dry_run else clean_stale_active_work(state, args.stale_timeout)
+    cleaned_count = (
+        0 if args.dry_run else clean_stale_active_work(state, args.stale_timeout)
+    )
 
     # Optimize state file
     if not args.dry_run:
