@@ -1,0 +1,144 @@
+name: 🎯 Conductor Task
+description: Create a new task for AI agent coordination
+title: "[Task] "
+labels: ["conductor:task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🎼 Create a Conductor Task
+
+        This template helps you create a structured task that can be automatically processed by Conductor-Score agents.
+
+        **Note**: Adding the `conductor:task` label will automatically convert this issue into a task.
+
+  - type: input
+    id: task_title
+    attributes:
+      label: Task Title
+      description: A clear, concise title for the task
+      placeholder: "Implement user authentication system"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Detailed description of what needs to be accomplished
+      placeholder: |
+        Create a secure user authentication system with the following features:
+        - User registration and login
+        - Password hashing with bcrypt
+        - JWT token management
+        - Session persistence
+        - Password reset functionality
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Estimated Effort
+      description: How much work is this task?
+      options:
+        - small (< 4 hours)
+        - medium (4-16 hours)
+        - large (> 16 hours)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: required_skills
+    attributes:
+      label: Required Skills
+      description: What specialized skills are needed? (Leave empty for general dev tasks)
+      options:
+        - label: DevOps (deployment, infrastructure, CI/CD)
+        - label: Security (authentication, encryption, compliance)
+        - label: UI/UX Design (interface design, user experience)
+        - label: Rust Development (systems programming, performance)
+        - label: Database (optimization, migrations, architecture)
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files Involved
+      description: List the files that will be modified (one per line)
+      placeholder: |
+        src/auth/models.py
+        src/auth/views.py
+        src/auth/serializers.py
+        tests/test_auth.py
+        requirements.txt
+
+  - type: textarea
+    id: specifications
+    attributes:
+      label: Specifications
+      description: Link to design docs, API specs, or detailed requirements
+      placeholder: |
+        - API Documentation: docs/auth-api.md
+        - Database Schema: docs/auth-schema.sql
+        - Security Requirements: docs/security-requirements.md
+
+  - type: textarea
+    id: best_practices
+    attributes:
+      label: Best Practices
+      description: Important guidelines and coding standards to follow
+      placeholder: |
+        - Follow Django REST framework conventions
+        - Use type hints for all function signatures
+        - Implement comprehensive error handling
+        - Add logging for all authentication events
+        - Follow OWASP security guidelines
+
+  - type: textarea
+    id: success_criteria
+    attributes:
+      label: Success Criteria
+      description: How will we know this task is complete?
+      placeholder: |
+        **Tests**: All tests pass with 95% code coverage
+        **Security**: Passes security audit checklist
+        **Performance**: Login completes in under 200ms
+        **Documentation**: All API endpoints documented
+        **Code Review**: Approved by security team member
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Other tasks or issues that must be completed first
+      placeholder: |
+        - Issue #123: Database migration system
+        - Task user_model_001: User model updates
+
+  - type: checkboxes
+    id: acknowledgments
+    attributes:
+      label: Acknowledgments
+      description: Please confirm you understand how Conductor tasks work
+      options:
+        - label: I understand this will be converted to an agent task automatically
+          required: true
+        - label: I have provided enough detail for an AI agent to complete this work
+          required: true
+        - label: I will monitor the progress and provide feedback as needed
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## 🚀 What Happens Next?
+
+        1. **Task Creation**: This issue will be automatically converted to a conductor task
+        2. **Agent Assignment**: Available agents can claim this task via the bootstrap script
+        3. **Isolation**: Work happens in isolated git worktrees to prevent conflicts
+        4. **Progress**: Monitor via GitHub Actions and system health checks
+        5. **Completion**: Agent creates PR when task is finished
+
+        📚 **Learn more**: [Conductor-Score Documentation](docs/USAGE.md) 

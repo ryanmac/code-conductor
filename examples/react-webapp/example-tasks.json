@@ -1,0 +1,166 @@
+{
+  "available_tasks": [
+    {
+      "id": "ui_001",
+      "title": "Create responsive navigation component",
+      "description": "Build a mobile-first navigation component with hamburger menu and smooth transitions",
+      "specs": "docs/nav-component-spec.md",
+      "best_practices": [
+        "Use semantic HTML for accessibility",
+        "Implement keyboard navigation",
+        "Add proper ARIA labels",
+        "Ensure responsive design works on all screen sizes"
+      ],
+      "success_criteria": {
+        "tests": "Component tests with 90% coverage",
+        "accessibility": "WCAG AA compliant",
+        "responsive": "Works on mobile, tablet, desktop",
+        "performance": "No layout shift, smooth animations"
+      },
+      "required_skills": [],
+      "estimated_effort": "medium",
+      "files_locked": [
+        "src/components/Navigation/",
+        "src/components/Navigation/Navigation.tsx",
+        "src/components/Navigation/Navigation.test.tsx",
+        "src/components/Navigation/Navigation.module.css"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "api_001",
+      "title": "Implement user authentication API integration",
+      "description": "Create authentication hooks and API calls for login, logout, and token refresh",
+      "specs": "docs/auth-api-spec.md",
+      "best_practices": [
+        "Use React Query for data fetching",
+        "Implement proper error handling",
+        "Store tokens securely",
+        "Add loading and error states"
+      ],
+      "success_criteria": {
+        "tests": "API integration tests passing",
+        "security": "Tokens stored securely, proper logout",
+        "ux": "Clear loading and error states",
+        "performance": "Optimistic updates where appropriate"
+      },
+      "required_skills": [],
+      "estimated_effort": "large",
+      "files_locked": [
+        "src/api/auth.ts",
+        "src/hooks/useAuth.ts",
+        "src/contexts/AuthContext.tsx",
+        "src/types/auth.ts"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "page_001",
+      "title": "Build user dashboard page",
+      "description": "Create a dashboard page showing user stats, recent activity, and quick actions",
+      "specs": "docs/dashboard-spec.md",
+      "best_practices": [
+        "Use compound components for flexibility",
+        "Implement skeleton loading states",
+        "Add data visualization with charts",
+        "Ensure responsive grid layout"
+      ],
+      "success_criteria": {
+        "tests": "Page tests with user interactions",
+        "performance": "Page loads in under 2 seconds",
+        "accessibility": "Screen reader compatible",
+        "responsive": "Adapts to all screen sizes"
+      },
+      "required_skills": [],
+      "estimated_effort": "large",
+      "files_locked": [
+        "src/pages/Dashboard/",
+        "src/pages/Dashboard/Dashboard.tsx",
+        "src/components/StatCard/",
+        "src/components/ActivityFeed/"
+      ],
+      "dependencies": ["api_001"]
+    },
+    {
+      "id": "style_001",
+      "title": "Design system: Create design tokens and theme",
+      "description": "Establish consistent design tokens for colors, typography, spacing, and create theme provider",
+      "specs": "docs/design-system-spec.md",
+      "best_practices": [
+        "Use CSS custom properties for theming",
+        "Create semantic color tokens",
+        "Implement dark/light mode support",
+        "Document all tokens with examples"
+      ],
+      "success_criteria": {
+        "consistency": "All components use design tokens",
+        "theming": "Dark/light mode working",
+        "documentation": "Storybook stories for all tokens",
+        "accessibility": "WCAG contrast ratios met"
+      },
+      "required_skills": ["ui-designer"],
+      "estimated_effort": "medium",
+      "files_locked": [
+        "src/theme/",
+        "src/theme/tokens.css",
+        "src/theme/ThemeProvider.tsx",
+        "src/theme/types.ts"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "test_001",
+      "title": "Set up comprehensive testing framework",
+      "description": "Configure Jest, React Testing Library, and Cypress for unit, integration, and e2e testing",
+      "specs": "docs/testing-strategy-spec.md",
+      "best_practices": [
+        "Set up test data factories",
+        "Mock external APIs consistently",
+        "Create reusable test utilities",
+        "Add visual regression testing"
+      ],
+      "success_criteria": {
+        "coverage": "90% code coverage maintained",
+        "e2e": "Critical user journeys tested",
+        "ci": "Tests run on every PR",
+        "speed": "Test suite runs in under 3 minutes"
+      },
+      "required_skills": [],
+      "estimated_effort": "medium",
+      "files_locked": [
+        "cypress/",
+        "src/test-utils/",
+        "jest.config.js",
+        "cypress.config.js"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "devops_001",
+      "title": "Set up automated deployment pipeline",
+      "description": "Create GitHub Actions workflow for automated testing, building, and deployment to Vercel/Netlify",
+      "specs": "docs/deployment-pipeline-spec.md",
+      "best_practices": [
+        "Implement preview deployments for PRs",
+        "Add security scanning",
+        "Cache dependencies for faster builds",
+        "Include rollback capability"
+      ],
+      "success_criteria": {
+        "automation": "Zero-touch deployment on merge",
+        "speed": "Deploy completes in under 5 minutes",
+        "security": "Dependency scanning passing",
+        "monitoring": "Build status visible in PR"
+      },
+      "required_skills": ["devops"],
+      "estimated_effort": "medium",
+      "files_locked": [
+        ".github/workflows/deploy.yml",
+        ".github/workflows/test.yml",
+        "vercel.json",
+        "package.json"
+      ],
+      "dependencies": ["test_001"]
+    }
+  ]
+} 

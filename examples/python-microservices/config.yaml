@@ -1,0 +1,67 @@
+# Python Microservices Configuration
+version: "1.0.0"
+project_name: "api-platform"
+docs_directory: "docs/"
+task_management: "github-issues"
+
+roles:
+  default: "dev"
+  specialized: ["devops", "security"]
+
+# Microservices specific patterns
+service_patterns:
+  - name: "auth-service"
+    path: "services/auth/"
+    port: 8001
+    dependencies: ["postgres", "redis"]
+
+  - name: "user-service"
+    path: "services/user/"
+    port: 8002
+    dependencies: ["postgres"]
+
+  - name: "notification-service"
+    path: "services/notification/"
+    port: 8003
+    dependencies: ["redis", "rabbitmq"]
+
+  - name: "api-gateway"
+    path: "services/gateway/"
+    port: 8000
+    dependencies: ["all-services"]
+
+conflict_prevention:
+  use_worktrees: true
+  file_locking: true
+  # Prevent conflicts on shared configurations
+  protected_files:
+    - "docker-compose.yml"
+    - "services/shared/models.py"
+    - ".env.example"
+
+github:
+  use_issues: true
+  use_actions: true
+  required_checks:
+    - "pytest"
+    - "flake8"
+    - "black"
+    - "security-scan"
+
+agent_settings:
+  heartbeat_interval: 600
+  idle_timeout: 1800
+  max_concurrent: 15
+
+# Python-specific validations
+quality_checks:
+  linting:
+    command: "flake8 services/"
+    auto_fix: "black services/"
+  type_checking:
+    command: "mypy services/"
+  security:
+    command: "bandit -r services/"
+  tests:
+    command: "pytest --cov=services"
+    min_coverage: 80

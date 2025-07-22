@@ -1,0 +1,97 @@
+[
+    {
+        "task_id": "micro_001",
+        "title": "Implement user authentication service",
+        "description": "Create a microservice for user authentication and authorization using JWT tokens",
+        "effort": "large",
+        "required_skills": ["python", "api", "security"],
+        "files_locked": [
+            "services/auth/",
+            "tests/test_auth.py",
+            "requirements.txt"
+        ],
+        "specifications": [
+            "Use JWT for token-based authentication",
+            "Implement user registration and login endpoints",
+            "Add password hashing with bcrypt",
+            "Include role-based access control (RBAC)",
+            "Add rate limiting for auth endpoints"
+        ],
+        "best_practices": [
+            "Follow REST API conventions",
+            "Include comprehensive error handling",
+            "Add input validation and sanitization",
+            "Use environment variables for secrets",
+            "Include proper logging for security events"
+        ],
+        "success_criteria": [
+            "All authentication endpoints return proper HTTP status codes",
+            "JWT tokens are properly signed and validated",
+            "Password security follows OWASP guidelines",
+            "Unit tests achieve >90% coverage",
+            "API documentation is complete"
+        ],
+        "dependencies": []
+    },
+    {
+        "task_id": "micro_002", 
+        "title": "Add database migration system",
+        "description": "Implement database schema migrations for microservices",
+        "effort": "medium",
+        "required_skills": ["python", "database"],
+        "files_locked": [
+            "migrations/",
+            "database/",
+            "alembic.ini"
+        ],
+        "specifications": [
+            "Use Alembic for database migrations",
+            "Support both upgrade and downgrade migrations",
+            "Include data migrations where needed",
+            "Add migration validation checks"
+        ],
+        "best_practices": [
+            "Keep migrations small and focused",
+            "Test migrations on sample data",
+            "Include rollback procedures",
+            "Document breaking changes"
+        ],
+        "success_criteria": [
+            "Migrations run successfully in both directions",
+            "Database schema matches expected state",
+            "No data loss during migrations",
+            "Migration history is properly tracked"
+        ],
+        "dependencies": ["micro_001"]
+    },
+    {
+        "task_id": "micro_003",
+        "title": "Implement health check endpoints",
+        "description": "Add health monitoring and status endpoints for all microservices",
+        "effort": "small",
+        "required_skills": ["python", "devops"],
+        "files_locked": [
+            "health/",
+            "monitoring/"
+        ],
+        "specifications": [
+            "Add /health endpoint for basic health checks",
+            "Add /health/detailed for comprehensive status",
+            "Include dependency health checks (database, external APIs)",
+            "Add metrics collection for monitoring"
+        ],
+        "best_practices": [
+            "Return appropriate HTTP status codes",
+            "Include response time measurements",
+            "Add circuit breaker patterns for dependencies",
+            "Log health check failures"
+        ],
+        "success_criteria": [
+            "Health endpoints respond within 1 second",
+            "Dependency status is accurately reported",
+            "Metrics are properly formatted for monitoring tools",
+            "Integration tests cover all health scenarios"
+        ],
+        "dependencies": []
+    }
+] 

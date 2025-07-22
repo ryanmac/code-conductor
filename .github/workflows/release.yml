@@ -1,0 +1,138 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: 🎼 Release Conductor-Score
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Validate configuration
+        run: |
+          python .conductor/scripts/validate-config.py --strict
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify VERSION file matches tag
+        run: |
+          FILE_VERSION=$(cat VERSION)
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          if [ "$FILE_VERSION" != "$TAG_VERSION" ]; then
+            echo "VERSION file ($FILE_VERSION) doesn't match tag ($TAG_VERSION)"
+            exit 1
+          fi
+
+      - name: Create release archive
+        run: |
+          # Create conductor-score template archive
+          mkdir -p dist
+
+          # Include core template files
+          tar -czf dist/conductor-score-template-${{ steps.version.outputs.version }}.tar.gz \
+            .conductor/ \
+            examples/ \
+            docs/ \
+            setup.py \
+            install.sh \
+            README.md \
+            CHANGELOG.md \
+            VERSION \
+            .gitignore
+
+          # Create quick-start zip for GitHub releases
+          zip -r dist/conductor-score-${{ steps.version.outputs.version }}.zip \
+            .conductor/ \
+            examples/ \
+            docs/ \
+            setup.py \
+            install.sh \
+            README.md \
+            CHANGELOG.md \
+            VERSION \
+            .gitignore
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract changelog section for this version
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Get content between this version and next version/unreleased
+          awk "/## \[$VERSION\]/{flag=1;next}/## \[/{flag=0}flag" CHANGELOG.md > release_notes.md
+
+          # If no specific changelog found, use generic message
+          if [ ! -s release_notes.md ]; then
+            echo "Release $VERSION" > release_notes.md
+            echo "" >> release_notes.md
+            echo "See CHANGELOG.md for details." >> release_notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          release_name: 🎼 Conductor-Score ${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+
+      - name: Upload template archive
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/conductor-score-template-${{ steps.version.outputs.version }}.tar.gz
+          asset_name: conductor-score-template-${{ steps.version.outputs.version }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload quick-start zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/conductor-score-${{ steps.version.outputs.version }}.zip
+          asset_name: conductor-score-${{ steps.version.outputs.version }}.zip
+          asset_content_type: application/zip
+
+      - name: Update installation URLs
+        run: |
+          echo "🎉 Release ${{ steps.version.outputs.version }} created!"
+          echo ""
+          echo "📦 Assets:"
+          echo "- Template: conductor-score-template-${{ steps.version.outputs.version }}.tar.gz"
+          echo "- Quick-start: conductor-score-${{ steps.version.outputs.version }}.zip"
+          echo ""
+          echo "🚀 Installation:"
+          echo "curl -sSL https://github.com/ryanmac/conductor-score/releases/download/${{ steps.version.outputs.tag_name }}/install.sh | bash"
+          echo ""
+          echo "📚 Documentation: https://github.com/ryanmac/conductor-score/blob/main/docs/USAGE.md" 

@@ -1,0 +1,332 @@
+# 🎼 Conductor-Score
+
+**Transform your development workflow in 60 seconds.** From tweet discovery to AI agents shipping code—the GitHub-native coordination system that changes how you build.
+
+> *"Stop juggling tasks. Start orchestrating agents."*
+
+## 🚀 **Why Developers Are Switching to Agentic Development**
+
+- ⚡ **"Life-changing" productivity** - Focus on architecture, let agents handle implementation
+- 🎯 **Zero config for 90% of projects** - Auto-detects your stack and configures roles
+- 🔒 **Conflict-free teamwork** - Git worktrees + file locking = no merge hell
+- 🤖 **Smart agent roles** - Generalist "dev" handles most tasks, specialists for complex work
+- 📊 **Native GitHub integration** - Issues become tasks, Actions monitor health
+- 🔄 **Self-healing coordination** - Automatic cleanup, heartbeat monitoring, stale work recovery
+
+*"From weekend side project to shipping product in weeks, not months."*
+
+## ⚡ **60-Second Setup**
+
+**One command. Instant AI coordination.**
+
+```bash
+# From any project directory:
+curl -sSL https://github.com/ryanmac/conductor-score/raw/main/install.sh | bash
+
+# Or clone and setup:
+git clone https://github.com/ryanmac/conductor-score.git && cd conductor-score
+python setup.py --auto
+```
+
+**That's it.** Now create a GitHub Issue with `conductor:task` label, launch an agent via [Conductor.build](https://conductor.build) (macOS only as of 2024-07-22) or terminal workflow (all platforms), and watch it work.
+
+## How It Works
+
+1. **Setup Phase**: The interactive setup script detects your project type and configures roles
+2. **Task Creation**: Create tasks via GitHub Issues or directly in the state file
+3. **Agent Initialization**: Agents use the universal bootstrap to claim work
+4. **Isolated Development**: Each agent works in a git worktree to prevent conflicts
+5. **Automated Coordination**: GitHub Actions manage health, cleanup, and task flow
+
+## Architecture
+
+### Hybrid Role Model
+
+The system uses a hybrid approach optimized for efficiency:
+
+- **Default Role**: `dev` - A generalist that can handle any task without specific requirements
+- **Specialized Roles**: Optional roles like `devops`, `security` for complex domains
+
+This reduces the complexity of managing many agent types while maintaining quality for specialized work.
+
+### File Structure
+
+```
+.conductor/
+├── config.yaml           # Project configuration
+├── workflow-state.json   # Central coordination state
+├── roles/               # Role definitions
+│   ├── dev.md          # Default generalist
+│   ├── devops.md       # CI/CD specialist
+│   └── security.md     # Security specialist
+├── scripts/            # Automation scripts
+│   ├── bootstrap.sh    # Universal agent init
+│   ├── task-claim.py   # Atomic task assignment
+│   └── health-check.py # System monitoring
+└── templates/          # Reusable templates
+```
+
+## Configuration
+
+### Project Setup
+
+Run `python setup.py` to configure:
+
+- Project name and documentation location
+- Technology stack detection
+- Role selection (hybrid model)
+- Task management approach
+- GitHub integration settings
+
+### Role Definitions
+
+Each role has a Markdown file in `.conductor/roles/` defining:
+
+- Responsibilities
+- Task selection criteria
+- Required skills
+- Success metrics
+
+### Task Format
+
+Tasks include complete specifications:
+
+```json
+{
+  "id": "task_001",
+  "title": "Implement authentication",
+  "specs": "docs/auth-spec.md",
+  "best_practices": ["Use JWT", "Implement refresh tokens"],
+  "success_criteria": {
+    "tests": "100% coverage",
+    "security": "Pass security scan"
+  },
+  "required_skills": [],  // Empty = any dev can take it
+  "estimated_effort": "medium"
+}
+```
+
+## Agent Workflow
+
+### Launching an Agent
+
+**Option A: Conductor Desktop App (macOS only)**
+```bash
+export AGENT_ROLE=dev  # or devops, security, etc.
+bash .conductor/scripts/bootstrap.sh
+# Follow the printed instructions to open in Conductor app
+```
+
+**Option B: Multiple Terminals (All Platforms)**
+```bash
+bash .conductor/scripts/bootstrap.sh dev
+cd worktrees/agent-dev-[task_id]
+# Use tmux or screen for session management on Linux/Windows
+# Start your Claude Code session in the worktree
+```
+
+📚 **[See complete usage guide →](docs/USAGE.md)**
+
+### Agent Lifecycle
+
+1. **Initialize**: Load role definition and check dependencies
+2. **Claim Task**: Atomically claim an available task
+3. **Create Worktree**: Isolated git workspace for conflict-free work
+4. **Execute Task**: Follow specifications and success criteria
+5. **Report Status**: Update heartbeat and progress
+6. **Complete/Idle**: Mark complete or report idle for cleanup
+
+### Universal Bootstrap Prompt
+
+The system provides a single prompt that works for any agent:
+
+```
+You are a Claude Code agent in a conductor-score coordinated project.
+ROLE: {role}
+PROJECT: {project_name}
+
+1. Read your role definition: .conductor/roles/{role}.md
+2. Check system state: .conductor/workflow-state.json
+3. Claim a task: python .conductor/scripts/task-claim.py --role {role}
+4. Work in your isolated worktree
+5. Commit and push changes when complete
+
+Note: Heartbeats are automatically managed by GitHub Actions.
+```
+
+## GitHub Integration
+
+### Issues as Tasks
+
+Create issues with the `conductor:task` label to automatically convert them to tasks.
+
+### Automated Workflows
+
+- **Health Monitoring**: Every 15 minutes
+- **Stale Cleanup**: Removes abandoned work
+- **Task Scheduling**: Processes dependencies
+- **Status Reports**: Updates dashboard issue
+
+## Monitoring
+
+### System Health
+
+```bash
+# Check local status
+python .conductor/scripts/health-check.py
+
+# View GitHub dashboard
+# Check issue with 'conductor:status' label
+```
+
+### Metrics Tracked
+
+- Active agents and their tasks
+- Available task queue depth
+- Completion rate and velocity
+- System health indicators
+
+## Examples
+
+### 🌟 **Works with Your Stack**
+
+<details>
+<summary><strong>React Web App</strong> - Modern full-stack development</summary>
+
+```yaml
+project_name: harmony-webapp
+roles:
+  default: dev
+  specialized: [devops, ui-designer]
+build_validation:
+  - npm test -- --coverage
+  - npm run lint
+  - npm run build
+```
+</details>
+
+<details>
+<summary><strong>Chrome Extension + NextJS</strong> - Browser extension with web dashboard</summary>
+
+```yaml
+project_name: symphony-extension
+roles:
+  default: dev
+  specialized: [devops]
+protected_files:
+  - packages/extension/manifest.json
+```
+</details>
+
+<details>
+<summary><strong>Python Microservices</strong> - Scalable backend architecture</summary>
+
+```yaml
+project_name: api-platform
+roles:
+  default: dev
+  specialized: [devops, security]
+quality_checks:
+  - pytest --cov=services
+  - bandit -r services/
+```
+</details>
+
+<details>
+<summary><strong>Tauri Desktop App</strong> - Cross-platform Rust + JS application</summary>
+
+```yaml
+project_name: desktop-app
+roles:
+  default: dev
+  specialized: [devops, security, rust-dev]
+matrix_builds: [ubuntu, macos, windows]
+```
+</details>
+
+**Don't see your stack?** [Contribute an example](CONTRIBUTING.md) and help other developers!
+
+## Troubleshooting
+
+### Common Issues
+
+**No tasks available**
+- Check `.conductor/workflow-state.json` has tasks
+- Verify no file conflicts blocking tasks
+- Create new tasks via GitHub issues
+
+**Agent can't claim tasks**
+- Run `python .conductor/scripts/dependency-check.py`
+- Ensure GitHub CLI is authenticated: `gh auth status`
+- Check git repository is clean: `git status`
+
+**File conflicts**
+- System prevents these automatically
+- If occurs, check worktree isolation
+- Run cleanup: `python .conductor/scripts/cleanup-stale.py`
+
+### Debug Commands
+
+```bash
+# Check dependencies
+python .conductor/scripts/dependency-check.py
+
+# View system state
+cat .conductor/workflow-state.json | jq
+
+# Force cleanup
+python .conductor/scripts/cleanup-stale.py --timeout 0
+
+# Validate configuration
+python .conductor/scripts/validate-config.py
+```
+
+## Storage Footprint
+
+**Disk Usage**: Each agent creates a Git worktree (~50-200MB depending on project size)
+- **Cleanup**: Run `gtclean` weekly to remove abandoned worktrees
+- **Monitor**: Use `gtw` to list active worktrees
+- **Automatic**: Stale worktrees (>7 days inactive) are auto-archived via GitHub Actions
+
+**Pro tip**: Large projects should set `worktree_retention_days: 3` in config.yaml
+
+## Best Practices
+
+1. **Task Design**: Make tasks self-contained with clear specs
+2. **Role Selection**: Start with dev-only, add specializations as needed
+3. **Regular Cleanup**: Let automation handle stale work
+4. **Monitor Health**: Check status issue regularly
+5. **Incremental Adoption**: Start small, expand as comfortable
+
+## Contributing
+
+This is a template repository. To contribute:
+
+1. Fork and improve
+2. Test with your project type
+3. Submit PRs with examples
+4. Share your adaptations
+
+## License
+
+MIT - See LICENSE file
+
+## Support
+
+- 🐛 [Issue Tracker](https://github.com/ryanmac/conductor-score/issues)
+- 💬 [Discussions](https://github.com/ryanmac/conductor-score/discussions)
+
+---
+
+---
+
+## 💬 **Join the Community**
+
+- 🐛 **Found a bug?** [Report it](https://github.com/ryanmac/conductor-score/issues)
+- 💡 **Have an idea?** [Start a discussion](https://github.com/ryanmac/conductor-score/discussions)
+- 🛠️ **Want to contribute?** [See our guide](CONTRIBUTING.md)
+- 🐦 **Share your success** Tweet [@your-handle](https://twitter.com) with #ConductorScore
+
+**Built for [Conductor.build](https://conductor.build) users who refuse to juggle tasks manually.**
+
+*Transform your development workflow. One command. Infinite possibilities.* 🎼

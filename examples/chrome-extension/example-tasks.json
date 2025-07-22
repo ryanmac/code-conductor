@@ -1,0 +1,100 @@
+{
+  "available_tasks": [
+    {
+      "id": "ext_001",
+      "title": "Add OAuth2 authentication to extension",
+      "description": "Implement Google OAuth2 flow for the Chrome extension using chrome.identity API",
+      "specs": "docs/auth-spec.md",
+      "best_practices": [
+        "Use chrome.identity.getAuthToken for OAuth",
+        "Store tokens securely in chrome.storage.local",
+        "Implement token refresh mechanism",
+        "Handle offline scenarios gracefully"
+      ],
+      "success_criteria": {
+        "tests": "Auth flow tests passing",
+        "security": "No tokens in manifest or code",
+        "ux": "Seamless login experience"
+      },
+      "required_skills": [],
+      "estimated_effort": "medium",
+      "files_locked": [
+        "packages/extension/src/background/auth.js",
+        "packages/extension/manifest.json"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "web_001",
+      "title": "Create dashboard for extension settings",
+      "description": "Build a NextJS dashboard page for users to manage their extension settings",
+      "specs": "docs/dashboard-spec.md",
+      "best_practices": [
+        "Use NextJS app router",
+        "Implement with Tailwind CSS",
+        "Make responsive for all devices",
+        "Use React Query for data fetching"
+      ],
+      "success_criteria": {
+        "tests": "Component tests with 90% coverage",
+        "performance": "Lighthouse score > 90",
+        "accessibility": "WCAG AA compliant"
+      },
+      "required_skills": [],
+      "estimated_effort": "large",
+      "files_locked": [
+        "packages/website/app/dashboard/",
+        "packages/website/components/settings/"
+      ],
+      "dependencies": ["ext_001"]
+    },
+    {
+      "id": "shared_001",
+      "title": "Create TypeScript types for API communication",
+      "description": "Define shared TypeScript interfaces for extension-website communication",
+      "specs": "docs/api-types-spec.md",
+      "best_practices": [
+        "Use TypeScript strict mode",
+        "Create Zod schemas for runtime validation",
+        "Document all types with JSDoc",
+        "Export from shared package"
+      ],
+      "success_criteria": {
+        "tests": "Type checking passes",
+        "validation": "Zod schemas tested",
+        "integration": "Both packages can import"
+      },
+      "required_skills": [],
+      "estimated_effort": "small",
+      "files_locked": [
+        "packages/shared/types/",
+        "packages/shared/schemas/"
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "devops_001",
+      "title": "Set up automated Chrome Web Store deployment",
+      "description": "Create GitHub Action for automated extension publishing",
+      "specs": "docs/deployment-spec.md",
+      "best_practices": [
+        "Use official Chrome Web Store API",
+        "Implement version bumping",
+        "Create release notes automation",
+        "Add rollback capability"
+      ],
+      "success_criteria": {
+        "tests": "Dry run successful",
+        "security": "Secrets properly stored",
+        "automation": "One-click deployment"
+      },
+      "required_skills": ["devops"],
+      "estimated_effort": "medium",
+      "files_locked": [
+        ".github/workflows/deploy-extension.yml",
+        "scripts/publish-extension.js"
+      ],
+      "dependencies": ["ext_001", "shared_001"]
+    }
+  ]
+}

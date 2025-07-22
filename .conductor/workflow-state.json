@@ -1,0 +1,12 @@
+{
+  "active_work": {},
+  "available_tasks": [],
+  "completed_work": [],
+  "system_status": {
+    "ci_passing": true,
+    "deployment_ready": false,
+    "active_agents": 0,
+    "idle_agents": 0,
+    "last_updated": "2025-07-22T00:00:00Z"
+  }
+}

@@ -1,0 +1,119 @@
+# React Web Application Configuration
+version: "1.0.0"
+project_name: "harmony-webapp"
+docs_directory: "docs/"
+task_management: "github-issues"
+
+roles:
+  default: "dev"
+  specialized: ["devops", "ui-designer"]
+
+# React app specific patterns
+app_structure:
+  frontend:
+    path: "src/"
+    framework: "react"
+    build_command: "npm run build"
+
+  components:
+    path: "src/components/"
+    patterns: ["*.tsx", "*.jsx"]
+
+  pages:
+    path: "src/pages/"
+    patterns: ["*.tsx", "*.jsx"]
+
+  api:
+    path: "src/api/"
+    patterns: ["*.ts", "*.js"]
+
+conflict_prevention:
+  use_worktrees: true
+  file_locking: true
+  # Critical React files that need coordination
+  protected_files:
+    - "package.json"
+    - "package-lock.json"
+    - "src/App.tsx"
+    - "public/index.html"
+
+github:
+  use_issues: true
+  use_actions: true
+  branch_protection:
+    - main
+    - production
+
+agent_settings:
+  heartbeat_interval: 600
+  idle_timeout: 1800
+  max_concurrent: 8
+
+# React-specific build validation
+build_validation:
+  dependencies:
+    command: "npm ci"
+    success_criteria: "Dependencies installed successfully"
+  type_check:
+    command: "npm run type-check"
+    success_criteria: "TypeScript compilation successful"
+  lint:
+    command: "npm run lint"
+    success_criteria: "ESLint checks passed"
+  test:
+    command: "npm test -- --coverage --watchAll=false"
+    success_criteria: "All tests passing with >80% coverage"
+  build:
+    command: "npm run build"
+    success_criteria: "Production build successful"
+
+# Task categories for React development
+task_patterns:
+  - name: "component-tasks"
+    path_prefix: "src/components/"
+    common_files:
+      - "*.tsx"
+      - "*.css"
+      - "*.module.css"
+    default_skills: []  # Any dev can work on components
+
+  - name: "page-tasks"
+    path_prefix: "src/pages/"
+    common_files:
+      - "*.tsx"
+      - "*.css"
+    default_skills: []
+
+  - name: "api-tasks"
+    path_prefix: "src/api/"
+    common_files:
+      - "*.ts"
+      - "*.js"
+    default_skills: []
+
+  - name: "styling-tasks"
+    file_patterns:
+      - "**/*.css"
+      - "**/*.scss"
+      - "**/tailwind.config.js"
+    required_skills: ["ui-designer"]
+
+  - name: "deployment-tasks"
+    path_prefix: ".github/"
+    common_files:
+      - "workflows/*.yml"
+      - "workflows/*.yaml"
+    required_skills: ["devops"]
+
+# Development workflow optimizations
+dev_optimizations:
+  hot_reload: true
+  source_maps: true
+  bundle_analyzer: false
+
+# Production optimizations
+prod_optimizations:
+  minification: true
+  tree_shaking: true
+  code_splitting: true
+  compression: true 

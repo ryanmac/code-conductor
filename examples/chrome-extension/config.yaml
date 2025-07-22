@@ -1,0 +1,63 @@
+# Chrome Extension + NextJS Monorepo Configuration
+version: "1.0.0"
+project_name: "symphony-extension"
+docs_directory: "docs/"
+task_management: "hybrid"
+
+roles:
+  default: "dev"
+  specialized: ["devops"]
+
+# Chrome extension specific patterns
+task_patterns:
+  - name: "extension-tasks"
+    path_prefix: "packages/extension/"
+    common_files:
+      - "manifest.json"
+      - "src/background/"
+      - "src/content/"
+    default_skills: []  # Any dev can work on extension
+
+  - name: "website-tasks"
+    path_prefix: "packages/website/"
+    common_files:
+      - "pages/"
+      - "components/"
+      - "api/"
+    default_skills: []  # Any dev can work on website
+
+  - name: "shared-tasks"
+    path_prefix: "packages/shared/"
+    common_files:
+      - "types/"
+      - "utils/"
+    default_skills: []  # Any dev can work on shared code
+
+conflict_prevention:
+  use_worktrees: true
+  file_locking: true
+  # Extra careful with manifest.json changes
+  protected_files:
+    - "packages/extension/manifest.json"
+    - "packages/website/package.json"
+
+github:
+  use_issues: true
+  use_actions: true
+  branch_protection:
+    - main
+    - production
+
+agent_settings:
+  heartbeat_interval: 600
+  idle_timeout: 1800
+  max_concurrent: 10
+
+# Extension-specific build checks
+build_validation:
+  extension:
+    command: "cd packages/extension && npm run build"
+    success_criteria: "Extension build successful"
+  website:
+    command: "cd packages/website && npm run build"
+    success_criteria: "Next.js build successful"

@@ -1,0 +1,76 @@
+# Tauri Desktop Application Configuration
+version: "1.0.0"
+project_name: "desktop-app"
+docs_directory: "docs/"
+task_management: "hybrid"
+
+roles:
+  default: "dev"
+  specialized: ["devops", "security", "rust-dev"]
+
+# Tauri-specific structure
+app_structure:
+  frontend:
+    path: "src/"
+    framework: "react"  # or vue, svelte, etc.
+    build_command: "npm run build"
+
+  backend:
+    path: "src-tauri/"
+    language: "rust"
+    build_command: "cargo build --release"
+
+  shared:
+    path: "src/shared/"
+    types: "typescript"
+
+conflict_prevention:
+  use_worktrees: true
+  file_locking: true
+  # Critical Tauri files
+  protected_files:
+    - "src-tauri/Cargo.toml"
+    - "src-tauri/tauri.conf.json"
+    - "src-tauri/capabilities/"
+
+github:
+  use_issues: true
+  use_actions: true
+  matrix_builds:
+    - os: "ubuntu-latest"
+    - os: "macos-latest"
+    - os: "windows-latest"
+
+agent_settings:
+  heartbeat_interval: 600
+  idle_timeout: 1800
+  max_concurrent: 10
+
+# Tauri-specific checks
+build_validation:
+  rust:
+    commands:
+      - "cd src-tauri && cargo check"
+      - "cd src-tauri && cargo clippy"
+      - "cd src-tauri && cargo test"
+  frontend:
+    commands:
+      - "npm run lint"
+      - "npm run type-check"
+      - "npm test"
+  integration:
+    command: "npm run tauri build"
+    platforms: ["current"]  # or ["all"] for cross-platform
+
+# Security settings for Tauri
+security:
+  capabilities:
+    strict_mode: true
+    allowed_apis:
+      - "fs:read"
+      - "dialog"
+      - "notification"
+    csp: "default-src 'self'"
+  code_signing:
+    required: true
+    platforms: ["macos", "windows"]

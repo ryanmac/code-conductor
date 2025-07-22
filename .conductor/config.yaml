@@ -1,0 +1,21 @@
+version: "1.0.0"
+project_name: "my-project"
+docs_directory: "docs/"
+task_management: "hybrid"
+
+roles:
+  default: "dev"
+  specialized: []
+
+conflict_prevention:
+  use_worktrees: true
+  file_locking: true
+
+github:
+  use_issues: true
+  use_actions: true
+
+agent_settings:
+  heartbeat_interval: 600  # 10 minutes
+  idle_timeout: 1800      # 30 minutes
+  max_concurrent: 20
