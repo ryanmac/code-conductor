@@ -1,5 +1,7 @@
 # 🎼 Conductor-Score
 
+<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/09dea359-56a0-4c65-8c16-b98ec2b4f02a" />
+
 **Transform your development workflow in 60 seconds.** From tweet discovery to AI agents shipping code—the GitHub-native coordination system that changes how you build.
 
 > *"Stop juggling tasks. Start orchestrating agents."*
