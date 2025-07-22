@@ -140,7 +140,7 @@ except:
     echo ""
     # Detect preferred terminal
     FULL_PATH=$(cd "$WORKTREE_PATH" && pwd)
-    
+
     if command -v warp >/dev/null 2>&1; then
         OPEN_CMD="warp --new-window"
         TERMINAL_NAME="Warp"

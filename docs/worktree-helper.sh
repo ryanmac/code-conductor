@@ -9,7 +9,7 @@ gtopen() {
         echo "❌ No worktree found"
         return 1
     fi
-    
+
     echo "📂 Opening $worktree_path in terminal..."
     if command -v warp >/dev/null 2>&1; then
         warp --new-window "$worktree_path"

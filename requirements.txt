@@ -1,0 +1,4 @@
+# Core dependencies for conductor-score
+pyyaml>=6.0
+requests>=2.32.4
+# Note: fcntl is Unix-only and part of Python standard library 

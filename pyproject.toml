@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "conductor-score"
+version = "0.1.0"
+description = "Agent coordination for Conductor, Warp, and Claude Code"
+authors = ["Ryan Mac <ryan@updoot.co>"]
+readme = "README.md"
+packages = [{include = "conductor_score"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pyyaml = "^6.0"
+requests = "^2.28.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+black = "^23.0.0"
+flake8 = "^6.0.0"
+
+[tool.poetry.scripts]
+conductor-setup = "setup:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"] 

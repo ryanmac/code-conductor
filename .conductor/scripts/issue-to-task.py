@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
+
 def get_issue_details(issue_number):
     """Get issue details from GitHub CLI"""
     try:
@@ -22,6 +23,7 @@ def get_issue_details(issue_number):
     except FileNotFoundError:
         print("❌ GitHub CLI (gh) not found. Please install it.")
         sys.exit(1)
+
 
 def parse_issue_body(body):
     """Parse issue body for task metadata"""
@@ -50,7 +52,8 @@ def parse_issue_body(body):
 
     return metadata
 
-def extract_task_data(issue, metadata):
+
+def extract_task_data(issue, metadata, issue_number):
     """Extract task data from issue and metadata"""
     # Extract labels
     labels = [label['name'] for label in issue.get('labels', [])]
@@ -120,6 +123,7 @@ def extract_task_data(issue, metadata):
 
     return task
 
+
 def add_task_to_state(task):
     """Add task to workflow state"""
     state_file = Path('.conductor/workflow-state.json')
@@ -162,10 +166,11 @@ def add_task_to_state(task):
     try:
         with open(state_file, 'w') as f:
             json.dump(state, f, indent=2)
-        print(f"✅ State file updated")
+        print("✅ State file updated")
     except Exception as e:
         print(f"❌ Failed to write state file: {e}")
         sys.exit(1)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Convert GitHub Issue to Conductor Task")
@@ -196,7 +201,7 @@ def main():
     metadata = parse_issue_body(issue.get('body', ''))
 
     # Create task
-    task = extract_task_data(issue, metadata)
+    task = extract_task_data(issue, metadata, issue_number)
 
     if args.dry_run:
         print("\n📋 Task that would be created:")
@@ -205,12 +210,13 @@ def main():
     else:
         # Add to state
         add_task_to_state(task)
-        print(f"\n🎯 Task created successfully!")
+        print("\n🎯 Task created successfully!")
         print(f"   Title: {task['title']}")
         print(f"   ID: {task['id']}")
         print(f"   Effort: {task['estimated_effort']}")
         if task['required_skills']:
             print(f"   Skills: {', '.join(task['required_skills'])}")
 
+
 if __name__ == "__main__":
-    main() 
+    main()

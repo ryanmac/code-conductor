@@ -19,13 +19,41 @@
 
 **One command. Instant AI coordination.**
 
+### Option 1: Poetry (Recommended)
 ```bash
-# From any project directory:
-curl -sSL https://github.com/ryanmac/conductor-score/raw/main/install.sh | bash
+# Clone the repository
+git clone https://github.com/ryanmac/conductor-score.git
+cd conductor-score
 
-# Or clone and setup:
-git clone https://github.com/ryanmac/conductor-score.git && cd conductor-score
-python setup.py --auto
+# Install with Poetry (auto-creates virtual environment)
+poetry install
+poetry run python setup.py
+```
+
+### Option 2: Pip + Virtual Environment
+```bash
+# Clone the repository
+git clone https://github.com/ryanmac/conductor-score.git
+cd conductor-score
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run setup
+python setup.py
+```
+
+### Option 3: One-Command Install Script
+```bash
+# From the repository directory:
+./install.sh
+
+# Or with custom setup options:
+./install.sh --auto
 ```
 
 **That's it.** Now create a GitHub Issue with `conductor:task` label, launch an agent via [Conductor.build](https://conductor.build) (macOS only as of 2024-07-22) or terminal workflow (all platforms), and watch it work.
@@ -298,6 +326,44 @@ python .conductor/scripts/validate-config.py
 4. **Monitor Health**: Check status issue regularly
 5. **Incremental Adoption**: Start small, expand as comfortable
 
+## Development Setup
+
+### Prerequisites
+- Python 3.9+
+- Git
+- GitHub CLI (optional, for issue integration)
+
+### Local Development
+```bash
+# Clone and setup
+git clone https://github.com/ryanmac/conductor-score.git
+cd conductor-score
+
+# Install with Poetry (recommended)
+poetry install
+
+# Or with pip
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run tests
+poetry run pytest tests/ -v
+# or
+python -m pytest tests/ -v
+
+# Run linting
+poetry run flake8 .conductor/scripts/ setup.py
+poetry run black --check .conductor/scripts/ setup.py
+```
+
+### CI/CD
+The project uses GitHub Actions for continuous integration:
+- **Linting**: flake8 and black formatting checks
+- **Testing**: pytest on multiple Python versions (3.9, 3.10, 3.11)
+- **Security**: safety vulnerability scanning
+- **Platforms**: Ubuntu and macOS
+
 ## Contributing
 
 This is a template repository. To contribute:
@@ -306,6 +372,12 @@ This is a template repository. To contribute:
 2. Test with your project type
 3. Submit PRs with examples
 4. Share your adaptations
+
+### Development Guidelines
+- Follow PEP 8 style guidelines
+- Add tests for new functionality
+- Update documentation for changes
+- Ensure CI passes before submitting PRs
 
 ## License
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Check system dependencies before claiming tasks"""
 
-import json
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
 
 class DependencyChecker:
     def __init__(self):
@@ -135,6 +135,7 @@ class DependencyChecker:
         self.results["status"] = "READY" if all_passed else "BLOCKED"
         return self.results
 
+
 def main():
     checker = DependencyChecker()
     result = checker.run_all_checks()
@@ -157,6 +158,7 @@ def main():
 
     # Exit with appropriate code
     sys.exit(0 if result["status"] == "READY" else 1)
+
 
 if __name__ == "__main__":
     main()

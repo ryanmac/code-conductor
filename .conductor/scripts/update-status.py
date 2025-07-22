@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 
+
 def load_state():
     """Load workflow state"""
     state_file = Path('.conductor/workflow-state.json')
@@ -20,6 +21,7 @@ def load_state():
         print("❌ Invalid workflow state file")
         sys.exit(1)
 
+
 def save_state(state):
     """Save workflow state"""
     state_file = Path('.conductor/workflow-state.json')
@@ -29,6 +31,7 @@ def save_state(state):
     except Exception as e:
         print(f"❌ Failed to save state: {e}")
         sys.exit(1)
+
 
 def update_system_status(state):
     """Update system status with current metrics"""
@@ -124,6 +127,7 @@ def update_system_status(state):
 
     return status
 
+
 def print_status_summary(status):
     """Print a human-readable status summary"""
     print("📊 System Status Summary")
@@ -152,6 +156,7 @@ def print_status_summary(status):
 
     print(f"\nLast Updated: {status.get('last_updated', 'Unknown')}")
 
+
 def main():
     print("🔄 Updating system status...")
 
@@ -169,5 +174,6 @@ def main():
     # Print summary
     print_status_summary(updated_status)
 
+
 if __name__ == "__main__":
-    main() 
+    main()

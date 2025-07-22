@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """Clean up abandoned git worktrees"""
 
-import os
 import subprocess
-import sys
 import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
+
 
 def get_worktrees():
     """Get list of current git worktrees"""
     try:
         result = subprocess.run(['git', 'worktree', 'list'],
-                              capture_output=True, text=True, check=True)
+                                capture_output=True, text=True, check=True)
         worktrees = []
         for line in result.stdout.strip().split('\n'):
             if line:
@@ -25,6 +24,7 @@ def get_worktrees():
     except subprocess.CalledProcessError:
         print("❌ Failed to list git worktrees")
         return []
+
 
 def is_worktree_stale(worktree_path, max_age_hours=24):
     """Check if a worktree is stale based on last modification time"""
@@ -42,6 +42,7 @@ def is_worktree_stale(worktree_path, max_age_hours=24):
     except OSError:
         return True
 
+
 def is_conductor_worktree(worktree_path):
     """Check if this is a conductor-generated worktree"""
     path = Path(worktree_path)
@@ -53,11 +54,12 @@ def is_conductor_worktree(worktree_path):
     # Check if the branch name follows conductor pattern
     try:
         result = subprocess.run(['git', 'branch', '--show-current'],
-                              cwd=worktree_path, capture_output=True, text=True, check=True)
+                                cwd=worktree_path, capture_output=True, text=True, check=True)
         branch = result.stdout.strip()
         return branch.startswith('agent-')
     except subprocess.CalledProcessError:
         return False
+
 
 def remove_worktree(worktree_path, force=False):
     """Remove a git worktree"""
@@ -86,6 +88,7 @@ def remove_worktree(worktree_path, force=False):
         print(f"❌ Error removing worktree {worktree_path}: {e}")
         return False
 
+
 def cleanup_worktree_branches():
     """Clean up branches that no longer have worktrees"""
     try:
@@ -113,7 +116,7 @@ def cleanup_worktree_branches():
         for branch in orphaned_branches:
             try:
                 subprocess.run(['git', 'branch', '-D', branch],
-                             capture_output=True, text=True, check=True)
+                               capture_output=True, text=True, check=True)
                 print(f"🗑️  Deleted orphaned branch: {branch}")
                 removed_count += 1
             except subprocess.CalledProcessError as e:
@@ -124,18 +127,19 @@ def cleanup_worktree_branches():
         print("⚠️  Failed to clean up orphaned branches")
         return 0
 
+
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Clean up abandoned git worktrees")
     parser.add_argument("--max-age", type=int, default=24,
-                       help="Maximum age in hours for worktrees (default: 24)")
+                        help="Maximum age in hours for worktrees (default: 24)")
     parser.add_argument("--force", action="store_true",
-                       help="Force removal of worktrees with uncommitted changes")
+                        help="Force removal of worktrees with uncommitted changes")
     parser.add_argument("--dry-run", action="store_true",
-                       help="Show what would be done without making changes")
+                        help="Show what would be done without making changes")
     parser.add_argument("--all", action="store_true",
-                       help="Clean up all conductor worktrees regardless of age")
+                        help="Clean up all conductor worktrees regardless of age")
 
     args = parser.parse_args()
 
@@ -192,7 +196,7 @@ def main():
     orphaned_branches = cleanup_worktree_branches()
 
     # Summary
-    print(f"\n📊 Cleanup Summary")
+    print("\n📊 Cleanup Summary")
     print(f"  Worktrees removed: {removed_count}")
     print(f"  Branches cleaned: {orphaned_branches}")
     print(f"  Remaining worktrees: {len(conductor_worktrees) - removed_count}")
@@ -202,5 +206,6 @@ def main():
     else:
         print("\n⚠️  No worktrees were removed")
 
+
 if __name__ == "__main__":
-    main() 
+    main()
