@@ -1,181 +1,364 @@
 #!/usr/bin/env python3
-"""Update system status in workflow state"""
+"""Update system status using GitHub Issues"""
 
 import json
 import sys
-from pathlib import Path
+import subprocess
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 
-def load_state():
-    """Load workflow state"""
-    state_file = Path(".conductor/workflow-state.json")
-    if not state_file.exists():
-        print("❌ Workflow state file not found")
-        sys.exit(1)
-
+def run_gh_command(args):
+    """Run GitHub CLI command and return output"""
     try:
-        with open(state_file, "r") as f:
-            return json.load(f)
-    except json.JSONDecodeError:
-        print("❌ Invalid workflow state file")
+        result = subprocess.run(
+            ["gh"] + args,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"❌ GitHub CLI error: {e.stderr}")
+        return ""
+    except FileNotFoundError:
+        print("❌ GitHub CLI (gh) not found. Please install it.")
         sys.exit(1)
 
 
-def save_state(state):
-    """Save workflow state"""
-    state_file = Path(".conductor/workflow-state.json")
-    try:
-        with open(state_file, "w") as f:
-            json.dump(state, f, indent=2)
-    except Exception as e:
-        print(f"❌ Failed to save state: {e}")
-        sys.exit(1)
+def get_status_issue():
+    """Get or create the status issue"""
+    # Check if status issue exists
+    output = run_gh_command([
+        "issue", "list",
+        "-l", "conductor:status",
+        "--state", "open",
+        "--limit", "1",
+        "--json", "number,title"
+    ])
+    
+    if output:
+        try:
+            issues = json.loads(output)
+            if issues:
+                return issues[0]["number"]
+        except json.JSONDecodeError:
+            pass
+    
+    # Create new status issue if it doesn't exist
+    print("📝 Creating new status issue...")
+    output = run_gh_command([
+        "issue", "create",
+        "--title", "🏥 Code-Conductor System Status",
+        "--body", "This issue tracks the system status and health metrics for Code-Conductor.",
+        "--label", "conductor:status"
+    ])
+    
+    # Extract issue number from output
+    if output and "#" in output:
+        issue_number = output.split("#")[1].split()[0]
+        return int(issue_number)
+    
+    return None
 
 
-def update_system_status(state):
-    """Update system status with current metrics"""
-    if "system_status" not in state:
-        state["system_status"] = {}
-
-    status = state["system_status"]
-    current_time = datetime.utcnow()
-
-    # Count active and idle agents
-    active_work = state.get("active_work", {})
-    status["active_agents"] = len(active_work)
-
-    # Count agents by status
-    agents_by_status = {}
-    stale_agents = []
-    idle_timeout = 1800  # 30 minutes default
-
-    for agent_id, work in active_work.items():
-        work_status = work.get("status", "unknown")
-        agents_by_status[work_status] = agents_by_status.get(work_status, 0) + 1
-
-        # Check for stale agents
-        heartbeat_str = work.get("heartbeat")
-        if heartbeat_str:
-            try:
-                heartbeat = datetime.fromisoformat(heartbeat_str.replace("Z", "+00:00"))
-                if (current_time - heartbeat).total_seconds() > idle_timeout:
-                    stale_agents.append(agent_id)
-            except ValueError:
-                pass
-
-    status["agents_by_status"] = agents_by_status
-    status["stale_agents"] = len(stale_agents)
-
-    # Count available tasks
-    available_tasks = state.get("available_tasks", [])
-    status["available_tasks"] = len(available_tasks)
-
-    # Count tasks by effort
-    tasks_by_effort = {}
-    tasks_by_skills = {}
-
-    for task in available_tasks:
-        effort = task.get("estimated_effort", "unknown")
-        tasks_by_effort[effort] = tasks_by_effort.get(effort, 0) + 1
-
-        skills = task.get("required_skills", [])
-        if not skills:
-            tasks_by_skills["general"] = tasks_by_skills.get("general", 0) + 1
-        else:
-            for skill in skills:
-                tasks_by_skills[skill] = tasks_by_skills.get(skill, 0) + 1
-
-    status["tasks_by_effort"] = tasks_by_effort
-    status["tasks_by_skills"] = tasks_by_skills
-
-    # Count completed work
-    completed_work = state.get("completed_work", [])
-    status["completed_tasks"] = len(completed_work)
-
-    # Calculate completion rate (last 24 hours)
-    day_ago = current_time - timedelta(days=1)
-    recent_completions = 0
-
-    for work in completed_work:
-        completed_at_str = work.get("completed_at")
-        if completed_at_str:
-            try:
-                completed_at = datetime.fromisoformat(
-                    completed_at_str.replace("Z", "+00:00")
-                )
-                if completed_at >= day_ago:
-                    recent_completions += 1
-            except ValueError:
-                pass
-
-    status["completions_24h"] = recent_completions
-
-    # System health indicators
-    status["health"] = {
-        "has_available_tasks": len(available_tasks) > 0,
-        "has_active_agents": len(active_work) > 0,
-        "low_stale_agents": len(stale_agents)
-        < len(active_work) * 0.3,  # Less than 30% stale
-        "recent_activity": recent_completions > 0 or len(active_work) > 0,
+def collect_metrics():
+    """Collect system metrics from GitHub Issues"""
+    metrics = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "tasks": {},
+        "agents": {},
+        "health": {}
     }
-
-    # Overall health score
-    health_checks = list(status["health"].values())
+    
+    # Get all conductor task issues
+    output = run_gh_command([
+        "issue", "list",
+        "-l", "conductor:task",
+        "--state", "all",
+        "--limit", "1000",
+        "--json", "number,title,state,assignees,labels,createdAt,updatedAt,closedAt"
+    ])
+    
+    if not output:
+        return metrics
+    
+    try:
+        all_issues = json.loads(output)
+    except json.JSONDecodeError:
+        return metrics
+    
+    # Categorize issues
+    available_tasks = []
+    assigned_tasks = []
+    completed_tasks = []
+    
+    for issue in all_issues:
+        if issue["state"] == "OPEN":
+            if issue.get("assignees"):
+                assigned_tasks.append(issue)
+            else:
+                available_tasks.append(issue)
+        else:  # CLOSED
+            completed_tasks.append(issue)
+    
+    metrics["tasks"]["available"] = len(available_tasks)
+    metrics["tasks"]["assigned"] = len(assigned_tasks)
+    metrics["tasks"]["completed"] = len(completed_tasks)
+    metrics["tasks"]["total"] = len(all_issues)
+    
+    # Analyze available tasks
+    tasks_by_effort = defaultdict(int)
+    tasks_by_priority = defaultdict(int)
+    tasks_by_skill = defaultdict(int)
+    
+    for task in available_tasks:
+        for label in task.get("labels", []):
+            name = label["name"]
+            if name.startswith("effort:"):
+                tasks_by_effort[name.replace("effort:", "")] += 1
+            elif name.startswith("priority:"):
+                tasks_by_priority[name.replace("priority:", "")] += 1
+            elif name.startswith("skill:"):
+                tasks_by_skill[name.replace("skill:", "")] += 1
+        
+        # Default counts
+        if not any(l["name"].startswith("effort:") for l in task.get("labels", [])):
+            tasks_by_effort["unspecified"] += 1
+        if not any(l["name"].startswith("priority:") for l in task.get("labels", [])):
+            tasks_by_priority["unspecified"] += 1
+        if not any(l["name"].startswith("skill:") for l in task.get("labels", [])):
+            tasks_by_skill["general"] += 1
+    
+    metrics["tasks"]["by_effort"] = dict(tasks_by_effort)
+    metrics["tasks"]["by_priority"] = dict(tasks_by_priority)
+    metrics["tasks"]["by_skill"] = dict(tasks_by_skill)
+    
+    # Calculate completion metrics
+    now = datetime.utcnow()
+    day_ago = now - timedelta(days=1)
+    week_ago = now - timedelta(days=7)
+    
+    completions_24h = 0
+    completions_7d = 0
+    
+    for task in completed_tasks:
+        if task.get("closedAt"):
+            closed_at = datetime.fromisoformat(
+                task["closedAt"].replace("Z", "+00:00")
+            ).replace(tzinfo=None)
+            
+            if closed_at >= day_ago:
+                completions_24h += 1
+            if closed_at >= week_ago:
+                completions_7d += 1
+    
+    metrics["tasks"]["completions_24h"] = completions_24h
+    metrics["tasks"]["completions_7d"] = completions_7d
+    
+    # Analyze active agents (from assigned tasks)
+    active_agents = {}
+    stale_agents = 0
+    
+    for task in assigned_tasks:
+        # Get last activity from comments
+        issue_number = task["number"]
+        comments_output = run_gh_command([
+            "issue", "view", str(issue_number),
+            "--json", "comments",
+            "--jq", '.comments[-1]'  # Get last comment
+        ])
+        
+        if comments_output:
+            try:
+                last_comment = json.loads(comments_output)
+                if last_comment and ("Agent Claimed Task" in last_comment.get("body", "") or 
+                                   "Heartbeat" in last_comment.get("body", "")):
+                    comment_time = datetime.fromisoformat(
+                        last_comment["createdAt"].replace("Z", "+00:00")
+                    ).replace(tzinfo=None)
+                    
+                    # Check if stale (no activity in 30 minutes)
+                    if (now - comment_time).total_seconds() > 1800:
+                        stale_agents += 1
+            except (json.JSONDecodeError, KeyError):
+                pass
+    
+    metrics["agents"]["active"] = len(assigned_tasks)
+    metrics["agents"]["stale"] = stale_agents
+    
+    # Calculate health metrics
+    metrics["health"]["has_available_tasks"] = metrics["tasks"]["available"] > 0
+    metrics["health"]["has_active_agents"] = metrics["agents"]["active"] > 0
+    metrics["health"]["low_stale_ratio"] = (
+        metrics["agents"]["stale"] < metrics["agents"]["active"] * 0.3
+        if metrics["agents"]["active"] > 0 else True
+    )
+    metrics["health"]["recent_activity"] = (
+        completions_24h > 0 or metrics["agents"]["active"] > 0
+    )
+    
+    # Calculate health score
+    health_checks = [v for k, v in metrics["health"].items() if k != "score"]
     health_score = sum(health_checks) / len(health_checks) if health_checks else 0
-    status["health_score"] = round(health_score, 2)
-
-    # Update timestamp
-    status["last_updated"] = current_time.isoformat()
-
-    return status
+    metrics["health"]["score"] = round(health_score, 2)
+    
+    return metrics
 
 
-def print_status_summary(status):
-    """Print a human-readable status summary"""
-    print("📊 System Status Summary")
-    print("=" * 30)
-    print(f"Active Agents: {status.get('active_agents', 0)}")
-    print(f"Available Tasks: {status.get('available_tasks', 0)}")
-    print(f"Completed (24h): {status.get('completions_24h', 0)}")
-    print(f"Health Score: {status.get('health_score', 0):.0%}")
+def format_status_report(metrics):
+    """Format metrics as a status report"""
+    report = f"""## 🏥 Code-Conductor System Status
 
-    if status.get("stale_agents", 0) > 0:
-        print(f"⚠️  Stale Agents: {status['stale_agents']}")
+**Last Updated**: {metrics['timestamp']}
+**Health Score**: {metrics['health']['score']:.0%} {get_health_emoji(metrics['health']['score'])}
 
-    # Tasks breakdown
-    tasks_by_effort = status.get("tasks_by_effort", {})
-    if tasks_by_effort:
-        print("\nTasks by Effort:")
-        for effort, count in tasks_by_effort.items():
-            print(f"  {effort}: {count}")
+### 📊 Task Metrics
 
-    # Skills breakdown
-    tasks_by_skills = status.get("tasks_by_skills", {})
-    if tasks_by_skills:
-        print("\nTasks by Skills:")
-        for skill, count in tasks_by_skills.items():
-            print(f"  {skill}: {count}")
+| Metric | Count |
+|--------|-------|
+| Available Tasks | {metrics['tasks']['available']} |
+| Assigned Tasks | {metrics['tasks']['assigned']} |
+| Completed Tasks | {metrics['tasks']['completed']} |
+| Total Tasks | {metrics['tasks']['total']} |
+| Completions (24h) | {metrics['tasks']['completions_24h']} |
+| Completions (7d) | {metrics['tasks']['completions_7d']} |
 
-    print(f"\nLast Updated: {status.get('last_updated', 'Unknown')}")
+### 🤖 Agent Metrics
+
+| Metric | Count |
+|--------|-------|
+| Active Agents | {metrics['agents']['active']} |
+| Stale Agents | {metrics['agents']['stale']} |
+
+"""
+    
+    # Add task breakdown if available
+    if metrics['tasks']['available'] > 0:
+        report += "### 📋 Available Task Breakdown\n\n"
+        
+        if metrics['tasks']['by_effort']:
+            report += "**By Effort:**\n"
+            for effort, count in sorted(metrics['tasks']['by_effort'].items()):
+                report += f"- {effort}: {count}\n"
+            report += "\n"
+        
+        if metrics['tasks']['by_priority']:
+            report += "**By Priority:**\n"
+            for priority, count in sorted(metrics['tasks']['by_priority'].items()):
+                report += f"- {priority}: {count}\n"
+            report += "\n"
+        
+        if metrics['tasks']['by_skill']:
+            report += "**By Required Skills:**\n"
+            for skill, count in sorted(metrics['tasks']['by_skill'].items()):
+                report += f"- {skill}: {count}\n"
+            report += "\n"
+    
+    # Add health indicators
+    report += "### 🏥 Health Indicators\n\n"
+    report += f"- {'✅' if metrics['health']['has_available_tasks'] else '❌'} Has available tasks\n"
+    report += f"- {'✅' if metrics['health']['has_active_agents'] else '❌'} Has active agents\n"
+    report += f"- {'✅' if metrics['health']['low_stale_ratio'] else '❌'} Low stale agent ratio\n"
+    report += f"- {'✅' if metrics['health']['recent_activity'] else '❌'} Recent activity\n"
+    
+    # Add quick actions
+    report += "\n### 🚀 Quick Actions\n\n"
+    if metrics['tasks']['available'] == 0:
+        report += "- [Create a new task](../../issues/new?labels=conductor:task)\n"
+    if metrics['agents']['active'] == 0:
+        report += "- Launch an agent: `bash .conductor/scripts/bootstrap.sh dev`\n"
+    if metrics['agents']['stale'] > 0:
+        report += "- Clean up stale agents: `python .conductor/scripts/cleanup-stale.py`\n"
+    
+    report += "\n---\n*Updated automatically by Code-Conductor status monitor*"
+    
+    return report
+
+
+def get_health_emoji(score):
+    """Get emoji for health score"""
+    if score >= 0.8:
+        return "🟢"
+    elif score >= 0.6:
+        return "🟡"
+    elif score >= 0.4:
+        return "🟠"
+    else:
+        return "🔴"
+
+
+def update_status_issue(issue_number, report):
+    """Update the status issue with the latest report"""
+    # Update issue body
+    run_gh_command([
+        "issue", "edit", str(issue_number),
+        "--body", report
+    ])
+    
+    # Add update comment
+    comment = f"""### 📊 Status Updated
+
+System status has been refreshed with the latest metrics.
+
+View the updated status in the issue description above.
+
+*Timestamp: {datetime.utcnow().isoformat()}*"""
+    
+    run_gh_command([
+        "issue", "comment", str(issue_number),
+        "--body", comment
+    ])
+
+
+def print_summary(metrics):
+    """Print a summary to console"""
+    print("\n📊 System Status Summary")
+    print("=" * 40)
+    print(f"Health Score:      {metrics['health']['score']:.0%} {get_health_emoji(metrics['health']['score'])}")
+    print(f"Available Tasks:   {metrics['tasks']['available']}")
+    print(f"Active Agents:     {metrics['agents']['active']}")
+    print(f"Completions (24h): {metrics['tasks']['completions_24h']}")
+    
+    if metrics['agents']['stale'] > 0:
+        print(f"⚠️  Stale Agents:    {metrics['agents']['stale']}")
+    
+    print(f"\nLast Updated: {metrics['timestamp']}")
 
 
 def main():
     print("🔄 Updating system status...")
-
-    # Load current state
-    state = load_state()
-
-    # Update status
-    updated_status = update_system_status(state)
-
-    # Save state
-    save_state(state)
-
-    print("✅ System status updated")
-
+    
+    # Check GitHub CLI authentication
+    if not run_gh_command(["auth", "status"]):
+        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
+        sys.exit(1)
+    
+    # Get or create status issue
+    issue_number = get_status_issue()
+    if not issue_number:
+        print("❌ Failed to get or create status issue")
+        sys.exit(1)
+    
+    print(f"📍 Using status issue #{issue_number}")
+    
+    # Collect metrics
+    print("📊 Collecting system metrics...")
+    metrics = collect_metrics()
+    
+    # Format report
+    report = format_status_report(metrics)
+    
+    # Update status issue
+    print("✏️  Updating status issue...")
+    update_status_issue(issue_number, report)
+    
+    print("✅ System status updated successfully!")
+    
     # Print summary
-    print_status_summary(updated_status)
+    print_summary(metrics)
+    
+    print(f"\n🔗 View full status: gh issue view {issue_number}")
 
 
 if __name__ == "__main__":

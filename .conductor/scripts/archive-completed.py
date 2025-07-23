@@ -1,226 +1,299 @@
 #!/usr/bin/env python3
-"""Archive completed tasks and clean up workflow state"""
+"""Archive old completed tasks and generate cleanup reports using GitHub Issues"""
 
 import json
 import sys
-from pathlib import Path
+import subprocess
+import argparse
 from datetime import datetime, timedelta
 
 
-def load_state():
-    """Load workflow state"""
-    state_file = Path(".conductor/workflow-state.json")
-    if not state_file.exists():
-        print("❌ Workflow state file not found")
-        sys.exit(1)
+class TaskArchiver:
+    def __init__(self):
+        self.archived_count = 0
+        self.report_data = {}
 
-    try:
-        with open(state_file, "r") as f:
-            return json.load(f)
-    except json.JSONDecodeError:
-        print("❌ Invalid workflow state file")
-        sys.exit(1)
+    def run_gh_command(self, args):
+        """Run GitHub CLI command and return output"""
+        try:
+            result = subprocess.run(
+                ["gh"] + args,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            print(f"GitHub CLI error: {e.stderr}")
+            return ""
+        except FileNotFoundError:
+            print("GitHub CLI (gh) not found. Please install it.")
+            return ""
 
+    def get_closed_issues(self, days_back=90):
+        """Get closed conductor task issues within the specified time range"""
+        # Calculate the date range
+        since_date = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        
+        output = self.run_gh_command([
+            "issue", "list",
+            "-l", "conductor:task",
+            "--state", "closed",
+            "--limit", "1000",
+            "--json", "number,title,closedAt,labels",
+            "--search", f"closed:>={since_date}"
+        ])
+        
+        if not output:
+            return []
+        
+        try:
+            return json.loads(output)
+        except json.JSONDecodeError:
+            return []
 
-def save_state(state):
-    """Save workflow state"""
-    state_file = Path(".conductor/workflow-state.json")
-    try:
-        with open(state_file, "w") as f:
-            json.dump(state, f, indent=2)
-    except Exception as e:
-        print(f"❌ Failed to save state: {e}")
-        sys.exit(1)
+    def archive_old_issues(self, max_age_days=30, dry_run=False):
+        """Add archive label to closed issues older than max_age_days"""
+        print(f"🔍 Looking for closed issues older than {max_age_days} days...")
+        
+        # Get all closed issues
+        closed_issues = self.get_closed_issues(days_back=max_age_days + 30)
+        
+        if not closed_issues:
+            print("ℹ️  No closed issues found")
+            return
+        
+        current_time = datetime.utcnow()
+        cutoff_date = current_time - timedelta(days=max_age_days)
+        issues_to_archive = []
+        
+        for issue in closed_issues:
+            # Skip if already archived
+            if any(label["name"] == "conductor:archived" for label in issue.get("labels", [])):
+                continue
+            
+            closed_at_str = issue.get("closedAt")
+            if closed_at_str:
+                try:
+                    closed_at = datetime.fromisoformat(
+                        closed_at_str.replace("Z", "+00:00")
+                    ).replace(tzinfo=None)
+                    
+                    if closed_at < cutoff_date:
+                        issues_to_archive.append({
+                            "number": issue["number"],
+                            "title": issue["title"],
+                            "closed_at": closed_at_str
+                        })
+                except ValueError:
+                    continue
+        
+        if not issues_to_archive:
+            print("ℹ️  No issues need archiving")
+            return
+        
+        print(f"📦 Found {len(issues_to_archive)} issue(s) to archive")
+        
+        if not dry_run:
+            for issue in issues_to_archive:
+                print(f"  - Archiving issue #{issue['number']}: {issue['title']}")
+                
+                # Add archive label
+                self.run_gh_command([
+                    "issue", "edit", str(issue["number"]),
+                    "--add-label", "conductor:archived"
+                ])
+                
+                # Add archive comment
+                archive_comment = f"""### 📦 Task Archived
 
+This completed task has been archived after {max_age_days} days.
 
-def archive_completed_tasks(state, max_age_days=30):
-    """Archive completed tasks older than max_age_days"""
-    if "completed_work" not in state:
-        state["completed_work"] = []
+- **Closed at**: {issue['closed_at']}
+- **Archive date**: {current_time.isoformat()}
 
-    current_time = datetime.utcnow()
-    cutoff_date = current_time - timedelta(days=max_age_days)
-
-    # Separate recent and old completed work
-    recent_completed = []
-    archived_count = 0
-
-    for work in state["completed_work"]:
-        completed_at_str = work.get("completed_at")
-        if completed_at_str:
-            try:
-                completed_at = datetime.fromisoformat(
-                    completed_at_str.replace("Z", "+00:00")
-                )
-                if completed_at >= cutoff_date:
-                    recent_completed.append(work)
-                else:
-                    archived_count += 1
-            except ValueError:
-                # Keep items with invalid dates
-                recent_completed.append(work)
+This helps keep the active task list manageable while preserving history.
+"""
+                
+                self.run_gh_command([
+                    "issue", "comment", str(issue["number"]),
+                    "--body", archive_comment
+                ])
+                
+                self.archived_count += 1
         else:
-            # Keep items without completion dates
-            recent_completed.append(work)
+            print("(DRY RUN - no changes made)")
+            for issue in issues_to_archive:
+                print(f"  - Would archive issue #{issue['number']}: {issue['title']}")
+            self.archived_count = len(issues_to_archive)
 
-    # Update completed work to only include recent items
-    state["completed_work"] = recent_completed
+    def generate_metrics_report(self):
+        """Generate system metrics report"""
+        print("\n📊 Generating system metrics...")
+        
+        # Get counts for different states
+        metrics = {}
+        
+        # Open tasks (available)
+        output = self.run_gh_command([
+            "issue", "list",
+            "-l", "conductor:task",
+            "--state", "open",
+            "--assignee", "!*",  # Not assigned
+            "--json", "number",
+            "--jq", '. | length'
+        ])
+        metrics["available_tasks"] = int(output) if output.isdigit() else 0
+        
+        # Assigned tasks
+        output = self.run_gh_command([
+            "issue", "list",
+            "-l", "conductor:task",
+            "--state", "open",
+            "--assignee", "*",  # Has assignee
+            "--json", "number",
+            "--jq", '. | length'
+        ])
+        metrics["assigned_tasks"] = int(output) if output.isdigit() else 0
+        
+        # Completed tasks (closed, not archived)
+        output = self.run_gh_command([
+            "issue", "list",
+            "-l", "conductor:task,!conductor:archived",
+            "--state", "closed",
+            "--json", "number",
+            "--jq", '. | length'
+        ])
+        metrics["completed_tasks"] = int(output) if output.isdigit() else 0
+        
+        # Archived tasks
+        output = self.run_gh_command([
+            "issue", "list",
+            "-l", "conductor:task,conductor:archived",
+            "--state", "closed",
+            "--json", "number",
+            "--jq", '. | length'
+        ])
+        metrics["archived_tasks"] = int(output) if output.isdigit() else 0
+        
+        # Recent completions (last 24h)
+        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+        output = self.run_gh_command([
+            "issue", "list",
+            "-l", "conductor:task",
+            "--state", "closed",
+            "--search", f"closed:>={yesterday}",
+            "--json", "number",
+            "--jq", '. | length'
+        ])
+        metrics["recent_completions"] = int(output) if output.isdigit() else 0
+        
+        self.report_data = metrics
+        
+        # Display report
+        print("\n📊 System Metrics")
+        print("=" * 40)
+        print(f"Available Tasks:      {metrics['available_tasks']}")
+        print(f"Assigned Tasks:       {metrics['assigned_tasks']}")
+        print(f"Completed Tasks:      {metrics['completed_tasks']}")
+        print(f"Archived Tasks:       {metrics['archived_tasks']}")
+        print(f"Recent Completions:   {metrics['recent_completions']} (last 24h)")
+        print(f"Total Active:         {metrics['available_tasks'] + metrics['assigned_tasks']}")
 
-    if archived_count > 0:
-        print(
-            f"📦 Archived {archived_count} completed task(s) older than {max_age_days} days"
-        )
-    else:
-        print("ℹ️  No old completed tasks to archive")
-
-    return archived_count
-
-
-def clean_stale_active_work(state, stale_timeout_minutes=30):
-    """Move stale active work to completed with appropriate status"""
-    if "active_work" not in state:
-        state["active_work"] = {}
-
-    if "completed_work" not in state:
-        state["completed_work"] = []
-
-    current_time = datetime.utcnow()
-    stale_cutoff = current_time - timedelta(minutes=stale_timeout_minutes)
-
-    active_work = state["active_work"]
-    stale_agents = []
-
-    for agent_id, work in list(active_work.items()):
-        heartbeat_str = work.get("heartbeat")
-        if heartbeat_str:
+    def update_status_issue(self):
+        """Update the status issue with archive report"""
+        if self.archived_count == 0:
+            return
+        
+        # Find status issue
+        output = self.run_gh_command([
+            "issue", "list",
+            "-l", "conductor:status",
+            "--state", "open",
+            "--limit", "1",
+            "--json", "number"
+        ])
+        
+        status_issue_number = None
+        if output:
             try:
-                heartbeat = datetime.fromisoformat(heartbeat_str.replace("Z", "+00:00"))
-                if heartbeat < stale_cutoff:
-                    stale_agents.append(agent_id)
-            except ValueError:
-                # Consider items with invalid heartbeat as stale
-                stale_agents.append(agent_id)
-        else:
-            # Consider items without heartbeat as stale
-            stale_agents.append(agent_id)
+                issues = json.loads(output)
+                if issues:
+                    status_issue_number = issues[0]["number"]
+            except json.JSONDecodeError:
+                pass
+        
+        if status_issue_number:
+            # Add archive report
+            archive_report = f"""### 📦 Archive Report
 
-    # Move stale work to completed
-    cleaned_count = 0
-    for agent_id in stale_agents:
-        work = active_work.pop(agent_id)
+**Timestamp**: {datetime.utcnow().isoformat()}
+**Archived**: {self.archived_count} tasks
 
-        # Mark as abandoned
-        work["status"] = "abandoned"
-        work["completed_at"] = current_time.isoformat()
-        work["abandonment_reason"] = "stale_heartbeat"
+#### System Metrics:
+- Available Tasks: {self.report_data.get('available_tasks', 0)}
+- Assigned Tasks: {self.report_data.get('assigned_tasks', 0)}
+- Completed Tasks: {self.report_data.get('completed_tasks', 0)}
+- Archived Tasks: {self.report_data.get('archived_tasks', 0)}
+- Recent Completions (24h): {self.report_data.get('recent_completions', 0)}
 
-        state["completed_work"].append(work)
-        cleaned_count += 1
-
-    if cleaned_count > 0:
-        print(f"🧹 Moved {cleaned_count} stale agent(s) to completed work")
-    else:
-        print("ℹ️  No stale active work found")
-
-    return cleaned_count
-
-
-def optimize_state_file(state):
-    """Optimize state file by removing redundant data and organizing"""
-    # Ensure all required sections exist
-    if "active_work" not in state:
-        state["active_work"] = {}
-    if "available_tasks" not in state:
-        state["available_tasks"] = []
-    if "completed_work" not in state:
-        state["completed_work"] = []
-    if "system_status" not in state:
-        state["system_status"] = {}
-
-    # Sort tasks by creation date (newest first)
-    for task_list in [state["available_tasks"], state["completed_work"]]:
-        if isinstance(task_list, list):
-            task_list.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-
-    # Update system status
-    state["system_status"]["last_cleanup"] = datetime.utcnow().isoformat()
-
-    print("✨ Optimized state file structure")
-
-
-def generate_cleanup_report(state, archived_count, cleaned_count):
-    """Generate a summary report of cleanup actions"""
-    print("\n📊 Cleanup Summary")
-    print("=" * 30)
-
-    current_metrics = {
-        "active_agents": len(state.get("active_work", {})),
-        "available_tasks": len(state.get("available_tasks", [])),
-        "completed_tasks": len(state.get("completed_work", [])),
-        "archived_tasks": archived_count,
-        "cleaned_stale": cleaned_count,
-    }
-
-    for metric, value in current_metrics.items():
-        print(f"{metric.replace('_', ' ').title()}: {value}")
-
-    print(f"\nCleanup completed at: {datetime.utcnow().isoformat()}")
+---
+*Automated archival by Code-Conductor*"""
+            
+            self.run_gh_command([
+                "issue", "comment", str(status_issue_number),
+                "--body", archive_report
+            ])
 
 
 def main():
-    import argparse
-
     parser = argparse.ArgumentParser(
-        description="Archive completed tasks and clean up state"
+        description="Archive old completed tasks and generate reports"
     )
     parser.add_argument(
         "--max-age",
         type=int,
         default=30,
-        help="Maximum age in days for completed tasks (default: 30)",
-    )
-    parser.add_argument(
-        "--stale-timeout",
-        type=int,
-        default=30,
-        help="Stale timeout in minutes for active work (default: 30)",
+        help="Maximum age in days for completed tasks before archiving (default: 30)",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would be done without making changes",
     )
+    parser.add_argument(
+        "--skip-metrics",
+        action="store_true",
+        help="Skip generating metrics report",
+    )
 
     args = parser.parse_args()
 
-    print("🧹 Starting cleanup and archival process...")
-
-    # Load current state
-    state = load_state()
-
+    print("🧹 Starting archive and cleanup process...")
+    
+    archiver = TaskArchiver()
+    
+    # Check GitHub CLI authentication
+    if not archiver.run_gh_command(["auth", "status"]):
+        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
+        sys.exit(1)
+    
+    # Archive old issues
+    archiver.archive_old_issues(max_age_days=args.max_age, dry_run=args.dry_run)
+    
+    # Generate metrics report
+    if not args.skip_metrics:
+        archiver.generate_metrics_report()
+    
+    # Update status issue
+    if not args.dry_run and archiver.archived_count > 0:
+        archiver.update_status_issue()
+    
+    print(f"\n✅ Archive process completed")
+    print(f"   Archived: {archiver.archived_count} tasks")
+    
     if args.dry_run:
-        print("(DRY RUN - no changes will be made)")
-
-    # Archive old completed tasks
-    archived_count = 0 if args.dry_run else archive_completed_tasks(state, args.max_age)
-
-    # Clean stale active work
-    cleaned_count = (
-        0 if args.dry_run else clean_stale_active_work(state, args.stale_timeout)
-    )
-
-    # Optimize state file
-    if not args.dry_run:
-        optimize_state_file(state)
-        save_state(state)
-
-    # Generate report
-    generate_cleanup_report(state, archived_count, cleaned_count)
-
-    if args.dry_run:
-        print("\nRun without --dry-run to perform cleanup")
-    else:
-        print("\n✅ Cleanup completed successfully")
+        print("\nRun without --dry-run to perform archival")
 
 
 if __name__ == "__main__":

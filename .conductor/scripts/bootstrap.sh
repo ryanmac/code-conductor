@@ -14,6 +14,19 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
+# Check for GitHub CLI
+if ! command -v gh &> /dev/null; then
+    echo "❌ GitHub CLI (gh) not found. Please install it first:"
+    echo "   https://cli.github.com/"
+    exit 1
+fi
+
+# Check GitHub authentication
+if ! gh auth status >/dev/null 2>&1; then
+    echo "❌ GitHub CLI not authenticated. Run 'gh auth login' first."
+    exit 1
+fi
+
 # Determine agent role
 AGENT_ROLE=${AGENT_ROLE:-$(echo "$1" | tr '[:upper:]' '[:lower:]')}
 if [ -z "$AGENT_ROLE" ] || [ "$AGENT_ROLE" = "unknown" ]; then
@@ -77,7 +90,9 @@ if [ "$TASK_STATUS" = "IDLE" ]; then
     echo ""
     echo "💡 To create tasks:"
     echo "   - Create a GitHub Issue with 'conductor:task' label"
-    echo "   - Or manually add tasks to .conductor/workflow-state.json"
+    echo "   - Or use: gh issue create --label 'conductor:task' --title 'Task title' --body 'Description'"
+    echo ""
+    echo "📋 View all tasks: gh issue list -l 'conductor:task'"
     echo ""
     echo "🔄 Check back later when new tasks are available."
     exit 0
@@ -206,16 +221,18 @@ except:
     echo ""
     echo "📚 Task Resources:"
     echo "   - Role guide: $ROLE_FILE"
-    echo "   - System state: .conductor/workflow-state.json"
-    echo "   - Task specs: Check task description for documentation links"
+    echo "   - View task: gh issue view $TASK_ID"
+    echo "   - Add progress: gh issue comment $TASK_ID --body 'Progress update...'"
+    echo "   - View all tasks: gh issue list -l 'conductor:task'"
 
     echo ""
     echo "💡 Pro Tips:"
     echo "   - Commit frequently with clear messages"
     echo "   - Run tests before pushing"
-    echo "   - Update task status via PR description"
+    echo "   - Update task progress via issue comments"
+    echo "   - Complete task: gh issue close $TASK_ID"
 
 else
     echo "❌ Unexpected task status: $TASK_STATUS"
     exit 1
-fi 
+fi

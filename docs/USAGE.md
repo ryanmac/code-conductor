@@ -123,8 +123,8 @@ screen -S conductor-task
 cd worktrees/agent-dev-task_001
 
 # Your task details are here:
-cat .conductor/workflow-state.json  # Check your task
-ls -la                              # See the isolated branch
+gh issue view $(basename $PWD | grep -o '[0-9]*$')  # View your assigned issue
+ls -la                                               # See the isolated branch
 
 # Start your development session
 # (Open your preferred editor, IDE, or Claude session here)
@@ -220,20 +220,18 @@ python .conductor/scripts/validate-config.py
 3. Use the issue template for structured task data
 4. The system automatically converts it to a task
 
-#### Via Direct State Modification
+#### Via GitHub CLI
 ```bash
-# Edit the state file directly (advanced)
-nano .conductor/workflow-state.json
+# Create a task using GitHub CLI
+gh issue create \
+  --title "Your task title" \
+  --body "## Description
+Detailed description
 
-# Add to "available_tasks" array
-{
-  "id": "custom_task_001",
-  "title": "Your task title",
-  "description": "Detailed description",
-  "estimated_effort": "medium",
-  "required_skills": [],
-  "files_locked": ["src/api/auth.py"]
-}
+## Success Criteria
+- List success criteria here" \
+  --label "conductor:task" \
+  --label "effort:medium"
 ```
 
 ### Worktree Management
@@ -272,7 +270,7 @@ python .conductor/scripts/cleanup-worktrees.py --force
 - **Commit often**: Small, atomic commits are easier to review
 - **Clear messages**: Use conventional commit format
 - **Test locally**: Run tests before pushing
-- **Update task status**: Keep the system informed of progress
+- **Update progress**: Add comments to your assigned issue to track progress
 
 ---
 
@@ -283,7 +281,7 @@ python .conductor/scripts/cleanup-worktrees.py --force
 **"No tasks available"**
 ```bash
 # Check if tasks exist
-cat .conductor/workflow-state.json | jq '.available_tasks'
+gh issue list -l 'conductor:task' --assignee '!*' --state open
 
 # Create a test task via GitHub issue
 gh issue create --title "Test task" --label "conductor:task"

@@ -1,36 +1,42 @@
 #!/usr/bin/env python3
-"""Convert GitHub Issue to Conductor Task"""
+"""Format GitHub Issue as a Conductor Task"""
 
 import json
 import sys
 import argparse
 import subprocess
-from pathlib import Path
 from datetime import datetime
 
 
-def get_issue_details(issue_number):
-    """Get issue details from GitHub CLI"""
+def run_gh_command(args):
+    """Run GitHub CLI command and return output"""
     try:
         result = subprocess.run(
-            [
-                "gh",
-                "issue",
-                "view",
-                str(issue_number),
-                "--json",
-                "title,body,labels,assignees,state",
-            ],
+            ["gh"] + args,
             capture_output=True,
             text=True,
-            check=True,
+            check=True
         )
-        return json.loads(result.stdout)
+        return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to fetch issue #{issue_number}: {e}")
+        print(f"❌ GitHub CLI error: {e.stderr}")
         sys.exit(1)
     except FileNotFoundError:
         print("❌ GitHub CLI (gh) not found. Please install it.")
+        sys.exit(1)
+
+
+def get_issue_details(issue_number):
+    """Get issue details from GitHub"""
+    output = run_gh_command([
+        "issue", "view", str(issue_number),
+        "--json", "title,body,labels,assignees,state"
+    ])
+    
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError:
+        print(f"❌ Failed to parse issue #{issue_number}")
         sys.exit(1)
 
 
@@ -62,177 +68,205 @@ def parse_issue_body(body):
     return metadata
 
 
-def extract_task_data(issue, metadata, issue_number):
-    """Extract task data from issue and metadata"""
-    # Extract labels
-    labels = [label["name"] for label in issue.get("labels", [])]
-
-    # Determine required skills
-    required_skills = []
-    for label in labels:
-        if label.startswith("skill:"):
-            required_skills.append(label.replace("skill:", ""))
-        elif label in ["devops", "security", "ui-designer", "rust-dev"]:
-            required_skills.append(label)
-
-    # Determine effort level
-    effort = "medium"  # default
-    for label in labels:
-        if label.startswith("effort:"):
-            effort = label.replace("effort:", "")
-        elif label in ["small", "medium", "large"]:
-            effort = label
-
-    # Extract files from metadata or estimate from title/body
-    files_involved = []
-    if "files" in metadata:
-        files_involved = [f.strip() for f in metadata["files"].split("\n") if f.strip()]
-
-    # Build task
-    task = {
-        "id": f"issue_{issue_number}",
-        "title": issue["title"],
-        "description": metadata.get("description", issue["title"]),
-        "specs": metadata.get("specifications", f"GitHub Issue #{issue_number}"),
-        "best_practices": [],
-        "success_criteria": {},
-        "required_skills": required_skills,
-        "estimated_effort": effort,
-        "files_locked": files_involved,
-        "dependencies": [],
-        "source": {
-            "type": "github_issue",
-            "issue_number": issue_number,
-            "url": f"https://github.com/ryanmac/Code-Conductor/issues/{issue_number}",
-        },
-        "created_at": datetime.utcnow().isoformat(),
-    }
-
-    # Parse best practices if available
-    if "best practices" in metadata:
-        task["best_practices"] = [
-            bp.strip("- ").strip()
-            for bp in metadata["best practices"].split("\n")
-            if bp.strip()
-        ]
-
-    # Parse success criteria
-    if "success criteria" in metadata:
-        criteria_text = metadata["success criteria"]
-        if criteria_text:
-            # Try to parse as key-value pairs
-            criteria = {}
-            for line in criteria_text.split("\n"):
-                if ":" in line:
-                    key, value = line.split(":", 1)
-                    criteria[key.strip("- ").strip()] = value.strip()
-                else:
-                    criteria["completion"] = criteria_text
-            task["success_criteria"] = criteria
-
-    return task
-
-
-def add_task_to_state(task):
-    """Add task to workflow state"""
-    state_file = Path(".conductor/workflow-state.json")
-
-    if not state_file.exists():
-        print("❌ Workflow state file not found")
-        sys.exit(1)
-
-    try:
-        with open(state_file, "r") as f:
-            state = json.load(f)
-    except json.JSONDecodeError:
-        print("❌ Invalid workflow state file")
-        sys.exit(1)
-
-    # Check if task already exists
-    existing_task = None
-    for i, existing in enumerate(state.get("available_tasks", [])):
-        if existing.get("id") == task["id"]:
-            existing_task = i
-            break
-
-    if existing_task is not None:
-        # Update existing task
-        state["available_tasks"][existing_task] = task
-        print(f"✅ Updated existing task: {task['id']}")
+def format_task_body(issue, metadata):
+    """Format issue body with conductor task structure"""
+    title = issue["title"]
+    existing_body = issue.get("body", "")
+    
+    # If body already has good structure, preserve it
+    if any(section in existing_body.lower() for section in ["## description", "## specifications", "## success criteria"]):
+        return existing_body
+    
+    # Otherwise, create structured body
+    body_parts = []
+    
+    # Description
+    body_parts.append("## Description")
+    if "description" in metadata:
+        body_parts.append(metadata["description"])
+    elif existing_body:
+        # Use first paragraph as description
+        desc_lines = []
+        for line in existing_body.split("\n"):
+            if line.strip():
+                desc_lines.append(line)
+            else:
+                break
+        body_parts.append("\n".join(desc_lines) if desc_lines else title)
     else:
-        # Add new task
-        if "available_tasks" not in state:
-            state["available_tasks"] = []
-        state["available_tasks"].append(task)
-        print(f"✅ Added new task: {task['id']}")
+        body_parts.append(title)
+    
+    # Specifications
+    body_parts.append("\n## Specifications")
+    if "specifications" in metadata:
+        body_parts.append(metadata["specifications"])
+    else:
+        body_parts.append("- [ ] Implement the feature/fix as described")
+        body_parts.append("- [ ] Add appropriate tests")
+        body_parts.append("- [ ] Update documentation if needed")
+    
+    # Success Criteria
+    body_parts.append("\n## Success Criteria")
+    if "success criteria" in metadata:
+        body_parts.append(metadata["success criteria"])
+    else:
+        body_parts.append("- All tests pass")
+        body_parts.append("- Code follows project conventions")
+        body_parts.append("- Feature works as described")
+    
+    # Files (if specified)
+    if "files" in metadata:
+        body_parts.append("\n## Files Involved")
+        body_parts.append(metadata["files"])
+    
+    # Best Practices (if specified)
+    if "best practices" in metadata:
+        body_parts.append("\n## Best Practices")
+        body_parts.append(metadata["best practices"])
+    
+    return "\n".join(body_parts)
 
-    # Update system status
-    if "system_status" not in state:
-        state["system_status"] = {}
-    state["system_status"]["last_updated"] = datetime.utcnow().isoformat()
 
-    # Write back to file
-    try:
-        with open(state_file, "w") as f:
-            json.dump(state, f, indent=2)
-        print("✅ State file updated")
-    except Exception as e:
-        print(f"❌ Failed to write state file: {e}")
-        sys.exit(1)
+def add_conductor_labels(issue_number, issue_labels):
+    """Add appropriate conductor labels to issue"""
+    existing_labels = [label["name"] for label in issue_labels]
+    labels_to_add = []
+    
+    # Always add conductor:task if not present
+    if "conductor:task" not in existing_labels:
+        labels_to_add.append("conductor:task")
+    
+    # Check for effort labels
+    has_effort = any(label.startswith("effort:") for label in existing_labels)
+    if not has_effort and not any(label in ["small", "medium", "large"] for label in existing_labels):
+        labels_to_add.append("effort:medium")  # Default effort
+    
+    # Check for priority labels
+    has_priority = any(label.startswith("priority:") for label in existing_labels)
+    if not has_priority and not any(label in ["high", "medium", "low"] for label in existing_labels):
+        labels_to_add.append("priority:medium")  # Default priority
+    
+    # Add labels if needed
+    if labels_to_add:
+        print(f"📎 Adding labels: {', '.join(labels_to_add)}")
+        for label in labels_to_add:
+            run_gh_command([
+                "issue", "edit", str(issue_number),
+                "--add-label", label
+            ])
+    
+    return labels_to_add
+
+
+def format_issue_as_task(issue_number, dry_run=False):
+    """Format a GitHub issue as a conductor task"""
+    print(f"🔄 Processing issue #{issue_number}...")
+    
+    # Get issue details
+    issue = get_issue_details(issue_number)
+    
+    # Check if issue is open
+    if issue.get("state") != "OPEN":
+        print(f"⚠️  Issue #{issue_number} is not open")
+        return False
+    
+    # Parse existing body
+    metadata = parse_issue_body(issue.get("body", ""))
+    
+    # Format body with conductor structure
+    new_body = format_task_body(issue, metadata)
+    
+    if dry_run:
+        print("\n📋 Changes that would be made:")
+        print("\nFormatted body:")
+        print("-" * 40)
+        print(new_body)
+        print("-" * 40)
+        
+        # Check what labels would be added
+        existing_labels = [label["name"] for label in issue.get("labels", [])]
+        if "conductor:task" not in existing_labels:
+            print("\nWould add label: conductor:task")
+        if not any(label.startswith("effort:") or label in ["small", "medium", "large"] for label in existing_labels):
+            print("Would add label: effort:medium")
+        if not any(label.startswith("priority:") or label in ["high", "medium", "low"] for label in existing_labels):
+            print("Would add label: priority:medium")
+    else:
+        # Update issue body if changed
+        if new_body != issue.get("body", ""):
+            print("📝 Updating issue body with conductor structure...")
+            run_gh_command([
+                "issue", "edit", str(issue_number),
+                "--body", new_body
+            ])
+        
+        # Add conductor labels
+        labels_added = add_conductor_labels(issue_number, issue.get("labels", []))
+        
+        # Add formatting comment
+        if labels_added or new_body != issue.get("body", ""):
+            comment = """### 🎼 Issue Formatted as Conductor Task
+
+This issue has been formatted to work with the Code-Conductor system.
+
+**What changed:**
+"""
+            if new_body != issue.get("body", ""):
+                comment += "- ✅ Body structured with Description, Specifications, and Success Criteria\n"
+            if labels_added:
+                comment += f"- ✅ Added labels: {', '.join(labels_added)}\n"
+            
+            comment += """
+**Next steps:**
+1. Review and adjust the task description if needed
+2. Add skill labels if specific expertise is required (e.g., `skill:rust`, `skill:frontend`)
+3. Adjust effort/priority labels if needed
+4. The task is now ready for agents to claim!
+
+Use `python .conductor/scripts/bootstrap.sh dev` to claim this task.
+"""
+            
+            run_gh_command([
+                "issue", "comment", str(issue_number),
+                "--body", comment
+            ])
+        
+        print(f"\n✅ Issue #{issue_number} formatted as conductor task!")
+        print(f"   Title: {issue['title']}")
+        print("   Status: Ready for agents to claim")
+    
+    return True
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert GitHub Issue to Conductor Task"
+        description="Format GitHub Issue as a Conductor Task"
     )
     parser.add_argument(
-        "--issue-number", type=int, required=True, help="GitHub issue number"
+        "issue_number", 
+        type=int, 
+        help="GitHub issue number to format"
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would be done without making changes",
     )
-
+    
     args = parser.parse_args()
-    issue_number = args.issue_number
-
-    print(f"🔄 Processing issue #{issue_number}...")
-
-    # Get issue details
-    issue = get_issue_details(issue_number)
-
-    # Check if issue has conductor:task label
-    labels = [label["name"] for label in issue.get("labels", [])]
-    if "conductor:task" not in labels:
-        print(f"⚠️  Issue #{issue_number} doesn't have 'conductor:task' label")
-        print("Add the label and try again.")
+    
+    # Check GitHub CLI authentication
+    if not run_gh_command(["auth", "status"]):
+        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
         sys.exit(1)
-
-    # Check if issue is open
-    if issue.get("state") != "open":
-        print(f"⚠️  Issue #{issue_number} is not open")
-        sys.exit(1)
-
-    # Parse issue body for metadata
-    metadata = parse_issue_body(issue.get("body", ""))
-
-    # Create task
-    task = extract_task_data(issue, metadata, issue_number)
-
-    if args.dry_run:
-        print("\n📋 Task that would be created:")
-        print(json.dumps(task, indent=2))
-        print("\n(Use without --dry-run to actually create the task)")
-    else:
-        # Add to state
-        add_task_to_state(task)
-        print("\n🎯 Task created successfully!")
-        print(f"   Title: {task['title']}")
-        print(f"   ID: {task['id']}")
-        print(f"   Effort: {task['estimated_effort']}")
-        if task["required_skills"]:
-            print(f"   Skills: {', '.join(task['required_skills'])}")
+    
+    # Format the issue
+    success = format_issue_as_task(args.issue_number, args.dry_run)
+    
+    if args.dry_run and success:
+        print("\nRun without --dry-run to apply these changes.")
+    
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

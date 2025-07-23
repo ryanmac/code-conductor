@@ -60,6 +60,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔒 Code-reviewer role always included in auto-configuration
 - 📋 Demo tasks only created if none exist
 
+## [2.0.0] - 2025-07-23
+
+### Changed - BREAKING
+- 🚀 **GitHub-Native State Management**: Migrated from local JSON files to GitHub Issues API
+  - Tasks are now GitHub Issues with `conductor:task` label
+  - Agent assignments use GitHub's native issue assignment
+  - Heartbeats tracked via issue comments
+  - Eliminated `workflow-state.json` file completely
+- 🔄 **All Core Scripts Updated**: Rewritten to use GitHub CLI (`gh`) commands
+  - `task-claim.py` - Claims tasks by assigning issues
+  - `health-check.py` - Monitors agent activity via issue comments
+  - `cleanup-stale.py` - Unassigns stale issues instead of JSON edits
+  - `update-status.py` - Uses dedicated status issue for metrics
+  - `generate-summary.py` - Queries issues for system reports
+- 📊 **Status Tracking**: System status now tracked in dedicated GitHub issue
+  - Single `conductor:status` labeled issue for system health
+  - Real-time metrics from issue and comment analysis
+  - GitHub Actions updates status automatically
+
+### Added
+- 🔄 **Migration Tool**: `migrate-to-github.py` for existing users
+  - Converts `workflow-state.json` tasks to GitHub Issues
+  - Preserves all task metadata and history
+  - Supports dry-run mode for safety
+  - Archives old JSON files after migration
+- 🏷️ **Rich Label System**: Comprehensive task categorization
+  - `conductor:task` - Core task identifier
+  - `effort:small/medium/large` - Task size estimation
+  - `priority:low/medium/high` - Task prioritization
+  - `skill:*` - Required skill tags
+  - `conductor:in-progress` - Active work indicator
+  - `conductor:archived` - Completed task archive
+- 🔔 **GitHub Events Integration**: Workflows triggered by issue events
+  - Automatic task processing on issue creation
+  - Real-time updates on label changes
+  - Agent activity tracking via comments
+- 🛠️ **Enhanced CLI Helpers**: New commands in worktree-helper.sh
+  - `gti <number>` - View specific task issue
+  - `gtn` - Create new task issue
+  - `gtst` - View system status issue
+  - Updated `gtl` to use GitHub CLI
+
+### Improved
+- ⚡ **Real-Time Synchronization**: No more file locking or race conditions
+  - GitHub's API ensures atomic operations
+  - Multiple agents can work without conflicts
+  - Instant visibility of task claims across team
+- 🔍 **Better Auditability**: Full history in GitHub's activity log
+  - Who claimed what task and when
+  - Complete comment history for each task
+  - Native GitHub notifications for updates
+- 🌐 **Remote Collaboration**: No local state files to sync
+  - Work from anywhere with GitHub access
+  - No dirty git states from JSON edits
+  - Clean separation of code and coordination
+
+### Fixed
+- 🐛 Eliminated race conditions in task claiming
+- 🔒 No more merge conflicts from `workflow-state.json`
+- 📱 Better mobile/web access to task state via GitHub
+
+### Migration Guide
+1. Ensure GitHub CLI is installed: `gh auth login`
+2. Run migration: `python .conductor/scripts/migrate-to-github.py`
+3. Verify tasks appear as GitHub Issues
+4. Remove old `workflow-state.json` files
+5. Update any custom scripts to use `gh` commands
+
 ## [1.0.1] - 2024-07-22
 
 ### Added

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Code Conductor is an AI agent coordination system designed to orchestrate multiple AI coding agents (like Claude Code, Conductor, Warp) working on the same codebase. It provides GitHub-native task management with automatic conflict prevention through git worktrees.
 
-**IMPORTANT**: This is a template repository. When you encounter Code Conductor files in a project, they have been imported to enable automated agent coordination. Work autonomously based on the task specifications in `workflow-state.json` and the guidance in these files.
+**IMPORTANT**: This is a template repository. When you encounter Code Conductor files in a project, they have been imported to enable automated agent coordination. Work autonomously based on GitHub Issues with the `conductor:task` label and the guidance in these files.
 
 ## Key Development Commands
 
@@ -54,11 +54,11 @@ python .conductor/scripts/health-check.py
    - Configures agent roles based on project type
    - Creates GitHub workflows for automation
 
-2. **Task Management** (`.conductor/workflow-state.json`)
-   - Central state file with atomic operations
-   - Tasks have unique IDs, specs, success criteria
-   - File locking prevents concurrent edits
-   - GitHub Issues integration via `conductor:task` label
+2. **Task Management** (GitHub Issues)
+   - GitHub Issues with `conductor:task` label serve as tasks
+   - Issues have unique numbers, descriptions, success criteria
+   - GitHub's atomic operations prevent race conditions
+   - Native integration with GitHub Projects and Actions
 
 3. **Agent Roles** (`.conductor/roles/`)
    - `dev.md` - Default generalist role for most tasks
@@ -68,7 +68,7 @@ python .conductor/scripts/health-check.py
 
 4. **Agent Coordination** (`.conductor/scripts/`)
    - `bootstrap.sh` - Universal agent initialization
-   - `task-claim.py` - Atomic task assignment with file locking
+   - `task-claim.py` - Task assignment via GitHub Issue assignment
    - `health-check.py` - Monitor agent heartbeats
    - `cleanup-stale.py` - Remove abandoned work
    - Git worktrees provide isolation between agents
@@ -81,10 +81,10 @@ python .conductor/scripts/health-check.py
 
 ### Key Design Patterns
 
-1. **Atomic Operations**: All state changes use file locking to prevent race conditions
+1. **Atomic Operations**: GitHub's issue assignment API ensures atomic task claiming
 2. **Worktree Isolation**: Each agent works in separate git worktree (`worktrees/agent-{role}-{task_id}`)
 3. **Heartbeat System**: Agents update timestamps; stale work auto-cleaned after timeout
-4. **File Conflict Prevention**: Tasks declare locked files; system prevents conflicting assignments
+4. **File Conflict Prevention**: Worktree isolation ensures agents work on separate branches
 5. **Self-Healing**: GitHub Actions monitor health, clean stale work, process issues
 
 ### Configuration Structure
@@ -143,7 +143,7 @@ When working in a project with Code Conductor:
 2. **Claim a task**: Use `python .conductor/scripts/task-claim.py --role [your-role]`
 3. **Work in isolation**: The bootstrap script creates your worktree automatically
 4. **Validate changes**: Always run the project's test/lint commands before committing
-5. **Complete work**: Update task status in workflow-state.json when done
+5. **Complete work**: Close the GitHub Issue when done
 
 ## Common Tasks
 
@@ -154,7 +154,7 @@ When working in a project with Code Conductor:
 
 ### Modifying Task Processing
 1. Core logic in `task-claim.py` for assignment
-2. State management in `workflow-state.json`
+2. State management via GitHub Issues and labels
 3. Update validation in `validate-config.py`
 
 ### Extending Stack Detection
@@ -164,7 +164,7 @@ When working in a project with Code Conductor:
 
 ## Important Notes
 
-- Always preserve atomic operations in state management
+- Always use GitHub CLI commands for state changes to ensure consistency
 - Maintain backward compatibility with existing conductor setups
 - Test with multiple Python versions (3.9-3.12)
 - Ensure GitHub Actions workflows remain functional
@@ -179,8 +179,8 @@ When working autonomously, validate your actions:
 # Before starting any task
 validations = {
     "environment": check_dependencies(),
-    "state": validate_workflow_state(),
-    "conflicts": check_file_locks(),
+    "github_auth": verify_github_cli_auth(),
+    "available_tasks": check_unassigned_issues(),
     "git": verify_clean_worktree()
 }
 if all(validations.values()):
@@ -196,7 +196,7 @@ post_checks = {
     "tests": run_project_tests(),
     "lint": run_linting_commands(),
     "build": verify_build_success(),
-    "state": confirm_state_consistency()
+    "pr_created": verify_pull_request_created()
 }
 ```
 
@@ -204,8 +204,8 @@ post_checks = {
 ```
 Validation Failed?
 ├─ Missing dependency → Install or use alternative
-├─ State corrupted → Restore from git or reinitialize
-├─ File locked → Work on different task
+├─ GitHub auth failed → Run 'gh auth login' or check credentials
+├─ No available tasks → Create new issue or wait for assignments
 ├─ Test failure → Fix or document known issue
 └─ Build failure → Rollback and try simpler approach
 ```

@@ -39,8 +39,10 @@ demo: ## Create and run a full demo
 	@echo "✅ Setup complete"
 	@echo ""
 	@echo "📋 Creating demo task..."
-	@cd /tmp/conductor-demo && echo '{"available_tasks":[{"id":"demo_001","title":"Add hello world feature","description":"Create a simple hello world function","estimated_effort":"small","required_skills":[],"files_locked":["src/hello.py"],"created_at":"'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}],"active_work":{},"completed_work":[],"system_status":{"last_updated":"'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}}' > .conductor/workflow-state.json
-	@echo "✅ Demo task created"
+	@echo "⚠️  Note: Demo tasks require GitHub CLI authentication."
+	@echo "   Run 'gh auth login' if not authenticated."
+	@echo "   Tasks will be created as GitHub Issues when you run bootstrap.sh"
+	@echo "✅ Demo environment ready"
 	@echo ""
 	@echo "🎯 Demo is ready!"
 	@echo "=================="
@@ -62,6 +64,17 @@ test: ## Run all system tests
 	@echo "🧪 Running Code Conductor Tests..."
 	@echo "=================================="
 	@echo ""
+	@echo "🔐 GitHub CLI check..."
+	@if command -v gh >/dev/null 2>&1; then \
+		if gh auth status >/dev/null 2>&1; then \
+			echo "✅ GitHub CLI authenticated"; \
+		else \
+			echo "⚠️  GitHub CLI not authenticated. Some tests may fail."; \
+		fi; \
+	else \
+		echo "⚠️  GitHub CLI not installed. Some tests will be skipped."; \
+	fi
+	@echo ""
 	@echo "📋 Configuration validation..."
 	@python .conductor/scripts/validate-config.py --strict
 	@echo "✅ Configuration valid"
@@ -74,9 +87,13 @@ test: ## Run all system tests
 	@bash -n .conductor/scripts/bootstrap.sh
 	@echo "✅ Bootstrap script syntax valid"
 	@echo ""
-	@echo "📊 Health check test..."
-	@python .conductor/scripts/health-check.py
-	@echo "✅ Health check working"
+	@if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then \
+		echo "📊 Health check test..."; \
+		GITHUB_TOKEN=$$(gh auth token) python .conductor/scripts/health-check.py; \
+		echo "✅ Health check working"; \
+	else \
+		echo "⏩ Skipping health check (requires GitHub CLI)"; \
+	fi
 	@echo ""
 	@echo "🎉 All tests passed!"
 
@@ -100,11 +117,15 @@ quick-start: ## Show quick start instructions
 	@echo "============================="
 	@echo ""
 	@echo "1. Install in your project:"
-	@echo "   curl -sSL https://github.com/ryanmac/code-conductor/raw/main/install.sh | bash"
+	@echo "   bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)"
 	@echo ""
-	@echo "2. Create a task via GitHub issue with 'conductor:task' label"
+	@echo "2. Authenticate GitHub CLI (if not already done):"
+	@echo "   gh auth login"
 	@echo ""
-	@echo "3. Launch an agent:"
+	@echo "3. Create a task via GitHub issue:"
+	@echo "   gh issue create --label 'conductor:task' --title 'Your task'"
+	@echo ""
+	@echo "4. Launch an agent:"
 	@echo "   bash .conductor/scripts/bootstrap.sh dev"
 	@echo ""
 	@echo "4. Open workspace in Conductor app (follow bootstrap instructions)"
