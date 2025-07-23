@@ -1,4 +1,4 @@
-"""Basic tests for conductor-score"""
+"""Basic tests for code-conductor"""
 
 import sys
 import yaml

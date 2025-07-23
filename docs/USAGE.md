@@ -1,6 +1,6 @@
-# 🎼 Conductor-Score Usage Guide
+# 🎼 Code Conductor Usage Guide
 
-This guide shows you two ways to use Conductor-Score: with the Conductor desktop app (macOS only) or manually with multiple terminals (all platforms).
+This guide shows you two ways to use Code Conductor: with the Conductor desktop app (macOS only) or manually with multiple terminals (all platforms).
 
 ## 🖥️ **Recommended Terminals**
 
@@ -23,7 +23,7 @@ The Conductor app provides a streamlined experience with integrated AI sessions 
 
 ### Prerequisites
 - [Conductor Desktop App](https://conductor.build) installed
-- Git repository with Conductor-Score installed
+- Git repository with Code Conductor installed
 
 ### Step-by-Step Workflow
 
@@ -324,8 +324,8 @@ open -a Conductor
 - **Validate setup**: `python .conductor/scripts/validate-config.py`
 - **Check dependencies**: `python .conductor/scripts/dependency-check.py`
 - **System health**: `python .conductor/scripts/health-check.py`
-- **GitHub issues**: [Report bugs](https://github.com/ryanmac/conductor-score/issues)
-- **Discussions**: [Ask questions](https://github.com/ryanmac/conductor-score/discussions)
+- **GitHub issues**: [Report bugs](https://github.com/ryanmac/code-conductor/issues)
+- **Discussions**: [Ask questions](https://github.com/ryanmac/code-conductor/discussions)
 
 ---
 

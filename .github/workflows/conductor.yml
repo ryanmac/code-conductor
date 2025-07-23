@@ -95,7 +95,7 @@ jobs:
             const body = `
             ## 🎼 System Health Alert
 
-            The automated health check has detected critical issues with the Conductor-Score system.
+            The automated health check has detected critical issues with the Code Conductor system.
 
             ### Issues Detected
             - High number of stale agents

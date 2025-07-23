@@ -1,4 +1,9 @@
-# 🎼 Conductor's Score
+# 🎼 Code Conductor
+
+> ⚠️ **Repository Renamed**  
+> This project was previously named **Conductor's Score** (`conductor-score`).  
+> It has been renamed to **Code Conductor** (`code-conductor`) as of July 23, 2025.  
+> GitHub redirects all URLs, but please update any bookmarks or references.
 
 <img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/09dea359-56a0-4c65-8c16-b98ec2b4f02a" />
 
@@ -19,7 +24,7 @@
 
 ## 🎯 **90% Stack Coverage - Your Tech is Supported**
 
-Conductor-Score automatically detects and configures for the most popular technology stacks:
+Code Conductor automatically detects and configures for the most popular technology stacks:
 
 ### **Frontend & Full-Stack** (40% of projects)
 - **React/Next.js** - Auto-configures frontend & UI roles
@@ -58,13 +63,13 @@ Based on your stack, we automatically add:
 **Prerequisites for all options:** Git, Python 3.9-3.12, curl (for one-liner), and tar. Run from the root of an existing Git repository. **If using pyenv, ensure your active Python version (e.g., via `pyenv shell 3.12.x`) has Poetry installed if you prefer it; otherwise, the script falls back to pip.**
 
 ### **Option 1: Universal One-Liner (Recommended - No Cloning Required)**
-Run this in your existing project's root directory to download and install Conductor-Score directly:
+Run this in your existing project's root directory to download and install Code Conductor directly:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/conductor-score/main/conductor-init.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
 ```
 
-- This method avoids cloning the full Conductor-Score repo and is ideal for integrating into existing projects without repository pollution.
+- This method avoids cloning the full Code Conductor repo and is ideal for integrating into existing projects without repository pollution.
 - The script will prompt before overwriting any existing installation.
 - **Security best practice:** Review the script at the raw URL before running.
 - **Pyenv users:** If Poetry install fails, switch to the Python version that has Poetry installed (e.g., `pyenv shell 3.10.13`) and re-run.
@@ -76,8 +81,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/conductor-score/main
 ### Option 2: Poetry (For Cloned Repo)
 ```bash
 # Clone the repository
-git clone https://github.com/ryanmac/conductor-score.git
-cd conductor-score
+git clone https://github.com/ryanmac/code-conductor.git
+cd code-conductor
 
 # Install with Poetry (auto-creates virtual environment)
 poetry install
@@ -87,8 +92,8 @@ poetry run python setup.py
 ### Option 3: Pip + Virtual Environment (For Cloned Repo)
 ```bash
 # Clone the repository
-git clone https://github.com/ryanmac/conductor-score.git
-cd conductor-score
+git clone https://github.com/ryanmac/code-conductor.git
+cd code-conductor
 
 # Create virtual environment
 python3 -m venv .venv
@@ -258,7 +263,7 @@ cd worktrees/agent-dev-[task_id]
 The system provides a single prompt that works for any agent:
 
 ```
-You are a Claude Code agent in a conductor-score coordinated project.
+You are a Claude Code agent in a Code Conductor coordinated project.
 ROLE: {role}
 PROJECT: {project_name}
 
@@ -425,8 +430,8 @@ python .conductor/scripts/validate-config.py
 ### Local Development
 ```bash
 # Clone and setup
-git clone https://github.com/ryanmac/conductor-score.git
-cd conductor-score
+git clone https://github.com/ryanmac/code-conductor.git
+cd code-conductor
 
 # Install with Poetry (recommended)
 poetry install
@@ -474,15 +479,15 @@ MIT - See LICENSE file
 
 ## Support
 
-- 🐛 [Issue Tracker](https://github.com/ryanmac/conductor-score/issues)
-- 💬 [Discussions](https://github.com/ryanmac/conductor-score/discussions)
+- 🐛 [Issue Tracker](https://github.com/ryanmac/code-conductor/issues)
+- 💬 [Discussions](https://github.com/ryanmac/code-conductor/discussions)
 
 ## 💬 **Join the Community**
 
-- 🐛 **Found a bug?** [Report it](https://github.com/ryanmac/conductor-score/issues)
-- 💡 **Have an idea?** [Start a discussion](https://github.com/ryanmac/conductor-score/discussions)
+- 🐛 **Found a bug?** [Report it](https://github.com/ryanmac/code-conductor/issues)
+- 💡 **Have an idea?** [Start a discussion](https://github.com/ryanmac/code-conductor/discussions)
 - 🛠️ **Want to contribute?** [See our guide](CONTRIBUTING.md)
-- 𝕏 **Share your success** Mention [@ryanmac](https://x.com/ryanmac) with #ConductorScore
+- 𝕏 **Share your success** Mention [@ryanmac](https://x.com/ryanmac) with #CodeConductor
 
 **Built for [Conductor.build](https://conductor.build) and [Warp](https://www.warp.dev/) users who refuse to juggle tasks manually.**
 

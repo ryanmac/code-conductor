@@ -10,14 +10,14 @@ Use this section to tell people about which versions of your project are current
 
 ## Reporting a Vulnerability
 
-We take security vulnerabilities seriously. If you discover a security vulnerability in Conductor-Score, please follow these steps:
+We take security vulnerabilities seriously. If you discover a security vulnerability in Code Conductor, please follow these steps:
 
 ### 1. **DO NOT** create a public GitHub issue
 Security vulnerabilities should be reported privately to prevent potential exploitation.
 
 ### 2. Email the maintainer
 Send an email to the maintainer with the following information:
-- **Subject:** `[SECURITY] Conductor-Score Vulnerability Report`
+- **Subject:** `[SECURITY] Code Conductor Vulnerability Report`
 - **Description:** Detailed description of the vulnerability
 - **Steps to reproduce:** Clear steps to reproduce the issue
 - **Impact:** Potential impact of the vulnerability
@@ -35,7 +35,7 @@ Send an email to the maintainer with the following information:
 
 ## Security Best Practices
 
-When using Conductor-Score:
+When using Code Conductor:
 
 1. **Keep dependencies updated:** Regularly update your dependencies to get security patches
 2. **Review configurations:** Ensure your `.conductor/config.yaml` doesn't expose sensitive information

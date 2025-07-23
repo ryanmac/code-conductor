@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: 🎼 Release Conductor-Score
+name: 🎼 Release Code Conductor
 
 on:
   push:
@@ -49,11 +49,11 @@ jobs:
 
       - name: Create release archive
         run: |
-          # Create conductor-score template archive
+          # Create code-conductor template archive
           mkdir -p dist
 
           # Include core template files
-          tar -czf dist/conductor-score-template-${{ steps.version.outputs.version }}.tar.gz \
+          tar -czf dist/code-conductor-template-${{ steps.version.outputs.version }}.tar.gz \
             .conductor/ \
             examples/ \
             docs/ \
@@ -65,7 +65,7 @@ jobs:
             .gitignore
 
           # Create quick-start zip for GitHub releases
-          zip -r dist/conductor-score-${{ steps.version.outputs.version }}.zip \
+          zip -r dist/code-conductor-${{ steps.version.outputs.version }}.zip \
             .conductor/ \
             examples/ \
             docs/ \
@@ -99,7 +99,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.version.outputs.tag_name }}
-          release_name: 🎼 Conductor-Score ${{ steps.version.outputs.version }}
+          release_name: 🎼 Code Conductor ${{ steps.version.outputs.version }}
           body_path: release_notes.md
           draft: false
           prerelease: false
@@ -110,8 +110,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/conductor-score-template-${{ steps.version.outputs.version }}.tar.gz
-          asset_name: conductor-score-template-${{ steps.version.outputs.version }}.tar.gz
+          asset_path: dist/code-conductor-template-${{ steps.version.outputs.version }}.tar.gz
+          asset_name: code-conductor-template-${{ steps.version.outputs.version }}.tar.gz
           asset_content_type: application/gzip
 
       - name: Upload quick-start zip
@@ -120,8 +120,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/conductor-score-${{ steps.version.outputs.version }}.zip
-          asset_name: conductor-score-${{ steps.version.outputs.version }}.zip
+          asset_path: dist/code-conductor-${{ steps.version.outputs.version }}.zip
+          asset_name: code-conductor-${{ steps.version.outputs.version }}.zip
           asset_content_type: application/zip
 
       - name: Update installation URLs
@@ -129,10 +129,10 @@ jobs:
           echo "🎉 Release ${{ steps.version.outputs.version }} created!"
           echo ""
           echo "📦 Assets:"
-          echo "- Template: conductor-score-template-${{ steps.version.outputs.version }}.tar.gz"
-          echo "- Quick-start: conductor-score-${{ steps.version.outputs.version }}.zip"
+          echo "- Template: code-conductor-template-${{ steps.version.outputs.version }}.tar.gz"
+          echo "- Quick-start: code-conductor-${{ steps.version.outputs.version }}.zip"
           echo ""
           echo "🚀 Installation:"
-          echo "curl -sSL https://github.com/ryanmac/conductor-score/releases/download/${{ steps.version.outputs.tag_name }}/install.sh | bash"
+          echo "curl -sSL https://github.com/ryanmac/code-conductor/releases/download/${{ steps.version.outputs.tag_name }}/install.sh | bash"
           echo ""
-          echo "📚 Documentation: https://github.com/ryanmac/conductor-score/blob/main/docs/USAGE.md" 
+          echo "📚 Documentation: https://github.com/ryanmac/code-conductor/blob/main/docs/USAGE.md" 

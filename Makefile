@@ -1,19 +1,19 @@
-# Conductor-Score Development Makefile
+# Code Conductor Development Makefile
 
 .PHONY: help install demo validate clean test setup
 
 # Default target
 help: ## Show this help message
-	@echo "🎼 Conductor-Score Development Commands"
+	@echo "🎼 Code Conductor Development Commands"
 	@echo "======================================"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install conductor-score in current directory
-	@echo "🚀 Installing Conductor-Score..."
+install: ## Install code-conductor in current directory
+	@echo "🚀 Installing Code Conductor..."
 	@bash install.sh --auto
 
 demo: ## Create and run a full demo
-	@echo "🎬 Creating Conductor-Score Demo..."
+	@echo "🎬 Creating Code Conductor Demo..."
 	@echo "=================================="
 	@echo ""
 	@echo "📁 Setting up demo environment..."
@@ -26,7 +26,7 @@ demo: ## Create and run a full demo
 	@cd /tmp/conductor-demo && git commit -m "Initial commit"
 	@echo "✅ Demo repository created"
 	@echo ""
-	@echo "🎼 Installing conductor-score..."
+	@echo "🎼 Installing code-conductor..."
 	@cd /tmp/conductor-demo && cp -r $(PWD)/.conductor .
 	@cd /tmp/conductor-demo && cp -r $(PWD)/examples .conductor/
 	@cd /tmp/conductor-demo && cp $(PWD)/setup.py .
@@ -54,12 +54,12 @@ demo: ## Create and run a full demo
 	@echo ""
 	@echo "🧹 To clean up: rm -rf /tmp/conductor-demo"
 
-validate: ## Validate the conductor-score configuration
-	@echo "🔍 Validating Conductor-Score..."
+validate: ## Validate the code-conductor configuration
+	@echo "🔍 Validating Code Conductor..."
 	@python .conductor/scripts/validate-config.py
 
 test: ## Run all system tests
-	@echo "🧪 Running Conductor-Score Tests..."
+	@echo "🧪 Running Code Conductor Tests..."
 	@echo "=================================="
 	@echo ""
 	@echo "📋 Configuration validation..."
@@ -81,7 +81,7 @@ test: ## Run all system tests
 	@echo "🎉 All tests passed!"
 
 setup: ## Interactive setup for development
-	@echo "🔧 Conductor-Score Development Setup"
+	@echo "🔧 Code Conductor Development Setup"
 	@echo "===================================="
 	@python setup.py
 
@@ -96,11 +96,11 @@ clean: ## Clean up generated files and caches
 	@echo "✅ Cleanup complete"
 
 quick-start: ## Show quick start instructions
-	@echo "🎼 Conductor-Score Quick Start"
+	@echo "🎼 Code Conductor Quick Start"
 	@echo "============================="
 	@echo ""
 	@echo "1. Install in your project:"
-	@echo "   curl -sSL https://github.com/ryanmac/conductor-score/raw/main/install.sh | bash"
+	@echo "   curl -sSL https://github.com/ryanmac/code-conductor/raw/main/install.sh | bash"
 	@echo ""
 	@echo "2. Create a task via GitHub issue with 'conductor:task' label"
 	@echo ""
@@ -113,7 +113,7 @@ quick-start: ## Show quick start instructions
 
 dev-aliases: ## Install helpful development aliases
 	@echo "🛠️  Installing development aliases..."
-	@echo "# Conductor-Score Development Aliases" >> ~/.bashrc
+	@echo "# Code Conductor Development Aliases" >> ~/.bashrc
 	@echo "alias ctr='cd worktrees && ls'" >> ~/.bashrc
 	@echo "alias cth='python .conductor/scripts/health-check.py'" >> ~/.bashrc
 	@echo "alias cts='python .conductor/scripts/update-status.py'" >> ~/.bashrc
@@ -123,5 +123,5 @@ dev-aliases: ## Install helpful development aliases
 	@echo "Run 'source ~/.bashrc' to load them"
 
 version: ## Show version information
-	@echo "🎼 Conductor-Score v$$(cat VERSION)"
+	@echo "🎼 Code Conductor v$$(cat VERSION)"
 	@echo "📅 Release: $$(head -1 CHANGELOG.md | grep -o '\[.*\]' | tr -d '[]')" 

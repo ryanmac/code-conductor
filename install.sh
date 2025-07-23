@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Conductor-Score Install Script
-# One-command setup for conductor-score
+# Code Conductor Install Script
+# One-command setup for code-conductor
 
 set -e
 
-echo "🚀 Setting up Conductor-Score..."
+echo "🚀 Setting up Code Conductor..."
 
 # Check if we're in the right directory
 if [ ! -f "setup.py" ]; then
-    echo "❌ Error: setup.py not found. Please run this script from the conductor-score directory."
+    echo "❌ Error: setup.py not found. Please run this script from the code-conductor directory."
     exit 1
 fi
 
