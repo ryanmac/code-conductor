@@ -1,0 +1,79 @@
+{
+  "available_tasks": [
+    {
+      "id": "go-1",
+      "title": "Implement gRPC service with protobuf",
+      "description": "Create high-performance gRPC service for inter-service communication",
+      "priority": "high",
+      "estimated_effort": "large",
+      "required_skills": ["devops"],
+      "files_to_modify": ["proto/", "internal/grpc/", "cmd/server/"],
+      "success_criteria": [
+        "Proto definitions created",
+        "Server and client implementations",
+        "TLS/mTLS authentication",
+        "Load balancing configured"
+      ]
+    },
+    {
+      "id": "go-2",
+      "title": "Add distributed tracing with OpenTelemetry",
+      "description": "Implement distributed tracing across microservices for observability",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": ["devops"],
+      "files_to_modify": ["pkg/telemetry/", "middleware/tracing.go"],
+      "success_criteria": [
+        "OpenTelemetry SDK integrated",
+        "Trace context propagation",
+        "Jaeger/Zipkin exporter configured",
+        "Custom spans for critical paths"
+      ]
+    },
+    {
+      "id": "go-3",
+      "title": "Implement circuit breaker pattern",
+      "description": "Add circuit breaker for external service calls to improve resilience",
+      "priority": "high",
+      "estimated_effort": "small",
+      "required_skills": [],
+      "files_to_modify": ["pkg/circuitbreaker/", "internal/client/"],
+      "success_criteria": [
+        "Circuit breaker library integrated",
+        "Configurable thresholds",
+        "Fallback mechanisms",
+        "Metrics for circuit state"
+      ]
+    },
+    {
+      "id": "go-4",
+      "title": "Optimize database queries with connection pooling",
+      "description": "Implement efficient database connection pooling and query optimization",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": ["devops"],
+      "files_to_modify": ["internal/database/", "config/db.go"],
+      "success_criteria": [
+        "Connection pool configured",
+        "Prepared statements cached",
+        "Query performance improved",
+        "Monitoring metrics added"
+      ]
+    },
+    {
+      "id": "go-5",
+      "title": "Add Kubernetes health checks",
+      "description": "Implement liveness and readiness probes for Kubernetes deployment",
+      "priority": "high",
+      "estimated_effort": "small",
+      "required_skills": ["devops"],
+      "files_to_modify": ["internal/health/", "cmd/server/main.go"],
+      "success_criteria": [
+        "Liveness endpoint at /healthz",
+        "Readiness endpoint at /ready",
+        "Dependency checks included",
+        "Graceful shutdown handling"
+      ]
+    }
+  ]
+}

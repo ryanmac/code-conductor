@@ -1,0 +1,64 @@
+{
+  "available_tasks": [
+    {
+      "id": "nextjs-1",
+      "title": "Implement server-side data fetching with App Router",
+      "description": "Update the homepage to fetch data server-side using Next.js 14 App Router patterns. Use async components and implement proper loading states.",
+      "priority": "high",
+      "estimated_effort": "medium",
+      "required_skills": ["frontend"],
+      "files_to_modify": ["app/page.tsx", "app/api/data/route.ts"],
+      "success_criteria": [
+        "Data fetched server-side using async components",
+        "Loading UI implemented",
+        "Error boundaries added",
+        "TypeScript types defined"
+      ]
+    },
+    {
+      "id": "nextjs-2",
+      "title": "Add internationalization support",
+      "description": "Implement i18n using next-intl for multi-language support. Start with English and Spanish.",
+      "priority": "medium",
+      "estimated_effort": "large",
+      "required_skills": ["frontend"],
+      "files_to_modify": ["middleware.ts", "app/[locale]/layout.tsx", "messages/"],
+      "success_criteria": [
+        "Language switcher component created",
+        "Routing handles locale prefixes",
+        "All UI text extracted to message files",
+        "RTL support considered"
+      ]
+    },
+    {
+      "id": "nextjs-3",
+      "title": "Optimize images with next/image",
+      "description": "Replace all img tags with Next.js Image component for automatic optimization",
+      "priority": "medium",
+      "estimated_effort": "small",
+      "required_skills": ["frontend"],
+      "files_to_modify": ["components/", "app/"],
+      "success_criteria": [
+        "All images use next/image",
+        "Proper width/height or fill props set",
+        "Blur placeholders added for above-fold images",
+        "Core Web Vitals improved"
+      ]
+    },
+    {
+      "id": "nextjs-4",
+      "title": "Implement API rate limiting",
+      "description": "Add rate limiting to API routes using upstash/ratelimit or similar",
+      "priority": "high",
+      "estimated_effort": "medium",
+      "required_skills": ["devops", "security"],
+      "files_to_modify": ["middleware.ts", "lib/rate-limit.ts"],
+      "success_criteria": [
+        "Rate limiting middleware created",
+        "Configurable limits per endpoint",
+        "Proper error responses (429)",
+        "Redis or in-memory store configured"
+      ]
+    }
+  ]
+}

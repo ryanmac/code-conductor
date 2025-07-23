@@ -106,39 +106,142 @@ class ConductorSetup:
                     self.logger.debug(f"Git remote detection failed: {e}")
                 pass
 
-        # Technology stack detection
+        # Technology stack detection - covering 90% of real-world projects
         tech_indicators = {
             "package.json": {
                 "tech": "nodejs",
                 "suggested_roles": ["devops"],
                 "common_patterns": ["frontend", "backend", "extension"],
+                "subtypes": {
+                    "react": {"keywords": ["react", "react-dom"], "roles": ["frontend", "ui-designer"]},
+                    "nextjs": {"keywords": ["next"], "roles": ["frontend", "devops"]},
+                    "vue": {"keywords": ["vue", "@vue/"], "roles": ["frontend", "ui-designer"]},
+                    "angular": {"keywords": ["@angular/"], "roles": ["frontend", "ui-designer"]},
+                    "svelte": {"keywords": ["svelte", "@sveltejs/"], "roles": ["frontend", "ui-designer"]},
+                    "express": {"keywords": ["express"], "roles": ["devops", "security"]},
+                    "nest": {"keywords": ["@nestjs/"], "roles": ["devops", "security"]},
+                    "electron": {"keywords": ["electron"], "roles": ["frontend", "devops"]},
+                    "react-native": {"keywords": ["react-native"], "roles": ["mobile", "frontend"]},
+                }
             },
             "requirements.txt": {
                 "tech": "python",
                 "suggested_roles": ["devops"],
                 "common_patterns": ["api", "ml", "automation"],
+                "subtypes": {
+                    "django": {"keywords": ["django"], "roles": ["devops", "security"]},
+                    "flask": {"keywords": ["flask"], "roles": ["devops", "security"]},
+                    "fastapi": {"keywords": ["fastapi"], "roles": ["devops", "security"]},
+                    "ml": {"keywords": ["tensorflow", "torch", "scikit-learn"], "roles": ["ml-engineer", "data"]},
+                    "data": {"keywords": ["pandas", "numpy", "jupyter"], "roles": ["data", "ml-engineer"]},
+                }
             },
             "Cargo.toml": {
                 "tech": "rust",
                 "suggested_roles": ["devops", "security"],
                 "common_patterns": ["tauri", "wasm", "cli"],
+                "subtypes": {
+                    "tauri": {"keywords": ["tauri"], "roles": ["frontend", "devops", "security"]},
+                }
             },
             "pom.xml": {
                 "tech": "java",
                 "suggested_roles": ["devops"],
                 "common_patterns": ["spring", "microservice"],
+                "subtypes": {
+                    "spring": {"keywords": ["spring-boot", "springframework"], "roles": ["devops", "security"]},
+                }
             },
             "go.mod": {
                 "tech": "go",
                 "suggested_roles": ["devops"],
                 "common_patterns": ["api", "cli", "microservice"],
+                "subtypes": {
+                    "gin": {"keywords": ["gin-gonic/gin"], "roles": ["devops", "security"]},
+                    "echo": {"keywords": ["labstack/echo"], "roles": ["devops", "security"]},
+                    "fiber": {"keywords": ["gofiber/fiber"], "roles": ["devops", "security"]},
+                }
+            },
+            "composer.json": {
+                "tech": "php",
+                "suggested_roles": ["devops", "security"],
+                "common_patterns": ["laravel", "symfony", "wordpress"],
+                "subtypes": {
+                    "laravel": {"keywords": ["laravel/"], "roles": ["devops", "security"]},
+                    "symfony": {"keywords": ["symfony/"], "roles": ["devops", "security"]},
+                }
+            },
+            "*.csproj": {
+                "tech": "dotnet",
+                "suggested_roles": ["devops", "security"],
+                "common_patterns": ["aspnet", "blazor"],
+                "subtypes": {
+                    "aspnet": {"keywords": ["Microsoft.AspNetCore"], "roles": ["devops", "security"]},
+                    "blazor": {"keywords": ["Microsoft.AspNetCore.Components"], "roles": ["frontend", "devops"]},
+                }
+            },
+            "pubspec.yaml": {
+                "tech": "flutter",
+                "suggested_roles": ["mobile", "frontend"],
+                "common_patterns": ["flutter", "dart"],
+            },
+            "build.gradle": {
+                "tech": "kotlin",
+                "suggested_roles": ["mobile", "devops"],
+                "common_patterns": ["android", "spring"],
             },
         }
 
-        for file, info in tech_indicators.items():
-            if (self.project_root / file).exists():
-                self.detected_stack.append(info)
-                print(f"✓ Detected {info['tech']} project")
+        import glob
+        
+        # Process each tech indicator
+        for file_pattern, info in tech_indicators.items():
+            found = False
+            
+            # Handle glob patterns
+            if '*' in file_pattern:
+                matches = list(self.project_root.glob(file_pattern))
+                if matches:
+                    found = True
+                    file_to_check = matches[0]  # Use first match for subtype detection
+            else:
+                file_to_check = self.project_root / file_pattern
+                if file_to_check.exists():
+                    found = True
+            
+            if found:
+                # Deep copy to avoid modifying the original
+                stack_info = info.copy()
+                
+                # Detect subtypes by reading file contents
+                if "subtypes" in info and file_to_check.exists():
+                    try:
+                        content = file_to_check.read_text(encoding='utf-8')
+                        detected_subtypes = []
+                        additional_roles = set()
+                        
+                        for subtype_name, subtype_info in info["subtypes"].items():
+                            for keyword in subtype_info["keywords"]:
+                                if keyword in content:
+                                    detected_subtypes.append(subtype_name)
+                                    additional_roles.update(subtype_info.get("roles", []))
+                                    break
+                        
+                        if detected_subtypes:
+                            stack_info["detected_subtypes"] = detected_subtypes
+                            # Merge additional roles from subtypes
+                            existing_roles = set(stack_info.get("suggested_roles", []))
+                            stack_info["suggested_roles"] = list(existing_roles | additional_roles)
+                            
+                    except Exception as e:
+                        if self.debug:
+                            self.logger.debug(f"Could not read {file_to_check}: {e}")
+                
+                self.detected_stack.append(stack_info)
+                subtypes_str = ""
+                if "detected_subtypes" in stack_info:
+                    subtypes_str = f" ({', '.join(stack_info['detected_subtypes'])})"
+                print(f"✓ Detected {info['tech']} project{subtypes_str}")
 
         # Check for specific patterns
         if (self.project_root / "manifest.json").exists():
@@ -236,19 +339,36 @@ class ConductorSetup:
         self.config["project_name"] = self.project_root.name
         self.config["docs_directory"] = "docs"
 
-        # Detect roles based on stack
+        # Detect roles based on enhanced stack detection
         suggested_roles = set()
+        detected_stacks = []
+        
         for stack in self.detected_stack:
-            suggested_roles.update(stack["suggested_roles"])
-
-        # Default to dev only unless devops/security clearly needed
-        specialized_roles = []
+            suggested_roles.update(stack.get("suggested_roles", []))
+            if "detected_subtypes" in stack:
+                detected_stacks.append(f"{stack['tech']} ({', '.join(stack['detected_subtypes'])})")
+            else:
+                detected_stacks.append(stack['tech'])
+        
+        # Always include code-reviewer role for AI-powered PR reviews
+        specialized_roles = ["code-reviewer"]
+        
+        # Add roles based on detected stack
+        specialized_roles.extend(list(suggested_roles))
+        
+        # Additional heuristics
         if any("docker" in str(f).lower() for f in self.project_root.glob("*")):
-            specialized_roles.append("devops")
+            if "devops" not in specialized_roles:
+                specialized_roles.append("devops")
         if any("security" in str(f).lower() for f in self.project_root.glob("*")):
-            specialized_roles.append("security")
+            if "security" not in specialized_roles:
+                specialized_roles.append("security")
+        
+        # Remove duplicates while preserving order
+        specialized_roles = list(dict.fromkeys(specialized_roles))
 
         self.config["roles"] = {"default": "dev", "specialized": specialized_roles}
+        self.config["detected_stacks"] = detected_stacks
 
         # Smart task management detection
         if (self.project_root / ".github").exists():
@@ -260,7 +380,9 @@ class ConductorSetup:
         self.config["max_concurrent_agents"] = 5
 
         print(f"✓ Project: {self.config['project_name']}")
-        print(f"✓ Roles: dev + {len(specialized_roles)} specialized")
+        if detected_stacks:
+            print(f"✓ Detected stacks: {', '.join(detected_stacks)}")
+        print(f"✓ Roles: dev + {len(specialized_roles)} specialized ({', '.join(specialized_roles)})")
         print(f"✓ Task management: {self.config['task_management']}")
         print(f"✓ Max agents: {self.config['max_concurrent_agents']}")
 
@@ -500,6 +622,134 @@ The UI Designer role focuses on user interface, design systems, and user experie
 - Design consistency maintained
 - Performance metrics met (LCP, FID, CLS)
 """,
+            "code-reviewer": """# Code Reviewer Role (AI-Powered)
+
+## Overview
+The Code Reviewer role provides automated AI-powered code reviews on pull requests, similar to CodeRabbit. This role runs automatically on all PRs to ensure code quality, catch bugs, and suggest improvements.
+
+## Responsibilities
+- Review all pull requests automatically
+- Identify potential bugs and security issues
+- Suggest code improvements and optimizations
+- Ensure coding standards compliance
+- Check for test coverage
+- Identify breaking changes
+- Suggest documentation updates
+
+## Task Selection Criteria
+- Automatically triggered on PR creation/update
+- Reviews all code changes
+- Provides feedback as PR comments
+- Can be manually invoked for specific reviews
+
+## Review Focus Areas
+- Code quality and maintainability
+- Security vulnerabilities
+- Performance issues
+- Test coverage gaps
+- Documentation completeness
+- Breaking API changes
+- Best practices adherence
+
+## Success Metrics
+- Average review time < 5 minutes
+- False positive rate < 10%
+- Developer satisfaction score > 4/5
+- Bugs caught before merge
+""",
+            "frontend": """# Frontend Developer Role
+
+## Overview
+The Frontend role specializes in client-side development, UI implementation, and user experience.
+
+## Responsibilities
+- Implement responsive UI components
+- Optimize frontend performance
+- Ensure cross-browser compatibility
+- Implement state management
+- Create reusable component libraries
+
+## Task Selection Criteria
+- Tasks labeled with 'frontend', 'ui', or 'client'
+- Component development tasks
+- Frontend optimization tasks
+- UI/UX implementation tasks
+
+## Required Skills
+- Modern JavaScript/TypeScript
+- Frontend frameworks (React, Vue, Angular, Svelte)
+- CSS/SASS and modern styling
+- Build tools (Webpack, Vite, etc.)
+- Performance optimization
+
+## Success Metrics
+- Lighthouse scores > 90
+- Component test coverage > 80%
+- Zero accessibility violations
+- Bundle size optimized
+""",
+            "mobile": """# Mobile Developer Role
+
+## Overview
+The Mobile role specializes in mobile application development across platforms.
+
+## Responsibilities
+- Develop mobile applications
+- Ensure platform-specific optimizations
+- Implement native features
+- Optimize for mobile performance
+- Handle offline functionality
+
+## Task Selection Criteria
+- Tasks labeled with 'mobile', 'ios', or 'android'
+- Mobile-specific feature implementations
+- Platform optimization tasks
+- Mobile UI/UX tasks
+
+## Required Skills
+- React Native / Flutter / Native development
+- Mobile platform guidelines (iOS/Android)
+- Mobile performance optimization
+- Push notifications and device APIs
+- App store deployment
+
+## Success Metrics
+- App performance metrics met
+- Crash-free rate > 99%
+- App store rating > 4.5
+- Platform compliance achieved
+""",
+            "data": """# Data Engineer Role
+
+## Overview
+The Data Engineer role focuses on data pipelines, analytics, and data infrastructure.
+
+## Responsibilities
+- Build and maintain data pipelines
+- Implement data transformations
+- Ensure data quality and integrity
+- Optimize data storage and retrieval
+- Create data visualization solutions
+
+## Task Selection Criteria
+- Tasks labeled with 'data', 'etl', or 'analytics'
+- Data pipeline implementations
+- Database optimization tasks
+- Analytics and reporting tasks
+
+## Required Skills
+- SQL and NoSQL databases
+- Data processing frameworks
+- ETL/ELT tools
+- Data visualization tools
+- Big data technologies
+
+## Success Metrics
+- Pipeline reliability > 99%
+- Data quality scores met
+- Query performance optimized
+- Documentation complete
+""",
         }
 
         for role in self.config["roles"]["specialized"]:
@@ -664,6 +914,79 @@ jobs:
         with open(cleanup_file, "w") as f:
             f.write(cleanup_workflow)
         print(f"✓ Created {cleanup_file}")
+
+        # Code reviewer workflow
+        code_reviewer_workflow = """name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml requests openai anthropic
+
+      - name: Get PR Details
+        id: pr_details
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          else
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          fi
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Run AI Code Review
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python .conductor/scripts/code-reviewer.py \\
+            --pr-number ${{ steps.pr_details.outputs.pr_number }} \\
+            --repo ${{ github.repository }}
+
+      - name: Post Review Summary
+        if: always()
+        run: |
+          echo "## 🤖 AI Code Review Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f ".conductor/review-summary.md" ]; then
+            cat .conductor/review-summary.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Review summary not found." >> $GITHUB_STEP_SUMMARY
+          fi
+"""
+
+        code_reviewer_file = workflows_dir / "code-review.yml"
+        with open(code_reviewer_file, "w") as f:
+            f.write(code_reviewer_workflow)
+        print(f"✓ Created {code_reviewer_file}")
 
         # Create issue template
         issue_template_dir = self.project_root / ".github" / "ISSUE_TEMPLATE"

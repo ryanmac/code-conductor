@@ -184,18 +184,154 @@ fi
 echo -e "${GREEN}✅ Setup complete.${NC}"
 echo ""
 
+# Step 5: Interactive Role Configuration
+echo -e "${YELLOW}🎭 Configuring agent roles...${NC}"
+
+# Read detected stacks from config
+DETECTED_STACKS=""
+if command -v python3 >/dev/null 2>&1; then
+    DETECTED_STACKS=$(python3 -c "
+import yaml
+try:
+    with open('.conductor/config.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+        stacks = config.get('detected_stacks', [])
+        if stacks:
+            print(', '.join(stacks))
+except:
+    pass
+" 2>/dev/null)
+fi
+
+if [ -n "$DETECTED_STACKS" ]; then
+    echo -e "📊 Detected technology stacks: ${GREEN}$DETECTED_STACKS${NC}"
+fi
+
+# Get configured roles
+CONFIGURED_ROLES=$(python3 -c "
+import yaml
+try:
+    with open('.conductor/config.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+        roles = config.get('roles', {}).get('specialized', [])
+        print(' '.join(roles))
+except:
+    print('code-reviewer')
+" 2>/dev/null)
+
+echo -e "🎯 Configured specialized roles: ${GREEN}$CONFIGURED_ROLES${NC}"
+echo ""
+
+# Ask if user wants to adjust roles
+read -p "Would you like to adjust the configured roles? [y/N]: " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Available specialized roles:"
+    echo "  - code-reviewer (AI-powered PR reviews)"
+    echo "  - frontend (React, Vue, Angular development)"
+    echo "  - mobile (React Native, Flutter development)"
+    echo "  - devops (CI/CD, deployments, infrastructure)"
+    echo "  - security (Security audits, vulnerability scanning)"
+    echo "  - ml-engineer (Machine learning tasks)"
+    echo "  - ui-designer (Design systems, UI/UX)"
+    echo "  - data (Data pipelines, analytics)"
+    echo ""
+    read -p "Enter roles to add (comma-separated, or press Enter to keep current): " ADDITIONAL_ROLES
+    
+    if [ -n "$ADDITIONAL_ROLES" ]; then
+        # Update config.yaml with additional roles
+        python3 -c "
+import yaml
+with open('.conductor/config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+current_roles = config.get('roles', {}).get('specialized', [])
+new_roles = [r.strip() for r in '$ADDITIONAL_ROLES'.split(',') if r.strip()]
+combined_roles = list(set(current_roles + new_roles))
+config['roles']['specialized'] = combined_roles
+with open('.conductor/config.yaml', 'w') as f:
+    yaml.dump(config, f, default_flow_style=False)
+print(f'✅ Roles updated: {combined_roles}')
+" || echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+    fi
+fi
+
+# Step 6: Seed Demo Tasks
+echo ""
+echo -e "${YELLOW}📝 Creating demo tasks...${NC}"
+
+# Create a sample workflow-state.json with demo tasks if it doesn't have any
+if [ -f ".conductor/workflow-state.json" ]; then
+    python3 -c "
+import json
+from datetime import datetime
+
+with open('.conductor/workflow-state.json', 'r') as f:
+    state = json.load(f)
+
+# Only add demo tasks if no tasks exist
+if not state.get('available_tasks'):
+    demo_tasks = [
+        {
+            'id': 'demo-1',
+            'title': 'Add README documentation',
+            'description': 'Create or update README.md with project overview, installation instructions, and usage examples',
+            'priority': 'medium',
+            'estimated_effort': 'small',
+            'required_skills': [],
+            'files_to_modify': ['README.md'],
+            'created_at': datetime.utcnow().isoformat()
+        },
+        {
+            'id': 'demo-2',
+            'title': 'Set up CI/CD pipeline',
+            'description': 'Create GitHub Actions workflow for automated testing and deployment',
+            'priority': 'high',
+            'estimated_effort': 'medium',
+            'required_skills': ['devops'],
+            'files_to_modify': ['.github/workflows/ci.yml'],
+            'created_at': datetime.utcnow().isoformat()
+        }
+    ]
+    state['available_tasks'] = demo_tasks
+    
+    with open('.conductor/workflow-state.json', 'w') as f:
+        json.dump(state, f, indent=2)
+    print('✅ Demo tasks created')
+else:
+    print('✅ Tasks already exist')
+" || echo -e "${YELLOW}⚠️ Could not create demo tasks.${NC}"
+fi
+
+# Step 7: Launch Agent (Optional)
+echo ""
+read -p "Would you like to start a dev agent now? [Y/n]: " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+    echo -e "${YELLOW}🤖 Starting dev agent...${NC}"
+    bash .conductor/scripts/bootstrap.sh dev || {
+        echo -e "${YELLOW}⚠️ Agent startup failed. You can try again later with: bash .conductor/scripts/bootstrap.sh dev${NC}"
+    }
+fi
+
 # Note: No cleanup of setup.py, requirements.txt, etc. - leaving them in place for user reference and future use.
 
-# Step 5: Next Steps
+# Step 8: Next Steps
+echo ""
 echo -e "${GREEN}🎉 Installation Successful!${NC}"
 echo "=========================================="
-echo "Conductor-Score is now installed in your repository."
+echo "Conductor-Score is now installed with:"
+echo "  ✅ Auto-detected technology stack"
+echo "  ✅ AI code-reviewer for all PRs"
+echo "  ✅ Specialized roles configured"
+echo "  ✅ Demo tasks ready to claim"
 echo ""
-echo "Next steps:"
-echo "1. Review .conductor/config.yaml and customize if needed."
-echo "2. Create a task: Use GitHub Issues with 'conductor:task' label."
-echo "3. Launch an agent: bash .conductor/scripts/bootstrap.sh dev"
-echo "4. For full documentation, see the original repo: https://github.com/ryanmac/conductor-score"
+echo "Quick Start Commands:"
+echo "  📋 View tasks: cat .conductor/workflow-state.json | jq '.available_tasks'"
+echo "  🤖 Start agent: bash .conductor/scripts/bootstrap.sh [role]"
+echo "  📝 Create task: Use GitHub Issues with 'conductor:task' label"
+echo "  🔧 Adjust config: edit .conductor/config.yaml"
 echo ""
-echo "If you encounter issues, check the troubleshooting guide in the repo."
+echo "Your first PR will automatically get AI code reviews!"
+echo ""
+echo "For full documentation: https://github.com/ryanmac/conductor-score"
 echo -e "${GREEN}Happy orchestrating! 🎼${NC}"

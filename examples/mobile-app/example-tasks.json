@@ -1,0 +1,79 @@
+{
+  "available_tasks": [
+    {
+      "id": "mobile-1",
+      "title": "Implement biometric authentication",
+      "description": "Add fingerprint/Face ID authentication for secure app access on iOS and Android",
+      "priority": "high",
+      "estimated_effort": "medium",
+      "required_skills": ["mobile", "security"],
+      "files_to_modify": ["src/auth/BiometricAuth.tsx", "ios/", "android/"],
+      "success_criteria": [
+        "Biometric prompt implemented for both platforms",
+        "Fallback to PIN/password",
+        "Secure storage of auth tokens",
+        "Proper permission handling"
+      ]
+    },
+    {
+      "id": "mobile-2",
+      "title": "Add offline data sync with SQLite",
+      "description": "Implement offline-first architecture with local SQLite database and sync mechanism",
+      "priority": "high",
+      "estimated_effort": "large",
+      "required_skills": ["mobile", "data"],
+      "files_to_modify": ["src/database/", "src/sync/", "src/models/"],
+      "success_criteria": [
+        "Local SQLite database configured",
+        "Conflict resolution strategy implemented",
+        "Background sync when online",
+        "UI indicates sync status"
+      ]
+    },
+    {
+      "id": "mobile-3",
+      "title": "Implement push notifications",
+      "description": "Set up Firebase Cloud Messaging for cross-platform push notifications",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": ["mobile", "devops"],
+      "files_to_modify": ["src/services/notifications.ts", "ios/", "android/"],
+      "success_criteria": [
+        "FCM configured for both platforms",
+        "Notification permissions handled",
+        "Deep linking from notifications",
+        "Analytics tracking for opens"
+      ]
+    },
+    {
+      "id": "mobile-4",
+      "title": "Optimize app startup performance",
+      "description": "Reduce app cold start time by implementing lazy loading and code splitting",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": ["mobile"],
+      "files_to_modify": ["src/App.tsx", "src/navigation/", "metro.config.js"],
+      "success_criteria": [
+        "Cold start time < 2 seconds",
+        "Lazy loading for heavy screens",
+        "Splash screen optimization",
+        "Bundle size reduced by 20%"
+      ]
+    },
+    {
+      "id": "mobile-5",
+      "title": "Add in-app purchases",
+      "description": "Integrate RevenueCat or native IAP for subscription management",
+      "priority": "low",
+      "estimated_effort": "large",
+      "required_skills": ["mobile"],
+      "files_to_modify": ["src/services/purchases.ts", "src/screens/Premium.tsx"],
+      "success_criteria": [
+        "Product catalog configured",
+        "Purchase flow implemented",
+        "Receipt validation",
+        "Subscription status synced"
+      ]
+    }
+  ]
+}

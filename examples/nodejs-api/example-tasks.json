@@ -1,0 +1,64 @@
+{
+  "available_tasks": [
+    {
+      "id": "node-api-1",
+      "title": "Implement JWT authentication middleware",
+      "description": "Create Express middleware for JWT token validation and user authentication",
+      "priority": "high",
+      "estimated_effort": "medium",
+      "required_skills": ["security", "devops"],
+      "files_to_modify": ["middleware/auth.js", "routes/auth.js", "config/jwt.js"],
+      "success_criteria": [
+        "JWT token generation endpoint",
+        "Token validation middleware",
+        "Refresh token mechanism",
+        "Proper error handling for invalid tokens"
+      ]
+    },
+    {
+      "id": "node-api-2",
+      "title": "Add request validation with Joi or Zod",
+      "description": "Implement schema validation for all API endpoints to ensure data integrity",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": [],
+      "files_to_modify": ["validators/", "middleware/validate.js"],
+      "success_criteria": [
+        "Validation schemas for all endpoints",
+        "Middleware to validate requests",
+        "Clear error messages for validation failures",
+        "TypeScript types generated from schemas"
+      ]
+    },
+    {
+      "id": "node-api-3",
+      "title": "Implement database connection pooling",
+      "description": "Optimize database connections using connection pooling for better performance",
+      "priority": "high",
+      "estimated_effort": "small",
+      "required_skills": ["devops"],
+      "files_to_modify": ["config/database.js", "lib/db.js"],
+      "success_criteria": [
+        "Connection pool configured",
+        "Proper connection lifecycle management",
+        "Monitoring for pool statistics",
+        "Graceful shutdown handling"
+      ]
+    },
+    {
+      "id": "node-api-4",
+      "title": "Add API documentation with Swagger/OpenAPI",
+      "description": "Generate interactive API documentation using swagger-jsdoc and swagger-ui-express",
+      "priority": "medium",
+      "estimated_effort": "large",
+      "required_skills": [],
+      "files_to_modify": ["swagger.json", "routes/", "app.js"],
+      "success_criteria": [
+        "OpenAPI 3.0 specification created",
+        "Swagger UI endpoint available",
+        "All endpoints documented with examples",
+        "Request/response schemas documented"
+      ]
+    }
+  ]
+}

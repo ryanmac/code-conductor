@@ -1,0 +1,79 @@
+{
+  "available_tasks": [
+    {
+      "id": "desktop-1",
+      "title": "Implement auto-updater functionality",
+      "description": "Add automatic update checking and installation for desktop app releases",
+      "priority": "high",
+      "estimated_effort": "medium",
+      "required_skills": ["frontend", "devops"],
+      "files_to_modify": ["src-tauri/src/updater.rs", "src/components/UpdateNotification.tsx"],
+      "success_criteria": [
+        "Update server configured",
+        "Background update checks",
+        "User notification UI",
+        "Rollback mechanism"
+      ]
+    },
+    {
+      "id": "desktop-2",
+      "title": "Add native OS notifications",
+      "description": "Implement system tray notifications using native OS APIs",
+      "priority": "medium",
+      "estimated_effort": "small",
+      "required_skills": ["frontend"],
+      "files_to_modify": ["src-tauri/src/notification.rs", "src/services/notifications.ts"],
+      "success_criteria": [
+        "Cross-platform notification API",
+        "Permission handling",
+        "Click actions supported",
+        "Notification queue management"
+      ]
+    },
+    {
+      "id": "desktop-3",
+      "title": "Implement file system integration",
+      "description": "Add drag-and-drop file handling and native file dialogs",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": ["frontend"],
+      "files_to_modify": ["src-tauri/src/fs.rs", "src/components/FileDropZone.tsx"],
+      "success_criteria": [
+        "Drag and drop from OS",
+        "Native file picker dialogs",
+        "File type validation",
+        "Progress indicators for large files"
+      ]
+    },
+    {
+      "id": "desktop-4",
+      "title": "Add local database with encryption",
+      "description": "Implement SQLite database with encryption for secure local data storage",
+      "priority": "high",
+      "estimated_effort": "medium",
+      "required_skills": ["security", "data"],
+      "files_to_modify": ["src-tauri/src/database/", "migrations/"],
+      "success_criteria": [
+        "SQLite with SQLCipher integrated",
+        "Migration system implemented",
+        "Secure key management",
+        "Data export/import functionality"
+      ]
+    },
+    {
+      "id": "desktop-5",
+      "title": "Optimize app bundle size",
+      "description": "Reduce application bundle size through code splitting and asset optimization",
+      "priority": "low",
+      "estimated_effort": "medium",
+      "required_skills": ["frontend", "devops"],
+      "files_to_modify": ["tauri.conf.json", "vite.config.ts", "src/"],
+      "success_criteria": [
+        "Bundle size reduced by 30%",
+        "Lazy loading implemented",
+        "Unused dependencies removed",
+        "Asset compression configured"
+      ]
+    }
+  ]
+}
