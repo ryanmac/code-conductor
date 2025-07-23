@@ -588,26 +588,82 @@ class ConductorSetup:
     def ensure_github_labels(self):
         """Ensure required GitHub labels exist"""
         print("\n🏷️  Ensuring GitHub labels exist...")
-        
+
         labels = [
-            {"name": "conductor:task", "color": "0e8a16", "description": "Tasks for AI agents"},
-            {"name": "conductor:status", "color": "1d76db", "description": "System status tracking"},
-            {"name": "conductor:in-progress", "color": "fbca04", "description": "Task being worked on"},
-            {"name": "conductor:blocked", "color": "d93f0b", "description": "Task is blocked"},
-            {"name": "conductor:archived", "color": "c5def5", "description": "Completed and archived"},
-            {"name": "conductor:alert", "color": "e11d21", "description": "System health alert"},
-            {"name": "effort:small", "color": "76d7c4", "description": "Small effort task"},
-            {"name": "effort:medium", "color": "f39c12", "description": "Medium effort task"},
-            {"name": "effort:large", "color": "e74c3c", "description": "Large effort task"},
+            {
+                "name": "conductor:task",
+                "color": "0e8a16",
+                "description": "Tasks for AI agents",
+            },
+            {
+                "name": "conductor:status",
+                "color": "1d76db",
+                "description": "System status tracking",
+            },
+            {
+                "name": "conductor:in-progress",
+                "color": "fbca04",
+                "description": "Task being worked on",
+            },
+            {
+                "name": "conductor:blocked",
+                "color": "d93f0b",
+                "description": "Task is blocked",
+            },
+            {
+                "name": "conductor:archived",
+                "color": "c5def5",
+                "description": "Completed and archived",
+            },
+            {
+                "name": "conductor:alert",
+                "color": "e11d21",
+                "description": "System health alert",
+            },
+            {
+                "name": "effort:small",
+                "color": "76d7c4",
+                "description": "Small effort task",
+            },
+            {
+                "name": "effort:medium",
+                "color": "f39c12",
+                "description": "Medium effort task",
+            },
+            {
+                "name": "effort:large",
+                "color": "e74c3c",
+                "description": "Large effort task",
+            },
             {"name": "priority:low", "color": "c5def5", "description": "Low priority"},
-            {"name": "priority:medium", "color": "fbca04", "description": "Medium priority"},
-            {"name": "priority:high", "color": "e11d21", "description": "High priority"},
-            {"name": "skill:frontend", "color": "7057ff", "description": "Frontend development"},
-            {"name": "skill:backend", "color": "008672", "description": "Backend development"},
-            {"name": "skill:devops", "color": "0052cc", "description": "DevOps and infrastructure"},
+            {
+                "name": "priority:medium",
+                "color": "fbca04",
+                "description": "Medium priority",
+            },
+            {
+                "name": "priority:high",
+                "color": "e11d21",
+                "description": "High priority",
+            },
+            {
+                "name": "skill:frontend",
+                "color": "7057ff",
+                "description": "Frontend development",
+            },
+            {
+                "name": "skill:backend",
+                "color": "008672",
+                "description": "Backend development",
+            },
+            {
+                "name": "skill:devops",
+                "color": "0052cc",
+                "description": "DevOps and infrastructure",
+            },
             {"name": "skill:ml", "color": "ff6b6b", "description": "Machine learning"},
         ]
-        
+
         # Check if gh CLI is available
         try:
             subprocess.run(["gh", "--version"], capture_output=True, check=True)
@@ -615,15 +671,17 @@ class ConductorSetup:
             print("⚠️  GitHub CLI not found. Labels will need to be created manually.")
             print("   Install from: https://cli.github.com/")
             return
-        
+
         # Check if we're authenticated
         try:
             subprocess.run(["gh", "auth", "status"], capture_output=True, check=True)
         except subprocess.CalledProcessError:
-            print("⚠️  GitHub CLI not authenticated. Labels will need to be created manually.")
+            print(
+                "⚠️  GitHub CLI not authenticated. Labels will need to be created manually."
+            )
             print("   Run: gh auth login")
             return
-        
+
         # Try to create labels
         created_count = 0
         for label in labels:
@@ -633,27 +691,32 @@ class ConductorSetup:
                     ["gh", "label", "list", "--json", "name"],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
                 existing_labels = [l["name"] for l in json.loads(result.stdout)]
-                
+
                 if label["name"] not in existing_labels:
                     # Create label
                     subprocess.run(
                         [
-                            "gh", "label", "create", label["name"],
-                            "--color", label["color"],
-                            "--description", label["description"]
+                            "gh",
+                            "label",
+                            "create",
+                            label["name"],
+                            "--color",
+                            label["color"],
+                            "--description",
+                            label["description"],
                         ],
                         capture_output=True,
-                        check=True
+                        check=True,
                     )
                     print(f"✓ Created label: {label['name']}")
                     created_count += 1
             except Exception:
                 # Silently continue if label creation fails
                 pass
-        
+
         if created_count > 0:
             print(f"✓ Created {created_count} GitHub labels")
         else:
