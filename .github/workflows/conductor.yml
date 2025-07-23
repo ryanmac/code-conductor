@@ -43,7 +43,8 @@ jobs:
       - name: Check system dependencies
         run: |
           python .conductor/scripts/dependency-check.py
-
+        env:
+          CONDUCTOR_GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
       - name: Run health check
         run: |
           python .conductor/scripts/health-check.py
