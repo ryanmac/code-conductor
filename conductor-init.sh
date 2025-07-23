@@ -290,20 +290,13 @@ else
         done
         
         if [ ${#SELECTED_ROLES[@]} -gt 0 ]; then
-            # Update config.yaml with selected roles
-            ROLES_TO_ADD=$(IFS=','; echo "${SELECTED_ROLES[*]}")
-            python3 -c "
-import yaml
-with open('.conductor/config.yaml', 'r') as f:
-    config = yaml.safe_load(f)
-current_roles = config.get('roles', {}).get('specialized', [])
-new_roles = [r.strip() for r in '$ROLES_TO_ADD'.split(',') if r.strip()]
-combined_roles = list(set(current_roles + new_roles))
-config['roles']['specialized'] = combined_roles
-with open('.conductor/config.yaml', 'w') as f:
-    yaml.dump(config, f, default_flow_style=False)
-print(f'✅ Roles added: {", ".join(new_roles)}')
-" || echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+            # Update config.yaml with selected roles (robust JSON passing)
+            if ! command -v jq >/dev/null 2>&1; then
+                echo -e "${RED}❌ jq is required for robust role selection. Please install jq and try again.${NC}"
+                exit 1
+            fi
+            ROLES_TO_ADD_JSON=$(printf '%s\n' "${SELECTED_ROLES[@]}" | jq -R . | jq -s .)
+            python3 -c "import sys, json, yaml;\nwith open('.conductor/config.yaml', 'r') as f:\n    config = yaml.safe_load(f)\ncurrent_roles = config.get('roles', {}).get('specialized', [])\nnew_roles = json.loads(sys.argv[1])\ncombined_roles = list(set(current_roles + new_roles))\nconfig['roles']['specialized'] = combined_roles\nwith open('.conductor/config.yaml', 'w') as f:\n    yaml.dump(config, f, default_flow_style=False)\nprint(f'✅ Roles added: {', '.join(new_roles)}')" "$ROLES_TO_ADD_JSON" || echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
         else
             echo -e "${YELLOW}⚠️ No valid selections made.${NC}"
         fi
