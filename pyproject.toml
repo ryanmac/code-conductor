@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "conductor-score"
+name = "code-conductor"
 version = "0.1.0"
 description = "Agent coordination for Conductor, Warp, and Claude Code"
 authors = ["Ryan Mac <ryan@updoot.co>"]
 readme = "README.md"
-packages = [{include = "conductor_score"}]
+packages = [{include = "code_conductor"}]
 
 [tool.poetry.dependencies]
 python = "^3.9,<3.13"

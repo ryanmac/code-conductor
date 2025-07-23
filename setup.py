@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Conductor Score Interactive Setup Script
+Code Conductor Interactive Setup Script
 Configures the repository for your specific project needs
 """
 
@@ -51,7 +51,7 @@ class ConductorSetup:
 
     def print_header(self):
         """Display setup header"""
-        print("🚀 Conductor Score Setup")
+        print("🚀 Code Conductor Setup")
         print("=" * 50)
         print("This will configure agent coordination for your project")
         print()
@@ -1391,7 +1391,7 @@ if __name__ == "__main__":
     def display_completion_message(self):
         """Show completion message and next steps"""
         print("\n" + "=" * 50)
-        print("🎉 Conductor Score Setup Complete!")
+        print("🎉 Code Conductor Setup Complete!")
         print("=" * 50)
 
         print("\n📋 Next Steps:")
@@ -1414,12 +1414,12 @@ if __name__ == "__main__":
         print("  - Configuration: .conductor/config.yaml")
         print("  - Scripts: .conductor/scripts/")
 
-        print("\n🚀 Happy coding with Conductor Score!")
+        print("\n🚀 Happy coding with Code Conductor!")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Conductor Score Interactive Setup",
+        description="Code Conductor Interactive Setup",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Conductor-Score will be documented in this file.
+All notable changes to Code Conductor will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -63,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1] - 2024-07-22
 
 ### Added
-- 🖥️ **Warp-Optimized Workflow**: Conductor-Score now detects Warp and can open each agent's worktree in an AI-powered terminal on macOS, Linux, or Windows
+- 🖥️ **Warp-Optimized Workflow**: Code Conductor now detects Warp and can open each agent's worktree in an AI-powered terminal on macOS, Linux, or Windows
 - 📱 Cross-platform terminal support with fallbacks (iTerm2, Kitty, Alacritty, Windows Terminal)
 - 🛠️ Enhanced `gtopen` and `gtwarp` commands in worktree helper
 - 📊 Storage footprint guidance and cleanup recommendations
@@ -81,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2024-07-22
 
 ### Added
-- 🎼 Initial release of Conductor-Score
+- 🎼 Initial release of Code Conductor
 - 🤖 Hybrid role system with default "dev" and specialized roles
 - 📋 GitHub Issues integration with `conductor:task` labels
 - 🔒 Conflict prevention via git worktrees and file locking

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Conductor-Score Worktree Helper
+# Code Conductor Worktree Helper
 # Source this file for convenient worktree management aliases
 
 # Terminal detection and opening functions
@@ -108,7 +108,7 @@ gtclean() {
 }
 
 # Print available commands when sourced
-echo "🎼 Conductor-Score Worktree Helper Loaded"
+echo "🎼 Code Conductor Worktree Helper Loaded"
 echo ""
 echo "Available commands:"
 echo "  gtr <task_id>  - Switch to task worktree"

@@ -1,1 +1,1 @@
-# Tests package for conductor-score
+# Tests package for code-conductor

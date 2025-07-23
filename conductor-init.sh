@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# conductor-init.sh - Universal Installer for Conductor-Score
-# Usage: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/conductor-score/main/conductor-init.sh)
-# Installs Conductor-Score into the current Git repository without full cloning.
+# conductor-init.sh - Universal Installer for Code Conductor
+# Usage: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+# Installs Code Conductor into the current Git repository without full cloning.
 
 set -e
 
@@ -12,9 +12,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}🚀 Conductor-Score Universal Installer${NC}"
+echo -e "${GREEN}🚀 Code Conductor Universal Installer${NC}"
 echo "=========================================="
-echo "This script will install Conductor-Score into your current Git repository."
+echo "This script will install Code Conductor into your current Git repository."
 echo "It will download necessary files and run the setup automatically."
 echo ""
 
@@ -73,8 +73,8 @@ echo ""
 
 # Step 2: Download and Extract Essential Files from Tarball
 echo -e "${YELLOW}📥 Downloading and extracting from GitHub tarball...${NC}"
-REPO_TARBALL_URL="https://github.com/ryanmac/conductor-score/archive/refs/heads/main.tar.gz"
-TEMP_DIR="/tmp/conductor-score-init"
+REPO_TARBALL_URL="https://github.com/ryanmac/code-conductor/archive/refs/heads/main.tar.gz"
+TEMP_DIR="/tmp/code-conductor-init"
 
 # Create temp dir
 mkdir -p "$TEMP_DIR"
@@ -193,7 +193,7 @@ else
     read -p "Commit these changes automatically? [Y/n]: " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-        git commit -m "Initialize Conductor-Score setup" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
+        git commit -m "Initialize Code Conductor setup" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
         echo -e "${GREEN}✅ Changes committed.${NC}"
     else
         echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
@@ -400,7 +400,7 @@ fi
 echo ""
 echo -e "${GREEN}🎉 Installation Successful!${NC}"
 echo "=========================================="
-echo "Conductor-Score is now installed with:"
+echo "Code Conductor is now installed with:"
 if [ -n "$DETECTED_STACKS" ]; then
     echo "  ✅ Auto-detected: $DETECTED_STACKS"
 else
@@ -418,7 +418,7 @@ echo "  🔧 Adjust config:  ${GREEN}$EDITOR .conductor/config.yaml${NC}"
 echo ""
 echo "${YELLOW}Your first PR will automatically get AI code reviews!${NC}"
 echo ""
-echo "📚 Documentation: https://github.com/ryanmac/conductor-score"
-echo "🐛 Report issues: https://github.com/ryanmac/conductor-score/issues"
+echo "📚 Documentation: https://github.com/ryanmac/code-conductor"
+echo "🐛 Report issues: https://github.com/ryanmac/code-conductor/issues"
 echo ""
 echo -e "${GREEN}Happy orchestrating! 🎼${NC}"

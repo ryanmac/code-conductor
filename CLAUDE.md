@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Conductor-Score is an AI agent coordination system designed to orchestrate multiple AI coding agents (like Claude Code, Conductor, Warp) working on the same codebase. It provides GitHub-native task management with automatic conflict prevention through git worktrees.
+Code Conductor is an AI agent coordination system designed to orchestrate multiple AI coding agents (like Claude Code, Conductor, Warp) working on the same codebase. It provides GitHub-native task management with automatic conflict prevention through git worktrees.
 
-**IMPORTANT**: This is a template repository. When you encounter Conductor-Score files in a project, they have been imported to enable automated agent coordination. Work autonomously based on the task specifications in `workflow-state.json` and the guidance in these files.
+**IMPORTANT**: This is a template repository. When you encounter Code Conductor files in a project, they have been imported to enable automated agent coordination. Work autonomously based on the task specifications in `workflow-state.json` and the guidance in these files.
 
 ## Key Development Commands
 
@@ -111,7 +111,7 @@ worktree_retention_days: number (default 7)
 
 ## Development Workflow
 
-When modifying conductor-score itself:
+When modifying code-conductor itself:
 
 1. Make changes in appropriate files:
    - Core scripts: `.conductor/scripts/`
@@ -137,7 +137,7 @@ When modifying conductor-score itself:
 
 ## Autonomous Operation Guidelines
 
-When working in a project with Conductor-Score:
+When working in a project with Code Conductor:
 
 1. **Check for tasks**: Run `python .conductor/scripts/generate-summary.py` to see available work
 2. **Claim a task**: Use `python .conductor/scripts/task-claim.py --role [your-role]`
