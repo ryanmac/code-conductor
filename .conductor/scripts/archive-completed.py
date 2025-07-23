@@ -17,10 +17,7 @@ class TaskArchiver:
         """Run GitHub CLI command and return output"""
         try:
             result = subprocess.run(
-                ["gh"] + args,
-                capture_output=True,
-                text=True,
-                check=True
+                ["gh"] + args, capture_output=True, text=True, check=True
             )
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
@@ -33,20 +30,30 @@ class TaskArchiver:
     def get_closed_issues(self, days_back=90):
         """Get closed conductor task issues within the specified time range"""
         # Calculate the date range
-        since_date = (datetime.utcnow() - timedelta(days=days_back)).strftime("%Y-%m-%d")
-        
-        output = self.run_gh_command([
-            "issue", "list",
-            "-l", "conductor:task",
-            "--state", "closed",
-            "--limit", "1000",
-            "--json", "number,title,closedAt,labels",
-            "--search", f"closed:>={since_date}"
-        ])
-        
+        since_date = (datetime.utcnow() - timedelta(days=days_back)).strftime(
+            "%Y-%m-%d"
+        )
+
+        output = self.run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:task",
+                "--state",
+                "closed",
+                "--limit",
+                "1000",
+                "--json",
+                "number,title,closedAt,labels",
+                "--search",
+                f"closed:>={since_date}",
+            ]
+        )
+
         if not output:
             return []
-        
+
         try:
             return json.loads(output)
         except json.JSONDecodeError:
@@ -55,55 +62,65 @@ class TaskArchiver:
     def archive_old_issues(self, max_age_days=30, dry_run=False):
         """Add archive label to closed issues older than max_age_days"""
         print(f"🔍 Looking for closed issues older than {max_age_days} days...")
-        
+
         # Get all closed issues
         closed_issues = self.get_closed_issues(days_back=max_age_days + 30)
-        
+
         if not closed_issues:
             print("ℹ️  No closed issues found")
             return
-        
+
         current_time = datetime.utcnow()
         cutoff_date = current_time - timedelta(days=max_age_days)
         issues_to_archive = []
-        
+
         for issue in closed_issues:
             # Skip if already archived
-            if any(label["name"] == "conductor:archived" for label in issue.get("labels", [])):
+            if any(
+                label["name"] == "conductor:archived"
+                for label in issue.get("labels", [])
+            ):
                 continue
-            
+
             closed_at_str = issue.get("closedAt")
             if closed_at_str:
                 try:
                     closed_at = datetime.fromisoformat(
                         closed_at_str.replace("Z", "+00:00")
                     ).replace(tzinfo=None)
-                    
+
                     if closed_at < cutoff_date:
-                        issues_to_archive.append({
-                            "number": issue["number"],
-                            "title": issue["title"],
-                            "closed_at": closed_at_str
-                        })
+                        issues_to_archive.append(
+                            {
+                                "number": issue["number"],
+                                "title": issue["title"],
+                                "closed_at": closed_at_str,
+                            }
+                        )
                 except ValueError:
                     continue
-        
+
         if not issues_to_archive:
             print("ℹ️  No issues need archiving")
             return
-        
+
         print(f"📦 Found {len(issues_to_archive)} issue(s) to archive")
-        
+
         if not dry_run:
             for issue in issues_to_archive:
                 print(f"  - Archiving issue #{issue['number']}: {issue['title']}")
-                
+
                 # Add archive label
-                self.run_gh_command([
-                    "issue", "edit", str(issue["number"]),
-                    "--add-label", "conductor:archived"
-                ])
-                
+                self.run_gh_command(
+                    [
+                        "issue",
+                        "edit",
+                        str(issue["number"]),
+                        "--add-label",
+                        "conductor:archived",
+                    ]
+                )
+
                 # Add archive comment
                 archive_comment = f"""### 📦 Task Archived
 
@@ -114,12 +131,17 @@ This completed task has been archived after {max_age_days} days.
 
 This helps keep the active task list manageable while preserving history.
 """
-                
-                self.run_gh_command([
-                    "issue", "comment", str(issue["number"]),
-                    "--body", archive_comment
-                ])
-                
+
+                self.run_gh_command(
+                    [
+                        "issue",
+                        "comment",
+                        str(issue["number"]),
+                        "--body",
+                        archive_comment,
+                    ]
+                )
+
                 self.archived_count += 1
         else:
             print("(DRY RUN - no changes made)")
@@ -130,66 +152,104 @@ This helps keep the active task list manageable while preserving history.
     def generate_metrics_report(self):
         """Generate system metrics report"""
         print("\n📊 Generating system metrics...")
-        
+
         # Get counts for different states
         metrics = {}
-        
+
         # Open tasks (available)
-        output = self.run_gh_command([
-            "issue", "list",
-            "-l", "conductor:task",
-            "--state", "open",
-            "--assignee", "!*",  # Not assigned
-            "--json", "number",
-            "--jq", '. | length'
-        ])
+        output = self.run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:task",
+                "--state",
+                "open",
+                "--assignee",
+                "!*",  # Not assigned
+                "--json",
+                "number",
+                "--jq",
+                ". | length",
+            ]
+        )
         metrics["available_tasks"] = int(output) if output.isdigit() else 0
-        
+
         # Assigned tasks
-        output = self.run_gh_command([
-            "issue", "list",
-            "-l", "conductor:task",
-            "--state", "open",
-            "--assignee", "*",  # Has assignee
-            "--json", "number",
-            "--jq", '. | length'
-        ])
+        output = self.run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:task",
+                "--state",
+                "open",
+                "--assignee",
+                "*",  # Has assignee
+                "--json",
+                "number",
+                "--jq",
+                ". | length",
+            ]
+        )
         metrics["assigned_tasks"] = int(output) if output.isdigit() else 0
-        
+
         # Completed tasks (closed, not archived)
-        output = self.run_gh_command([
-            "issue", "list",
-            "-l", "conductor:task,!conductor:archived",
-            "--state", "closed",
-            "--json", "number",
-            "--jq", '. | length'
-        ])
+        output = self.run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:task,!conductor:archived",
+                "--state",
+                "closed",
+                "--json",
+                "number",
+                "--jq",
+                ". | length",
+            ]
+        )
         metrics["completed_tasks"] = int(output) if output.isdigit() else 0
-        
+
         # Archived tasks
-        output = self.run_gh_command([
-            "issue", "list",
-            "-l", "conductor:task,conductor:archived",
-            "--state", "closed",
-            "--json", "number",
-            "--jq", '. | length'
-        ])
+        output = self.run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:task,conductor:archived",
+                "--state",
+                "closed",
+                "--json",
+                "number",
+                "--jq",
+                ". | length",
+            ]
+        )
         metrics["archived_tasks"] = int(output) if output.isdigit() else 0
-        
+
         # Recent completions (last 24h)
         yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
-        output = self.run_gh_command([
-            "issue", "list",
-            "-l", "conductor:task",
-            "--state", "closed",
-            "--search", f"closed:>={yesterday}",
-            "--json", "number",
-            "--jq", '. | length'
-        ])
+        output = self.run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:task",
+                "--state",
+                "closed",
+                "--search",
+                f"closed:>={yesterday}",
+                "--json",
+                "number",
+                "--jq",
+                ". | length",
+            ]
+        )
         metrics["recent_completions"] = int(output) if output.isdigit() else 0
-        
+
         self.report_data = metrics
-        
+
         # Display report
         print("\n📊 System Metrics")
         print("=" * 40)
@@ -198,22 +258,31 @@ This helps keep the active task list manageable while preserving history.
         print(f"Completed Tasks:      {metrics['completed_tasks']}")
         print(f"Archived Tasks:       {metrics['archived_tasks']}")
         print(f"Recent Completions:   {metrics['recent_completions']} (last 24h)")
-        print(f"Total Active:         {metrics['available_tasks'] + metrics['assigned_tasks']}")
+        print(
+            f"Total Active:         {metrics['available_tasks'] + metrics['assigned_tasks']}"
+        )
 
     def update_status_issue(self):
         """Update the status issue with archive report"""
         if self.archived_count == 0:
             return
-        
+
         # Find status issue
-        output = self.run_gh_command([
-            "issue", "list",
-            "-l", "conductor:status",
-            "--state", "open",
-            "--limit", "1",
-            "--json", "number"
-        ])
-        
+        output = self.run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:status",
+                "--state",
+                "open",
+                "--limit",
+                "1",
+                "--json",
+                "number",
+            ]
+        )
+
         status_issue_number = None
         if output:
             try:
@@ -222,7 +291,7 @@ This helps keep the active task list manageable while preserving history.
                     status_issue_number = issues[0]["number"]
             except json.JSONDecodeError:
                 pass
-        
+
         if status_issue_number:
             # Add archive report
             archive_report = f"""### 📦 Archive Report
@@ -239,11 +308,10 @@ This helps keep the active task list manageable while preserving history.
 
 ---
 *Automated archival by Code-Conductor*"""
-            
-            self.run_gh_command([
-                "issue", "comment", str(status_issue_number),
-                "--body", archive_report
-            ])
+
+            self.run_gh_command(
+                ["issue", "comment", str(status_issue_number), "--body", archive_report]
+            )
 
 
 def main():
@@ -270,28 +338,28 @@ def main():
     args = parser.parse_args()
 
     print("🧹 Starting archive and cleanup process...")
-    
+
     archiver = TaskArchiver()
-    
+
     # Check GitHub CLI authentication
     if not archiver.run_gh_command(["auth", "status"]):
         print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
         sys.exit(1)
-    
+
     # Archive old issues
     archiver.archive_old_issues(max_age_days=args.max_age, dry_run=args.dry_run)
-    
+
     # Generate metrics report
     if not args.skip_metrics:
         archiver.generate_metrics_report()
-    
+
     # Update status issue
     if not args.dry_run and archiver.archived_count > 0:
         archiver.update_status_issue()
-    
+
     print(f"\n✅ Archive process completed")
     print(f"   Archived: {archiver.archived_count} tasks")
-    
+
     if args.dry_run:
         print("\nRun without --dry-run to perform archival")
 

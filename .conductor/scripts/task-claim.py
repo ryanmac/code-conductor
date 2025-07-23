@@ -14,37 +14,43 @@ def run_gh_command(args):
     """Run GitHub CLI command and return output"""
     try:
         result = subprocess.run(
-            ["gh"] + args,
-            capture_output=True,
-            text=True,
-            check=True
+            ["gh"] + args, capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         print(f'{{"status": "ERROR", "message": "GitHub CLI error: {e.stderr}"}}')
         sys.exit(1)
     except FileNotFoundError:
-        print('{"status": "ERROR", "message": "GitHub CLI (gh) not found. Please install it."}')
+        print(
+            '{"status": "ERROR", "message": "GitHub CLI (gh) not found. Please install it."}'
+        )
         sys.exit(1)
 
 
 def get_available_tasks():
     """Get available tasks from GitHub Issues"""
     # Query open issues with conductor:task label that are not assigned
-    output = run_gh_command([
-        "issue", "list",
-        "-l", "conductor:task",
-        "--state", "open",
-        "--json", "number,title,body,labels,assignees,createdAt",
-        "--jq", '.[] | select(.assignees | length == 0)'
-    ])
-    
+    output = run_gh_command(
+        [
+            "issue",
+            "list",
+            "-l",
+            "conductor:task",
+            "--state",
+            "open",
+            "--json",
+            "number,title,body,labels,assignees,createdAt",
+            "--jq",
+            ".[] | select(.assignees | length == 0)",
+        ]
+    )
+
     if not output:
         return []
-    
+
     # Parse tasks from JSON lines
     tasks = []
-    for line in output.strip().split('\n'):
+    for line in output.strip().split("\n"):
         if line:
             try:
                 issue = json.loads(line)
@@ -56,9 +62,9 @@ def get_available_tasks():
                     "created_at": issue["createdAt"],
                     "required_skills": [],
                     "estimated_effort": "medium",
-                    "priority": "medium"
+                    "priority": "medium",
                 }
-                
+
                 # Extract metadata from labels
                 for label in issue["labels"]:
                     name = label["name"]
@@ -68,11 +74,11 @@ def get_available_tasks():
                         task["estimated_effort"] = name.replace("effort:", "")
                     elif name.startswith("priority:"):
                         task["priority"] = name.replace("priority:", "")
-                
+
                 tasks.append(task)
             except json.JSONDecodeError:
                 continue
-    
+
     return tasks
 
 
@@ -106,7 +112,7 @@ def find_suitable_task(tasks, role):
         role_tasks.sort(
             key=lambda x: (
                 priority_order.get(x.get("priority", "medium"), 2),
-                effort_order.get(x.get("estimated_effort", "medium"), 2)
+                effort_order.get(x.get("estimated_effort", "medium"), 2),
             )
         )
         return role_tasks[0]
@@ -118,7 +124,7 @@ def find_suitable_task(tasks, role):
         general_tasks.sort(
             key=lambda x: (
                 priority_order.get(x.get("priority", "medium"), 2),
-                effort_order.get(x.get("estimated_effort", "medium"), 2)
+                effort_order.get(x.get("estimated_effort", "medium"), 2),
             )
         )
         return general_tasks[0]
@@ -131,13 +137,10 @@ def claim_task(task, role):
     task_id = task["id"]
     agent_id = f"{role}_{uuid.uuid4().hex[:8]}"
     current_time = datetime.utcnow().isoformat()
-    
+
     # Assign the issue to self
-    run_gh_command([
-        "issue", "edit", task_id,
-        "--add-assignee", "@me"
-    ])
-    
+    run_gh_command(["issue", "edit", task_id, "--add-assignee", "@me"])
+
     # Add agent metadata as a comment
     metadata = {
         "agent_id": agent_id,
@@ -145,26 +148,20 @@ def claim_task(task, role):
         "status": "claimed",
         "claimed_at": current_time,
         "heartbeat": current_time,
-        "worktree_path": f"./worktrees/agent-{role}-{task_id}"
+        "worktree_path": f"./worktrees/agent-{role}-{task_id}",
     }
-    
+
     comment = f"""### Agent Claimed Task
 ```json
 {json.dumps(metadata, indent=2)}
 ```
 """
-    
-    run_gh_command([
-        "issue", "comment", task_id,
-        "--body", comment
-    ])
-    
+
+    run_gh_command(["issue", "comment", task_id, "--body", comment])
+
     # Add in-progress label
-    run_gh_command([
-        "issue", "edit", task_id,
-        "--add-label", "conductor:in-progress"
-    ])
-    
+    run_gh_command(["issue", "edit", task_id, "--add-label", "conductor:in-progress"])
+
     return agent_id, metadata
 
 
@@ -181,30 +178,32 @@ def main():
     # Get available tasks
     if args.task_id:
         # Check if specific task is available
-        output = run_gh_command([
-            "issue", "view", args.task_id,
-            "--json", "number,title,body,labels,assignees,state"
-        ])
-        
+        output = run_gh_command(
+            [
+                "issue",
+                "view",
+                args.task_id,
+                "--json",
+                "number,title,body,labels,assignees,state",
+            ]
+        )
+
         issue = json.loads(output)
-        
+
         # Validate task is claimable
         if issue["state"] != "OPEN":
-            result = {
-                "status": "ERROR",
-                "message": f"Task {args.task_id} is not open"
-            }
+            result = {"status": "ERROR", "message": f"Task {args.task_id} is not open"}
             print(json.dumps(result))
             sys.exit(1)
-        
+
         if issue["assignees"]:
             result = {
                 "status": "ERROR",
-                "message": f"Task {args.task_id} is already assigned"
+                "message": f"Task {args.task_id} is already assigned",
             }
             print(json.dumps(result))
             sys.exit(1)
-        
+
         # Check if it has conductor:task label
         has_conductor_label = any(
             label["name"] == "conductor:task" for label in issue["labels"]
@@ -212,11 +211,11 @@ def main():
         if not has_conductor_label:
             result = {
                 "status": "ERROR",
-                "message": f"Issue {args.task_id} is not a conductor task"
+                "message": f"Issue {args.task_id} is not a conductor task",
             }
             print(json.dumps(result))
             sys.exit(1)
-        
+
         # Convert to task format
         target_task = {
             "id": str(issue["number"]),
@@ -224,9 +223,9 @@ def main():
             "description": issue["body"] or "",
             "required_skills": [],
             "estimated_effort": "medium",
-            "priority": "medium"
+            "priority": "medium",
         }
-        
+
         # Extract metadata from labels
         for label in issue["labels"]:
             name = label["name"]

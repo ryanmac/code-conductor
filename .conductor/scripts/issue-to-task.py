@@ -12,10 +12,7 @@ def run_gh_command(args):
     """Run GitHub CLI command and return output"""
     try:
         result = subprocess.run(
-            ["gh"] + args,
-            capture_output=True,
-            text=True,
-            check=True
+            ["gh"] + args, capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
@@ -28,11 +25,16 @@ def run_gh_command(args):
 
 def get_issue_details(issue_number):
     """Get issue details from GitHub"""
-    output = run_gh_command([
-        "issue", "view", str(issue_number),
-        "--json", "title,body,labels,assignees,state"
-    ])
-    
+    output = run_gh_command(
+        [
+            "issue",
+            "view",
+            str(issue_number),
+            "--json",
+            "title,body,labels,assignees,state",
+        ]
+    )
+
     try:
         return json.loads(output)
     except json.JSONDecodeError:
@@ -72,14 +74,17 @@ def format_task_body(issue, metadata):
     """Format issue body with conductor task structure"""
     title = issue["title"]
     existing_body = issue.get("body", "")
-    
+
     # If body already has good structure, preserve it
-    if any(section in existing_body.lower() for section in ["## description", "## specifications", "## success criteria"]):
+    if any(
+        section in existing_body.lower()
+        for section in ["## description", "## specifications", "## success criteria"]
+    ):
         return existing_body
-    
+
     # Otherwise, create structured body
     body_parts = []
-    
+
     # Description
     body_parts.append("## Description")
     if "description" in metadata:
@@ -95,7 +100,7 @@ def format_task_body(issue, metadata):
         body_parts.append("\n".join(desc_lines) if desc_lines else title)
     else:
         body_parts.append(title)
-    
+
     # Specifications
     body_parts.append("\n## Specifications")
     if "specifications" in metadata:
@@ -104,7 +109,7 @@ def format_task_body(issue, metadata):
         body_parts.append("- [ ] Implement the feature/fix as described")
         body_parts.append("- [ ] Add appropriate tests")
         body_parts.append("- [ ] Update documentation if needed")
-    
+
     # Success Criteria
     body_parts.append("\n## Success Criteria")
     if "success criteria" in metadata:
@@ -113,17 +118,17 @@ def format_task_body(issue, metadata):
         body_parts.append("- All tests pass")
         body_parts.append("- Code follows project conventions")
         body_parts.append("- Feature works as described")
-    
+
     # Files (if specified)
     if "files" in metadata:
         body_parts.append("\n## Files Involved")
         body_parts.append(metadata["files"])
-    
+
     # Best Practices (if specified)
     if "best practices" in metadata:
         body_parts.append("\n## Best Practices")
         body_parts.append(metadata["best practices"])
-    
+
     return "\n".join(body_parts)
 
 
@@ -131,78 +136,82 @@ def add_conductor_labels(issue_number, issue_labels):
     """Add appropriate conductor labels to issue"""
     existing_labels = [label["name"] for label in issue_labels]
     labels_to_add = []
-    
+
     # Always add conductor:task if not present
     if "conductor:task" not in existing_labels:
         labels_to_add.append("conductor:task")
-    
+
     # Check for effort labels
     has_effort = any(label.startswith("effort:") for label in existing_labels)
-    if not has_effort and not any(label in ["small", "medium", "large"] for label in existing_labels):
+    if not has_effort and not any(
+        label in ["small", "medium", "large"] for label in existing_labels
+    ):
         labels_to_add.append("effort:medium")  # Default effort
-    
+
     # Check for priority labels
     has_priority = any(label.startswith("priority:") for label in existing_labels)
-    if not has_priority and not any(label in ["high", "medium", "low"] for label in existing_labels):
+    if not has_priority and not any(
+        label in ["high", "medium", "low"] for label in existing_labels
+    ):
         labels_to_add.append("priority:medium")  # Default priority
-    
+
     # Add labels if needed
     if labels_to_add:
         print(f"📎 Adding labels: {', '.join(labels_to_add)}")
         for label in labels_to_add:
-            run_gh_command([
-                "issue", "edit", str(issue_number),
-                "--add-label", label
-            ])
-    
+            run_gh_command(["issue", "edit", str(issue_number), "--add-label", label])
+
     return labels_to_add
 
 
 def format_issue_as_task(issue_number, dry_run=False):
     """Format a GitHub issue as a conductor task"""
     print(f"🔄 Processing issue #{issue_number}...")
-    
+
     # Get issue details
     issue = get_issue_details(issue_number)
-    
+
     # Check if issue is open
     if issue.get("state") != "OPEN":
         print(f"⚠️  Issue #{issue_number} is not open")
         return False
-    
+
     # Parse existing body
     metadata = parse_issue_body(issue.get("body", ""))
-    
+
     # Format body with conductor structure
     new_body = format_task_body(issue, metadata)
-    
+
     if dry_run:
         print("\n📋 Changes that would be made:")
         print("\nFormatted body:")
         print("-" * 40)
         print(new_body)
         print("-" * 40)
-        
+
         # Check what labels would be added
         existing_labels = [label["name"] for label in issue.get("labels", [])]
         if "conductor:task" not in existing_labels:
             print("\nWould add label: conductor:task")
-        if not any(label.startswith("effort:") or label in ["small", "medium", "large"] for label in existing_labels):
+        if not any(
+            label.startswith("effort:") or label in ["small", "medium", "large"]
+            for label in existing_labels
+        ):
             print("Would add label: effort:medium")
-        if not any(label.startswith("priority:") or label in ["high", "medium", "low"] for label in existing_labels):
+        if not any(
+            label.startswith("priority:") or label in ["high", "medium", "low"]
+            for label in existing_labels
+        ):
             print("Would add label: priority:medium")
     else:
         # Update issue body if changed
         if new_body != issue.get("body", ""):
             print("📝 Updating issue body with conductor structure...")
-            run_gh_command([
-                "issue", "edit", str(issue_number),
-                "--body", new_body
-            ])
-        
+            run_gh_command(["issue", "edit", str(issue_number), "--body", new_body])
+
         # Add conductor labels
         labels_added = add_conductor_labels(issue_number, issue.get("labels", []))
-        
+
         # Add formatting comment
         if labels_added or new_body != issue.get("body", ""):
             comment = """### 🎼 Issue Formatted as Conductor Task
@@ -215,7 +224,7 @@ This issue has been formatted to work with the Code-Conductor system.
                 comment += "- ✅ Body structured with Description, Specifications, and Success Criteria\n"
             if labels_added:
                 comment += f"- ✅ Added labels: {', '.join(labels_added)}\n"
-            
+
             comment += """
 **Next steps:**
 1. Review and adjust the task description if needed
@@ -225,16 +234,13 @@ This issue has been formatted to work with the Code-Conductor system.
 
 Use `python .conductor/scripts/bootstrap.sh dev` to claim this task.
 """
-            
-            run_gh_command([
-                "issue", "comment", str(issue_number),
-                "--body", comment
-            ])
-        
+
+            run_gh_command(["issue", "comment", str(issue_number), "--body", comment])
+
         print(f"\n✅ Issue #{issue_number} formatted as conductor task!")
         print(f"   Title: {issue['title']}")
         print("   Status: Ready for agents to claim")
-    
+
     return True
 
 
@@ -242,30 +248,26 @@ def main():
     parser = argparse.ArgumentParser(
         description="Format GitHub Issue as a Conductor Task"
     )
-    parser.add_argument(
-        "issue_number", 
-        type=int, 
-        help="GitHub issue number to format"
-    )
+    parser.add_argument("issue_number", type=int, help="GitHub issue number to format")
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would be done without making changes",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Check GitHub CLI authentication
     if not run_gh_command(["auth", "status"]):
         print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
         sys.exit(1)
-    
+
     # Format the issue
     success = format_issue_as_task(args.issue_number, args.dry_run)
-    
+
     if args.dry_run and success:
         print("\nRun without --dry-run to apply these changes.")
-    
+
     sys.exit(0 if success else 1)
 
 

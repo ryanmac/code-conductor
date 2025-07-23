@@ -519,7 +519,7 @@ class ConductorSetup:
                     "type": "markdown",
                     "attributes": {
                         "value": "## Task Details\n\nPlease provide clear specifications for this task."
-                    }
+                    },
                 },
                 {
                     "type": "textarea",
@@ -527,11 +527,9 @@ class ConductorSetup:
                     "attributes": {
                         "label": "Description",
                         "description": "What needs to be done?",
-                        "placeholder": "Provide a clear description of the task..."
+                        "placeholder": "Provide a clear description of the task...",
                     },
-                    "validations": {
-                        "required": True
-                    }
+                    "validations": {"required": True},
                 },
                 {
                     "type": "textarea",
@@ -539,8 +537,8 @@ class ConductorSetup:
                     "attributes": {
                         "label": "Specifications",
                         "description": "Detailed technical specifications",
-                        "placeholder": "- [ ] Requirement 1\n- [ ] Requirement 2\n- [ ] Requirement 3"
-                    }
+                        "placeholder": "- [ ] Requirement 1\n- [ ] Requirement 2\n- [ ] Requirement 3",
+                    },
                 },
                 {
                     "type": "textarea",
@@ -548,30 +546,26 @@ class ConductorSetup:
                     "attributes": {
                         "label": "Success Criteria",
                         "description": "How will we know when this task is complete?",
-                        "placeholder": "- All tests pass\n- Code follows project conventions\n- Feature works as described"
-                    }
+                        "placeholder": "- All tests pass\n- Code follows project conventions\n- Feature works as described",
+                    },
                 },
                 {
                     "type": "dropdown",
                     "id": "effort",
                     "attributes": {
                         "label": "Estimated Effort",
-                        "options": ["small", "medium", "large"]
+                        "options": ["small", "medium", "large"],
                     },
-                    "validations": {
-                        "required": True
-                    }
+                    "validations": {"required": True},
                 },
                 {
                     "type": "dropdown",
                     "id": "priority",
                     "attributes": {
                         "label": "Priority",
-                        "options": ["low", "medium", "high"]
+                        "options": ["low", "medium", "high"],
                     },
-                    "validations": {
-                        "required": True
-                    }
+                    "validations": {"required": True},
                 },
                 {
                     "type": "input",
@@ -579,10 +573,10 @@ class ConductorSetup:
                     "attributes": {
                         "label": "Required Skills",
                         "description": "Comma-separated list of required skills (e.g., python, react, devops)",
-                        "placeholder": "Leave blank for general dev tasks"
-                    }
-                }
-            ]
+                        "placeholder": "Leave blank for general dev tasks",
+                    },
+                },
+            ],
         }
 
         template_file = issue_templates_dir / "conductor-task.yml"
@@ -1476,7 +1470,9 @@ if __name__ == "__main__":
 
         print("\n💡 Quick Start:")
         print("  # Create a task via GitHub CLI:")
-        print("  gh issue create --label 'conductor:task' --title '[Task] Your task title'")
+        print(
+            "  gh issue create --label 'conductor:task' --title '[Task] Your task title'"
+        )
         print("  ")
         print("  # Or use the web interface with the task template")
         print("  ")
