@@ -96,7 +96,7 @@ jobs:
         uses: actions/create-release@v1
         id: create_release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.version.outputs.tag_name }}
           release_name: 🎼 Code Conductor ${{ steps.version.outputs.version }}
@@ -107,7 +107,7 @@ jobs:
       - name: Upload template archive
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: dist/code-conductor-template-${{ steps.version.outputs.version }}.tar.gz
@@ -117,7 +117,7 @@ jobs:
       - name: Upload quick-start zip
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: dist/code-conductor-${{ steps.version.outputs.version }}.zip
