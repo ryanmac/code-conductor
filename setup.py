@@ -1318,7 +1318,7 @@ class TaskClaimer:
 
     def _has_file_conflicts(self, task, state):
         """Check if task files conflict with active work"""
-                    task_files = set(task.get("files_locked", []))
+        task_files = set(task.get("files_locked", []))
         if not task_files:
             return False
 
