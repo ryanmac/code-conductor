@@ -42,13 +42,16 @@ jobs:
       
       - name: Setup GitHub CLI
         run: |
-          gh auth status || echo "Setting up GitHub CLI authentication"
+          echo "$GITHUB_TOKEN" | gh auth login --with-token || true
+          gh auth status
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate configuration
         run: |
           python .conductor/scripts/validate-config.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check system dependencies
         run: |
@@ -174,7 +177,8 @@ jobs:
 
       - name: Setup GitHub CLI
         run: |
-          gh auth status || echo "GitHub CLI not authenticated"
+          echo "$GITHUB_TOKEN" | gh auth login --with-token || true
+          gh auth status
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
