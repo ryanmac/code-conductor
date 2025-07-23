@@ -129,7 +129,7 @@ rm -rf "$TEMP_DIR"
 echo -e "${GREEN}✅ Files extracted: .conductor/, setup.py, requirements.txt, pyproject.toml, VERSION${NC}"
 echo ""
 
-# Step 3: Install Dependencies
+# Step 3: Install Dependencies (improved: suppress verbosity)
 echo -e "${YELLOW}📦 Installing dependencies...${NC}"
 
 # **Improved: Check if Poetry is functional before using it**
@@ -141,7 +141,7 @@ fi
 # Prefer Poetry if available and functional, otherwise use pip + venv
 if $POETRY_AVAILABLE; then
     echo "🎵 Poetry detected and functional. Using Poetry for installation."
-    poetry install || {
+    poetry install --quiet || {
         echo -e "${RED}❌ Poetry install failed. If using pyenv, try switching versions (e.g., pyenv shell 3.10.13) and re-run.${NC}"
         exit 1
     }
@@ -152,11 +152,11 @@ else
         exit 1
     }
     source .venv/bin/activate
-    pip install --upgrade pip || {
+    pip install --upgrade pip --quiet || {
         echo -e "${RED}❌ Failed to upgrade pip.${NC}"
         exit 1
     }
-    pip install -r requirements.txt || {
+    pip install -r requirements.txt --quiet || {
         echo -e "${RED}❌ Pip install failed.${NC}"
         exit 1
     }
@@ -184,7 +184,24 @@ fi
 echo -e "${GREEN}✅ Setup complete.${NC}"
 echo ""
 
-# Step 5: Interactive Role Configuration
+# Step 5: Auto-commit generated files (with user consent)
+echo -e "${YELLOW}📝 Committing generated files to Git...${NC}"
+git add .conductor .github setup.py requirements.txt pyproject.toml VERSION 2>/dev/null
+if git diff --staged --quiet; then
+    echo -e "${GREEN}✅ No changes to commit (files already in Git).${NC}"
+else
+    read -p "Commit these changes automatically? [Y/n]: " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        git commit -m "Initialize Conductor-Score setup" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
+        echo -e "${GREEN}✅ Changes committed.${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
+    fi
+fi
+echo ""
+
+# Step 6: Interactive Role Configuration (improved: numbered menu)
 echo -e "${YELLOW}🎭 Configuring agent roles...${NC}"
 
 # Read detected stacks from config
@@ -222,40 +239,80 @@ except:
 echo -e "🎯 Configured specialized roles: ${GREEN}$CONFIGURED_ROLES${NC}"
 echo ""
 
+# Parse current roles and filter suggestions
+ALL_ROLES=("code-reviewer" "frontend" "mobile" "devops" "security" "ml-engineer" "ui-designer" "data")
+ROLE_DESCRIPTIONS=(
+    "AI-powered PR reviews"
+    "React, Vue, Angular development"
+    "React Native, Flutter development"
+    "CI/CD, deployments, infrastructure"
+    "Security audits, vulnerability scanning"
+    "Machine learning tasks"
+    "Design systems, UI/UX"
+    "Data pipelines, analytics"
+)
+
+# Get array of current roles
+IFS=' ' read -ra CURRENT_ROLES_ARRAY <<< "$CONFIGURED_ROLES"
+
+# Build suggested roles (exclude already configured)
+SUGGESTED_ROLES=()
+SUGGESTED_INDICES=()
+for i in "${!ALL_ROLES[@]}"; do
+    role="${ALL_ROLES[$i]}"
+    if [[ ! " ${CURRENT_ROLES_ARRAY[@]} " =~ " ${role} " ]]; then
+        SUGGESTED_ROLES+=("$role")
+        SUGGESTED_INDICES+=("$i")
+    fi
+done
+
 # Ask if user wants to adjust roles
-read -p "Would you like to adjust the configured roles? [y/N]: " -n 1 -r
-echo ""
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Available specialized roles:"
-    echo "  - code-reviewer (AI-powered PR reviews)"
-    echo "  - frontend (React, Vue, Angular development)"
-    echo "  - mobile (React Native, Flutter development)"
-    echo "  - devops (CI/CD, deployments, infrastructure)"
-    echo "  - security (Security audits, vulnerability scanning)"
-    echo "  - ml-engineer (Machine learning tasks)"
-    echo "  - ui-designer (Design systems, UI/UX)"
-    echo "  - data (Data pipelines, analytics)"
+if [ ${#SUGGESTED_ROLES[@]} -eq 0 ]; then
+    echo -e "${GREEN}✅ All available roles are already configured.${NC}"
+else
+    echo "Available roles to add:"
+    for i in "${!SUGGESTED_ROLES[@]}"; do
+        idx=${SUGGESTED_INDICES[$i]}
+        echo "  $((i+1))) ${SUGGESTED_ROLES[$i]} - ${ROLE_DESCRIPTIONS[$idx]}"
+    done
     echo ""
-    read -p "Enter roles to add (comma-separated, or press Enter to keep current): " ADDITIONAL_ROLES
+    read -p "Select roles to add (comma-separated numbers, or Enter to skip): " -r ROLE_SELECTION
     
-    if [ -n "$ADDITIONAL_ROLES" ]; then
-        # Update config.yaml with additional roles
-        python3 -c "
+    if [ -n "$ROLE_SELECTION" ]; then
+        # Parse selected numbers and build role list
+        SELECTED_ROLES=()
+        IFS=',' read -ra SELECTIONS <<< "$ROLE_SELECTION"
+        for num in "${SELECTIONS[@]}"; do
+            num=$(echo $num | tr -d ' ')  # Trim spaces
+            if [[ $num =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#SUGGESTED_ROLES[@]}" ]; then
+                SELECTED_ROLES+=("${SUGGESTED_ROLES[$((num-1))]}")
+            fi
+        done
+        
+        if [ ${#SELECTED_ROLES[@]} -gt 0 ]; then
+            # Update config.yaml with selected roles
+            ROLES_TO_ADD=$(IFS=','; echo "${SELECTED_ROLES[*]}")
+            python3 -c "
 import yaml
 with open('.conductor/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 current_roles = config.get('roles', {}).get('specialized', [])
-new_roles = [r.strip() for r in '$ADDITIONAL_ROLES'.split(',') if r.strip()]
+new_roles = [r.strip() for r in '$ROLES_TO_ADD'.split(',') if r.strip()]
 combined_roles = list(set(current_roles + new_roles))
 config['roles']['specialized'] = combined_roles
 with open('.conductor/config.yaml', 'w') as f:
     yaml.dump(config, f, default_flow_style=False)
-print(f'✅ Roles updated: {combined_roles}')
+print(f'✅ Roles added: {", ".join(new_roles)}')
 " || echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+        else
+            echo -e "${YELLOW}⚠️ No valid selections made.${NC}"
+        fi
+    else
+        echo -e "${GREEN}✅ Keeping current role configuration.${NC}"
     fi
 fi
 
-# Step 6: Seed Demo Tasks
+# Step 7: Seed Demo Tasks
 echo ""
 echo -e "${YELLOW}📝 Creating demo tasks...${NC}"
 
@@ -302,36 +359,66 @@ else:
 " || echo -e "${YELLOW}⚠️ Could not create demo tasks.${NC}"
 fi
 
-# Step 7: Launch Agent (Optional)
+# Step 8: Launch Agent (improved: handle uncommitted changes)
 echo ""
 read -p "Would you like to start a dev agent now? [Y/n]: " -n 1 -r
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
     echo -e "${YELLOW}🤖 Starting dev agent...${NC}"
+    
+    # Check for uncommitted changes
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+        echo -e "${YELLOW}⚠️ Uncommitted changes detected.${NC}"
+        read -p "Stash them automatically before starting agent? [Y/n]: " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            git stash push -m "Auto-stash before Conductor agent startup" || {
+                echo -e "${RED}❌ Failed to stash changes.${NC}"
+                echo "Please commit or stash changes manually, then run: bash .conductor/scripts/bootstrap.sh dev"
+                exit 1
+            }
+            echo -e "${GREEN}✅ Changes stashed. You can restore them later with: git stash pop${NC}"
+        else
+            echo -e "${YELLOW}⚠️ Skipping agent startup. Please handle uncommitted changes first.${NC}"
+            echo "Then run: bash .conductor/scripts/bootstrap.sh dev"
+            exit 0
+        fi
+    fi
+    
     bash .conductor/scripts/bootstrap.sh dev || {
-        echo -e "${YELLOW}⚠️ Agent startup failed. You can try again later with: bash .conductor/scripts/bootstrap.sh dev${NC}"
+        echo -e "${YELLOW}⚠️ Agent startup failed.${NC}"
+        echo "You can try again with: bash .conductor/scripts/bootstrap.sh dev"
+        if git stash list | grep -q "Auto-stash before Conductor"; then
+            echo "To restore your stashed changes: git stash pop"
+        fi
     }
 fi
 
 # Note: No cleanup of setup.py, requirements.txt, etc. - leaving them in place for user reference and future use.
 
-# Step 8: Next Steps
+# Step 9: Next Steps (enhanced with copy-pasteable commands)
 echo ""
 echo -e "${GREEN}🎉 Installation Successful!${NC}"
 echo "=========================================="
 echo "Conductor-Score is now installed with:"
-echo "  ✅ Auto-detected technology stack"
+if [ -n "$DETECTED_STACKS" ]; then
+    echo "  ✅ Auto-detected: $DETECTED_STACKS"
+else
+    echo "  ✅ Auto-detected technology stack"
+fi
 echo "  ✅ AI code-reviewer for all PRs"
-echo "  ✅ Specialized roles configured"
+echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
 echo "  ✅ Demo tasks ready to claim"
 echo ""
-echo "Quick Start Commands:"
-echo "  📋 View tasks: cat .conductor/workflow-state.json | jq '.available_tasks'"
-echo "  🤖 Start agent: bash .conductor/scripts/bootstrap.sh [role]"
-echo "  📝 Create task: Use GitHub Issues with 'conductor:task' label"
-echo "  🔧 Adjust config: edit .conductor/config.yaml"
+echo "${YELLOW}Quick Start Commands:${NC}"
+echo "  📋 View tasks:     ${GREEN}cat .conductor/workflow-state.json | jq '.available_tasks'${NC}"
+echo "  🤖 Start agent:    ${GREEN}bash .conductor/scripts/bootstrap.sh dev${NC}"
+echo "  📝 Create task:    ${GREEN}gh issue create -l 'conductor:task'${NC}"
+echo "  🔧 Adjust config:  ${GREEN}$EDITOR .conductor/config.yaml${NC}"
 echo ""
-echo "Your first PR will automatically get AI code reviews!"
+echo "${YELLOW}Your first PR will automatically get AI code reviews!${NC}"
 echo ""
-echo "For full documentation: https://github.com/ryanmac/conductor-score"
+echo "📚 Documentation: https://github.com/ryanmac/conductor-score"
+echo "🐛 Report issues: https://github.com/ryanmac/conductor-score/issues"
+echo ""
 echo -e "${GREEN}Happy orchestrating! 🎼${NC}"
