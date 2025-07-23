@@ -296,7 +296,18 @@ else
                 exit 1
             fi
             ROLES_TO_ADD_JSON=$(printf '%s\n' "${SELECTED_ROLES[@]}" | jq -R . | jq -s .)
-            python3 -c "import sys, json, yaml;\nwith open('.conductor/config.yaml', 'r') as f:\n    config = yaml.safe_load(f)\ncurrent_roles = config.get('roles', {}).get('specialized', [])\nnew_roles = json.loads(sys.argv[1])\ncombined_roles = list(set(current_roles + new_roles))\nconfig['roles']['specialized'] = combined_roles\nwith open('.conductor/config.yaml', 'w') as f:\n    yaml.dump(config, f, default_flow_style=False)\nprint(f'✅ Roles added: {', '.join(new_roles)}')" "$ROLES_TO_ADD_JSON" || echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+            python3 - "$ROLES_TO_ADD_JSON" <<'EOF'
+import sys, json, yaml
+with open('.conductor/config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+current_roles = config.get('roles', {}).get('specialized', [])
+new_roles = json.loads(sys.argv[1])
+combined_roles = list(set(current_roles + new_roles))
+config['roles']['specialized'] = combined_roles
+with open('.conductor/config.yaml', 'w') as f:
+    yaml.dump(config, f, default_flow_style=False)
+print(f'✅ Roles added: {', '.join(new_roles)}')
+EOF || echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
         else
             echo -e "${YELLOW}⚠️ No valid selections made.${NC}"
         fi
