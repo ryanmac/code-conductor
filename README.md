@@ -21,7 +21,7 @@
 
 **One command. Instant AI coordination.**
 
-**Prerequisites for all options:** Git, Python 3.9+, curl (for one-liner), and tar. Run from the root of an existing Git repository. **If using pyenv, ensure your active Python version (e.g., via `pyenv shell 3.12.x`) has Poetry installed if you prefer it; otherwise, the script falls back to pip.**
+**Prerequisites for all options:** Git, Python 3.9-3.12, curl (for one-liner), and tar. Run from the root of an existing Git repository. **If using pyenv, ensure your active Python version (e.g., via `pyenv shell 3.12.x`) has Poetry installed if you prefer it; otherwise, the script falls back to pip.**
 
 ### **Option 1: Universal One-Liner (Recommended - No Cloning Required)**
 Run this in your existing project's root directory to download and install Conductor-Score directly:
@@ -345,7 +345,7 @@ python .conductor/scripts/validate-config.py
 ## Development Setup
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.9-3.12
 - Git
 - GitHub CLI (optional, for issue integration)
 
@@ -376,7 +376,7 @@ poetry run black --check .conductor/scripts/ setup.py
 ### CI/CD
 The project uses GitHub Actions for continuous integration:
 - **Linting**: flake8 and black formatting checks
-- **Testing**: pytest on multiple Python versions (3.9, 3.10, 3.11)
+- **Testing**: pytest on multiple Python versions (3.9, 3.10, 3.11, 3.12)
 - **Security**: safety vulnerability scanning
 - **Platforms**: Ubuntu and macOS
 

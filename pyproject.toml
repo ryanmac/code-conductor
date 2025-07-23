@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "conductor_score"}]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.9,<3.13"
 pyyaml = "^6.0"
 requests = "^2.28.0"
 
@@ -25,7 +25,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
-target-version = ['py39']
+target-version = ['py39', 'py310', 'py311', 'py312']
 
 [tool.flake8]
 max-line-length = 88

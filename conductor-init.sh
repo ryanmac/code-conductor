@@ -33,9 +33,9 @@ if ! command -v git >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check for Python 3.9+
-if ! command -v python3 >/dev/null 2>&1 || ! python3 -c "import sys; exit(0 if sys.version_info >= (3,9) else 1)"; then
-    echo -e "${RED}❌ Error: Python 3.9+ is required. Please install Python 3.9 or higher.${NC}"
+# Check for Python 3.9-3.12
+if ! command -v python3 >/dev/null 2>&1 || ! python3 -c "import sys; exit(0 if sys.version_info >= (3,9) and sys.version_info < (3,13) else 1)"; then
+    echo -e "${RED}❌ Error: Python 3.9-3.12 is required. Please install Python 3.9, 3.10, 3.11, or 3.12.${NC}"
     exit 1
 fi
 

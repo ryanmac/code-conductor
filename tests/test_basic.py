@@ -6,8 +6,9 @@ import requests
 
 
 def test_python_version():
-    """Test that we're running Python 3.9+"""
-    assert sys.version_info >= (3, 9), f"Python 3.9+ required, got {sys.version}"
+    """Test that we're running Python 3.9-3.12"""
+    assert sys.version_info >= (3, 9), f"Python 3.9-3.12 required, got {sys.version}"
+    assert sys.version_info < (3, 13), f"Python 3.13+ not yet supported, got {sys.version}"
 
 
 def test_dependencies():
