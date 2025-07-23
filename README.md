@@ -5,7 +5,7 @@
 > It has been renamed to **Code Conductor** (`code-conductor`) as of July 23, 2025.  
 > GitHub redirects all URLs, but please update any bookmarks or references.
 
-<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/09dea359-56a0-4c65-8c16-b98ec2b4f02a" />
+<img width="800" height="800" alt="image" src="https://github.com/user-attachments/assets/be1b47d2-8384-4012-b437-4d8316eaf9f7" />
 
 **Transform your development workflow in 60 seconds.** From tweet discovery to AI agents shipping code—the GitHub-native coordination system that changes how you build.
 
