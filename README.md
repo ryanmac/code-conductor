@@ -35,6 +35,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/conductor-score/main
 - **Security best practice:** Review the script at the raw URL before running.
 - **Pyenv users:** If Poetry install fails, switch to the Python version that has Poetry installed (e.g., `pyenv shell 3.10.13`) and re-run.
 
+<img width="1084" height="350" alt="CleanShot 2025-07-23 at 12 44 55" src="https://github.com/user-attachments/assets/3a04506f-982f-457a-b8ea-98b6448c0219" />
+
 ### Option 2: Poetry (For Cloned Repo)
 ```bash
 # Clone the repository
