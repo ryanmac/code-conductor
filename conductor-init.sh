@@ -296,7 +296,7 @@ else
                 exit 1
             fi
             ROLES_TO_ADD_JSON=$(printf '%s\n' "${SELECTED_ROLES[@]}" | jq -R . | jq -s .)
-            python3 - "$ROLES_TO_ADD_JSON" <<'EOF'
+            python3 - "$ROLES_TO_ADD_JSON" <<EOF
 import sys, json, yaml
 with open('.conductor/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
