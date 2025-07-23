@@ -29,12 +29,12 @@ class DependencyChecker:
                 try:
                     import urllib.request
                     import urllib.parse
-                    
+
                     # Create request with Authorization header
                     req = urllib.request.Request('https://api.github.com/user')
                     req.add_header('Authorization', f'token {github_token}')
                     req.add_header('User-Agent', 'Code-Conductor-CI')
-                    
+
                     with urllib.request.urlopen(req) as response:
                         if response.status == 200:
                             self.results["dependencies_satisfied"].append("GitHub API accessible (CI/CD)")
