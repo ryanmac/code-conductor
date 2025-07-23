@@ -9,13 +9,47 @@
 ## 🚀 **Why Developers Are Switching to Agentic Development**
 
 - ⚡ **Focus on architecture, let agents handle implementation** - Spend time on what matters most
-- 🎯 **Zero config for 90% of projects** - Auto-detects your stack and configures roles
-- 🔒 **Conflict-free teamwork** - Git worktrees + file locking = no merge hell
+- 🎯 **Zero config for 90% of projects** - Auto-detects your stack and configures optimal roles
+- 🔒 **AI code reviews on every PR** - Built-in CodeRabbit-style reviews catch bugs before merge
 - 🤖 **Smart agent roles** - Generalist "dev" handles most tasks, specialists for complex work
 - 📊 **Native GitHub integration** - Issues become tasks, Actions monitor health
 - 🔄 **Self-healing coordination** - Automatic cleanup, heartbeat monitoring, stale work recovery
 
 *"From weekend side project to shipping product in weeks, not months."*
+
+## 🎯 **90% Stack Coverage - Your Tech is Supported**
+
+Conductor-Score automatically detects and configures for the most popular technology stacks:
+
+### **Frontend & Full-Stack** (40% of projects)
+- **React/Next.js** - Auto-configures frontend & UI roles
+- **Vue/Nuxt** - Component-based development ready
+- **Angular** - Enterprise app support
+- **Svelte/SvelteKit** - Modern reactive apps
+
+### **Backend & APIs** (35% of projects)
+- **Node.js** (Express, NestJS) - Microservices ready
+- **Python** (Django, Flask, FastAPI) - Web & ML support
+- **Go** (Gin, Echo, Fiber) - High-performance services
+- **Java/Kotlin** (Spring) - Enterprise backends
+- **PHP** (Laravel, Symfony) - Rapid development
+- **.NET Core** (ASP.NET) - Microsoft stack
+
+### **Mobile & Desktop** (15% of projects)
+- **React Native** - Cross-platform mobile
+- **Flutter** - Native performance
+- **Tauri** - Lightweight desktop apps
+- **Electron** - Web-powered desktop
+
+### **Specialized Roles Auto-Configured**
+Based on your stack, we automatically add:
+- 🤖 **code-reviewer** - AI reviews on every PR (always included)
+- 🎨 **frontend** - UI/UX implementation
+- 📱 **mobile** - Platform-specific features
+- 🔧 **devops** - CI/CD & infrastructure
+- 🔒 **security** - Vulnerability scanning
+- 🧮 **ml-engineer** - ML model deployment
+- 📊 **data** - ETL & analytics
 
 ## ⚡ **60-Second Setup**
 
@@ -101,17 +135,27 @@ This reduces the complexity of managing many agent types while maintaining quali
 
 ```
 .conductor/
-├── config.yaml           # Project configuration
+├── config.yaml           # Project configuration with auto-detected stack
 ├── workflow-state.json   # Central coordination state
 ├── roles/               # Role definitions
 │   ├── dev.md          # Default generalist
+│   ├── code-reviewer.md # AI-powered PR reviewer
+│   ├── frontend.md     # UI/UX specialist
+│   ├── mobile.md       # Mobile app developer
 │   ├── devops.md       # CI/CD specialist
-│   └── security.md     # Security specialist
+│   ├── security.md     # Security specialist
+│   ├── ml-engineer.md  # ML/AI specialist
+│   └── data.md         # Data engineer
 ├── scripts/            # Automation scripts
 │   ├── bootstrap.sh    # Universal agent init
 │   ├── task-claim.py   # Atomic task assignment
+│   ├── code-reviewer.py # AI code review engine
 │   └── health-check.py # System monitoring
-└── templates/          # Reusable templates
+└── examples/           # Stack-specific task templates
+    ├── nextjs-webapp/
+    ├── python-webapp/
+    ├── mobile-app/
+    └── ...
 ```
 
 ## Configuration
@@ -152,6 +196,31 @@ Tasks include complete specifications:
   "required_skills": [],  // Empty = any dev can take it
   "estimated_effort": "medium"
 }
+```
+
+## 🤖 AI Code Review - Built-In Quality Gates
+
+Every pull request automatically gets AI-powered code reviews that:
+
+- 🔒 **Security scanning** - Catches hardcoded secrets, SQL injection risks, unsafe operations
+- 🐛 **Bug detection** - Identifies logic errors, null pointer risks, race conditions
+- 💡 **Improvement suggestions** - Performance optimizations, better patterns, refactoring opportunities
+- 🎨 **Style consistency** - Ensures coding standards across the team
+- 🧪 **Test coverage** - Suggests missing tests and edge cases
+
+### How It Works
+
+1. **Automatic trigger** - Reviews start instantly on PR creation/update
+2. **Contextual analysis** - Understands your codebase patterns
+3. **Actionable feedback** - Clear, specific suggestions with examples
+4. **Zero configuration** - Works out of the box with your existing GitHub workflow
+
+```yaml
+# .github/workflows/code-review.yml (auto-created)
+name: AI Code Review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 ```
 
 ## Agent Workflow

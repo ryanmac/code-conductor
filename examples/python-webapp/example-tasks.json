@@ -1,0 +1,79 @@
+{
+  "available_tasks": [
+    {
+      "id": "python-web-1",
+      "title": "Implement async database operations with SQLAlchemy",
+      "description": "Convert synchronous database operations to async using SQLAlchemy 2.0 async features",
+      "priority": "high",
+      "estimated_effort": "large",
+      "required_skills": ["devops"],
+      "files_to_modify": ["models/", "database.py", "api/"],
+      "success_criteria": [
+        "Async session factory configured",
+        "All database queries converted to async",
+        "Connection pooling optimized",
+        "Performance benchmarks show improvement"
+      ]
+    },
+    {
+      "id": "python-web-2",
+      "title": "Add Pydantic models for API validation",
+      "description": "Implement Pydantic models for request/response validation in FastAPI endpoints",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": [],
+      "files_to_modify": ["schemas/", "api/endpoints/"],
+      "success_criteria": [
+        "Pydantic models for all endpoints",
+        "Automatic validation enabled",
+        "Clear error messages",
+        "OpenAPI schema auto-generated"
+      ]
+    },
+    {
+      "id": "python-web-3",
+      "title": "Implement Redis caching layer",
+      "description": "Add Redis caching for frequently accessed data to improve API performance",
+      "priority": "medium",
+      "estimated_effort": "medium",
+      "required_skills": ["devops"],
+      "files_to_modify": ["cache.py", "api/", "docker-compose.yml"],
+      "success_criteria": [
+        "Redis connection configured",
+        "Cache decorator implemented",
+        "TTL strategy defined",
+        "Cache invalidation logic added"
+      ]
+    },
+    {
+      "id": "python-data-1",
+      "title": "Create data pipeline with Apache Airflow",
+      "description": "Build ETL pipeline for processing daily data imports using Airflow DAGs",
+      "priority": "high",
+      "estimated_effort": "large",
+      "required_skills": ["data", "devops"],
+      "files_to_modify": ["dags/", "plugins/", "config/airflow.cfg"],
+      "success_criteria": [
+        "DAG created with proper dependencies",
+        "Error handling and retries configured",
+        "Monitoring and alerting set up",
+        "Data quality checks implemented"
+      ]
+    },
+    {
+      "id": "python-ml-1",
+      "title": "Deploy ML model with FastAPI and Docker",
+      "description": "Create production-ready API endpoint for machine learning model inference",
+      "priority": "high",
+      "estimated_effort": "medium",
+      "required_skills": ["ml-engineer", "devops"],
+      "files_to_modify": ["api/predict.py", "models/", "Dockerfile"],
+      "success_criteria": [
+        "Model loaded efficiently",
+        "Batch prediction support",
+        "Input validation and preprocessing",
+        "Response time < 100ms"
+      ]
+    }
+  ]
+}

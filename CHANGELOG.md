@@ -5,6 +5,61 @@ All notable changes to Conductor-Score will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- 🎯 **90% Stack Coverage**: Enhanced detection for 10 major technology clusters covering 90% of real-world projects
+  - React/Next.js, Vue/Nuxt, Angular, Svelte full-stack applications
+  - Node.js, Python, Go, Java/Kotlin, PHP, .NET Core backends
+  - React Native, Flutter mobile development
+  - Tauri, Electron desktop applications
+- 🤖 **AI Code Reviewer**: Built-in CodeRabbit-style PR reviews for all projects
+  - Automatic security vulnerability detection
+  - Bug and logic error identification
+  - Code quality and performance suggestions
+  - Test coverage recommendations
+  - GitHub workflow included (`.github/workflows/code-review.yml`)
+- 🎭 **Enhanced Role System**: New specialized roles based on detected stack
+  - `code-reviewer` - AI-powered PR reviews (always included)
+  - `frontend` - React, Vue, Angular specialists
+  - `mobile` - React Native, Flutter developers
+  - `data` - Data pipeline and analytics engineers
+- 📊 **Interactive Setup**: Post-installation role configuration
+  - Shows detected technology stacks
+  - Suggests appropriate roles
+  - Allows manual role adjustment
+  - Seeds demo tasks automatically
+- 🧪 **Comprehensive Testing**: Stack detection test suite
+  - Tests for all 10 supported stack clusters
+  - Auto-configuration validation
+  - Role template verification
+- 📚 **Stack-Specific Examples**: Tailored task templates for each technology
+  - Next.js: SSR, i18n, optimization tasks
+  - Python: Async operations, ML deployment
+  - Mobile: Biometric auth, offline sync
+  - Go: gRPC, distributed tracing
+  - Desktop: Auto-updates, native integrations
+
+### Changed
+- 🔧 **setup.py**: Smarter stack detection with subtype analysis
+  - Reads package.json, requirements.txt, go.mod contents
+  - Detects specific frameworks (React vs Vue, Django vs FastAPI)
+  - Suggests optimal roles per detected stack
+- 📝 **conductor-init.sh**: Enhanced onboarding experience
+  - Shows detected stacks after setup
+  - Interactive role configuration prompt
+  - Demo task seeding
+  - Optional agent startup
+- 🎨 **README.md**: Updated with 90% coverage messaging
+  - Stack support matrix
+  - AI code review feature highlights
+  - Enhanced value propositions
+
+### Fixed
+- 🐛 Glob pattern support for .NET project detection (*.csproj)
+- 🔒 Code-reviewer role always included in auto-configuration
+- 📋 Demo tasks only created if none exist
+
 ## [1.0.1] - 2024-07-22
 
 ### Added
