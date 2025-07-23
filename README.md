@@ -21,7 +21,20 @@
 
 **One command. Instant AI coordination.**
 
-### Option 1: Poetry (Recommended)
+**Prerequisites for all options:** Git, Python 3.9+, curl (for one-liner), and tar. Run from the root of an existing Git repository.
+
+### Option 1: Universal One-Liner (Recommended - No Cloning Required)
+Run this in your existing project's root directory to download and install Conductor-Score directly:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/conductor-score/main/conductor-init.sh)
+```
+
+- This method avoids cloning the full Conductor-Score repo and is ideal for integrating into existing projects without repository pollution.
+- The script will prompt before overwriting any existing installation.
+- **Security best practice:** Review the script at the raw URL before running.
+
+### Option 2: Poetry (Manual Clone)
 ```bash
 # Clone the repository
 git clone https://github.com/ryanmac/conductor-score.git
@@ -32,7 +45,7 @@ poetry install
 poetry run python setup.py
 ```
 
-### Option 2: Pip + Virtual Environment
+### Option 3: Pip + Virtual Environment
 ```bash
 # Clone the repository
 git clone https://github.com/ryanmac/conductor-score.git
@@ -49,7 +62,7 @@ pip install -r requirements.txt
 python setup.py
 ```
 
-### Option 3: One-Command Install Script
+### Option 4: One-Command Install Script (from cloned repo)
 ```bash
 # From the repository directory:
 ./install.sh
@@ -62,7 +75,7 @@ python setup.py
 
 ## How It Works
 
-1. **Setup Phase**: The interactive setup script detects your project type and configures roles
+1. **Setup Phase**: Use the universal installer (Option 1) or other setup methods to configure your project. The setup script detects your project type and configures roles.
 2. **Task Creation**: Create tasks via GitHub Issues or directly in the state file
 3. **Agent Initialization**: Agents use the universal bootstrap to claim work
 4. **Isolated Development**: Each agent works in a git worktree to prevent conflicts
@@ -389,10 +402,6 @@ MIT - See LICENSE file
 
 - 🐛 [Issue Tracker](https://github.com/ryanmac/conductor-score/issues)
 - 💬 [Discussions](https://github.com/ryanmac/conductor-score/discussions)
-
----
-
----
 
 ## 💬 **Join the Community**
 
