@@ -3,6 +3,7 @@
 
 import subprocess
 import sys
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -19,26 +20,60 @@ class DependencyChecker:
 
     def check_github_api_status(self):
         """Verify GitHub API connectivity"""
-        try:
-            result = subprocess.run(
-                ["gh", "api", "user"], capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                self.results["dependencies_satisfied"].append("GitHub API accessible")
-                return True
+        # Check if we're in a CI/CD environment
+        if os.getenv('CI') or os.getenv('GITHUB_ACTIONS'):
+            # In CI/CD, check if GITHUB_TOKEN is available
+            github_token = os.getenv('CONDUCTOR_GITHUB_TOKEN') or os.getenv('GITHUB_TOKEN') or os.getenv('GH_TOKEN')
+            if github_token:
+                # Test API access using curl instead of gh CLI
+                try:
+                    import urllib.request
+                    import urllib.parse
+                    
+                    # Create request with Authorization header
+                    req = urllib.request.Request('https://api.github.com/user')
+                    req.add_header('Authorization', f'token {github_token}')
+                    req.add_header('User-Agent', 'Code-Conductor-CI')
+                    
+                    with urllib.request.urlopen(req) as response:
+                        if response.status == 200:
+                            self.results["dependencies_satisfied"].append("GitHub API accessible (CI/CD)")
+                            return True
+                        else:
+                            self.results["blockers"].append(
+                                f"GitHub API authentication failed - status {response.status}"
+                            )
+                            return False
+                except Exception as e:
+                    self.results["blockers"].append(f"GitHub API error in CI/CD: {e}")
+                    return False
             else:
                 self.results["blockers"].append(
-                    "GitHub API authentication failed - run 'gh auth login'"
+                    "GitHub token not available in CI/CD environment"
                 )
                 return False
-        except FileNotFoundError:
-            self.results["blockers"].append(
-                "GitHub CLI not installed - visit https://cli.github.com"
-            )
-            return False
-        except Exception as e:
-            self.results["blockers"].append(f"GitHub CLI error: {e}")
-            return False
+        else:
+            # Local environment - use GitHub CLI
+            try:
+                result = subprocess.run(
+                    ["gh", "api", "user"], capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    self.results["dependencies_satisfied"].append("GitHub API accessible")
+                    return True
+                else:
+                    self.results["blockers"].append(
+                        "GitHub API authentication failed - run 'gh auth login'"
+                    )
+                    return False
+            except FileNotFoundError:
+                self.results["blockers"].append(
+                    "GitHub CLI not installed - visit https://cli.github.com"
+                )
+                return False
+            except Exception as e:
+                self.results["blockers"].append(f"GitHub CLI error: {e}")
+                return False
 
     def check_git_status(self):
         """Check git repository status"""

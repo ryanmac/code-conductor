@@ -155,7 +155,7 @@ jobs:
         run: |
           gh auth status || echo "GitHub CLI not authenticated"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Process conductor:task issues
         run: |
@@ -167,7 +167,7 @@ jobs:
             python .conductor/scripts/issue-to-task.py --issue-number "$issue_number" || true
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
   workspace-maintenance:
     name: Workspace Maintenance
