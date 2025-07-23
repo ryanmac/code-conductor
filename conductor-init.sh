@@ -184,24 +184,7 @@ fi
 echo -e "${GREEN}✅ Setup complete.${NC}"
 echo ""
 
-# Step 5: Auto-commit generated files (with user consent)
-echo -e "${YELLOW}📝 Committing generated files to Git...${NC}"
-git add .conductor .github setup.py requirements.txt pyproject.toml VERSION 2>/dev/null
-if git diff --staged --quiet; then
-    echo -e "${GREEN}✅ No changes to commit (files already in Git).${NC}"
-else
-    read -p "Commit these changes automatically? [Y/n]: " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-        git commit -m "Initialize Code Conductor setup" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
-        echo -e "${GREEN}✅ Changes committed.${NC}"
-    else
-        echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
-    fi
-fi
-echo ""
-
-# Step 6: Interactive Role Configuration (improved: numbered menu)
+# Step 5: Interactive Role Configuration (improved: numbered menu)
 echo -e "${YELLOW}🎭 Configuring agent roles...${NC}"
 
 # Read detected stacks from config
@@ -319,7 +302,7 @@ EOF
     fi
 fi
 
-# Step 7: Seed Demo Tasks
+# Step 6: Seed Demo Tasks
 echo ""
 echo -e "${YELLOW}📝 Creating demo tasks...${NC}"
 
@@ -365,6 +348,24 @@ else:
     print('✅ Tasks already exist')
 " || echo -e "${YELLOW}⚠️ Could not create demo tasks.${NC}"
 fi
+
+# Step 7: Auto-commit generated files (with user consent)
+echo ""
+echo -e "${YELLOW}📝 Committing generated files to Git...${NC}"
+git add .conductor .github setup.py requirements.txt pyproject.toml VERSION 2>/dev/null
+if git diff --staged --quiet; then
+    echo -e "${GREEN}✅ No changes to commit (files already in Git).${NC}"
+else
+    read -p "Commit these changes automatically? [Y/n]: " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        git commit -m "Initialize Code Conductor setup" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
+        echo -e "${GREEN}✅ Changes committed.${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
+    fi
+fi
+echo ""
 
 # Step 8: Launch Agent (improved: handle uncommitted changes)
 echo ""
