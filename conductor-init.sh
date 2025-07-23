@@ -306,8 +306,11 @@ combined_roles = list(set(current_roles + new_roles))
 config['roles']['specialized'] = combined_roles
 with open('.conductor/config.yaml', 'w') as f:
     yaml.dump(config, f, default_flow_style=False)
-print(f'✅ Roles added: {', '.join(new_roles)}')
-EOF || echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+print(f'✅ Roles added: {", ".join(new_roles)}')
+EOF
+            if [ $? -ne 0 ]; then
+                echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+            fi
         else
             echo -e "${YELLOW}⚠️ No valid selections made.${NC}"
         fi
