@@ -28,7 +28,7 @@ demo: ## Create and run a full demo
 	@echo ""
 	@echo "🎼 Installing conductor-score..."
 	@cd /tmp/conductor-demo && cp -r $(PWD)/.conductor .
-	@cd /tmp/conductor-demo && cp -r $(PWD)/examples .
+	@cd /tmp/conductor-demo && cp -r $(PWD)/examples .conductor/
 	@cd /tmp/conductor-demo && cp $(PWD)/setup.py .
 	@cd /tmp/conductor-demo && cp $(PWD)/.gitignore .conductor-gitignore
 	@cd /tmp/conductor-demo && cat .conductor-gitignore >> .gitignore || cp .conductor-gitignore .gitignore

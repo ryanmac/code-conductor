@@ -117,10 +117,10 @@ cp "$TEMP_DIR/VERSION" . || {
 read -p "Do you want to copy example configurations (recommended for new users)? [Y/n]: " -n 1 -r
 echo ""
 if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-    cp -r "$TEMP_DIR/examples" . || {
+    cp -r "$TEMP_DIR/examples" .conductor/ || {
         echo -e "${YELLOW}⚠️ Failed to copy examples directory (continuing anyway).${NC}"
     }
-    echo -e "${GREEN}✅ Examples copied.${NC}"
+    echo -e "${GREEN}✅ Examples copied to .conductor/examples.${NC}"
 fi
 
 # Clean up temp dir
