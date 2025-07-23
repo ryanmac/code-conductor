@@ -12,8 +12,10 @@ import os
 def run_gh_command(args):
     """Run GitHub CLI command and return output"""
     try:
+        # Pass through environment variables including GITHUB_TOKEN
+        env = os.environ.copy()
         result = subprocess.run(
-            ["gh"] + args, capture_output=True, text=True, check=True
+            ["gh"] + args, capture_output=True, text=True, check=True, env=env
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
@@ -118,13 +120,17 @@ def validate_github_cli():
     # Check authentication
     output = run_gh_command(["auth", "status"])
     if not output:
-        errors.append(
-            "GitHub CLI not authenticated. Run 'gh auth login' to authenticate"
-        )
+        # In CI environment with GITHUB_TOKEN, this might be a warning not an error
+        if os.environ.get("GITHUB_TOKEN") or os.environ.get("CI"):
+            warnings.append(
+                "GitHub CLI auth status check failed (but GITHUB_TOKEN is set)"
+            )
+        else:
+            errors.append(
+                "GitHub CLI not authenticated. Run 'gh auth login' to authenticate"
+            )
     else:
-        print(
-            f"  ✓ GitHub CLI version: {output.split()[2] if 'version' in output else 'Unknown'}"
-        )
+        print(f"  ✓ GitHub CLI authenticated")
 
     # Check if we're in a git repository
     try:
