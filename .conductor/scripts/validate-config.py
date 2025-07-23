@@ -130,9 +130,7 @@ def validate_github_cli():
                 "GitHub CLI not authenticated. Run 'gh auth login' to authenticate"
             )
     else:
-        print(
-            f"  ✓ GitHub CLI authenticated"
-        )
+        print(f"  ✓ GitHub CLI authenticated")
 
     # Check if we're in a git repository
     try:
