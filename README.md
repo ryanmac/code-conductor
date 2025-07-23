@@ -1,4 +1,4 @@
-# 🎼 Conductor-Score
+# 🎼 Conductor's Score
 
 <img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/09dea359-56a0-4c65-8c16-b98ec2b4f02a" />
 
