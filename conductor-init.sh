@@ -366,66 +366,151 @@ else:
 " || echo -e "${YELLOW}⚠️ Could not create demo tasks.${NC}"
 fi
 
-# Step 8: Launch Agent (improved: handle uncommitted changes)
+# Step 8: Development Environment Selection
 echo ""
-read -p "Would you like to start a dev agent now? [Y/n]: " -n 1 -r
+echo -e "${YELLOW}🖥️  Select your primary development environment:${NC}"
 echo ""
-if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-    echo -e "${YELLOW}🤖 Starting dev agent...${NC}"
-    
-    # Check for uncommitted changes
-    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        echo -e "${YELLOW}⚠️ Uncommitted changes detected.${NC}"
-        read -p "Stash them automatically before starting agent? [Y/n]: " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-            git stash push -m "Auto-stash before Conductor agent startup" || {
-                echo -e "${RED}❌ Failed to stash changes.${NC}"
-                echo "Please commit or stash changes manually, then run: bash .conductor/scripts/bootstrap.sh dev"
-                exit 1
-            }
-            echo -e "${GREEN}✅ Changes stashed. You can restore them later with: git stash pop${NC}"
-        else
-            echo -e "${YELLOW}⚠️ Skipping agent startup. Please handle uncommitted changes first.${NC}"
-            echo "Then run: bash .conductor/scripts/bootstrap.sh dev"
+echo "  1) Conductor (https://conductor.build - macOS only)"
+echo "  2) Terminal (Warp, iTerm2, Windows Terminal, etc.)"
+echo "  3) IDE (Cursor, Cline, Windsurf, VSCode, etc.)"
+echo ""
+read -p "Enter your choice [1-3]: " -n 1 -r ENV_CHOICE
+echo ""
+
+case "$ENV_CHOICE" in
+    1)
+        # Conductor App Flow
+        if [[ "$OSTYPE" != "darwin"* ]]; then
+            echo -e "${YELLOW}⚠️  Conductor app is currently macOS-only.${NC}"
+            echo "Please select Terminal or IDE option instead."
             exit 0
         fi
-    fi
-    
-    bash .conductor/scripts/bootstrap.sh dev || {
-        echo -e "${YELLOW}⚠️ Agent startup failed.${NC}"
-        echo "You can try again with: bash .conductor/scripts/bootstrap.sh dev"
-        if git stash list | grep -q "Auto-stash before Conductor"; then
-            echo "To restore your stashed changes: git stash pop"
+        
+        echo -e "${GREEN}🎼 Conductor App Setup${NC}"
+        echo "=========================================="
+        echo ""
+        echo "📋 Next Steps:"
+        echo ""
+        echo "1. Open Conductor app:"
+        echo "   ${GREEN}open -a Conductor${NC}"
+        echo ""
+        echo "2. Add this project as a workspace:"
+        echo "   • In Conductor: ${YELLOW}File → Add Workspace${NC}"
+        echo "   • Select directory: ${GREEN}$(pwd)${NC}"
+        echo ""
+        echo "3. Start working with this prompt:"
+        echo ""
+        echo "   ${YELLOW}\"Check available tasks and start working on the highest priority one.\"${NC}"
+        echo ""
+        echo "💡 Pro Tips:"
+        echo "   • Conductor will handle task claiming and worktree setup automatically"
+        echo "   • Use the built-in terminal for git operations"
+        echo "   • AI code reviews happen automatically on PRs"
+        echo ""
+        echo "📚 Learn more: https://conductor.build"
+        ;;
+        
+    2|3)
+        # Terminal/IDE Flow - Run bootstrap
+        if [ "$ENV_CHOICE" = "2" ]; then
+            echo -e "${GREEN}🖥️  Terminal Workflow${NC}"
+        else
+            echo -e "${GREEN}💻 IDE Workflow${NC}"
         fi
-    }
-fi
+        echo "=========================================="
+        echo ""
+        
+        read -p "Would you like to start a dev agent now? [Y/n]: " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            echo -e "${YELLOW}🤖 Starting dev agent...${NC}"
+            
+            # Check for uncommitted changes
+            if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+                echo -e "${YELLOW}⚠️ Uncommitted changes detected.${NC}"
+                read -p "Stash them automatically before starting agent? [Y/n]: " -n 1 -r
+                echo ""
+                if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+                    git stash push -m "Auto-stash before Conductor agent startup" || {
+                        echo -e "${RED}❌ Failed to stash changes.${NC}"
+                        echo "Please commit or stash changes manually, then run: bash .conductor/scripts/bootstrap.sh dev"
+                        exit 1
+                    }
+                    echo -e "${GREEN}✅ Changes stashed. You can restore them later with: git stash pop${NC}"
+                else
+                    echo -e "${YELLOW}⚠️ Skipping agent startup. Please handle uncommitted changes first.${NC}"
+                    echo "Then run: bash .conductor/scripts/bootstrap.sh dev"
+                    exit 0
+                fi
+            fi
+            
+            bash .conductor/scripts/bootstrap.sh dev || {
+                echo -e "${YELLOW}⚠️ Agent startup failed.${NC}"
+                echo "You can try again with: bash .conductor/scripts/bootstrap.sh dev"
+                if git stash list | grep -q "Auto-stash before Conductor"; then
+                    echo "To restore your stashed changes: git stash pop"
+                fi
+            }
+        else
+            echo ""
+            echo "📋 To start an agent later:"
+            echo "   ${GREEN}bash .conductor/scripts/bootstrap.sh dev${NC}"
+        fi
+        ;;
+        
+    *)
+        echo -e "${RED}❌ Invalid choice. Please run the installer again.${NC}"
+        exit 1
+        ;;
+esac
 
 # Note: No cleanup of setup.py, requirements.txt, etc. - leaving them in place for user reference and future use.
 
-# Step 9: Next Steps (enhanced with copy-pasteable commands)
-echo ""
-echo -e "${GREEN}🎉 Installation Successful!${NC}"
-echo "=========================================="
-echo "Code Conductor is now installed with:"
-if [ -n "$DETECTED_STACKS" ]; then
-    echo "  ✅ Auto-detected: $DETECTED_STACKS"
+# Step 9: Next Steps (contextual based on environment choice)
+if [ "$ENV_CHOICE" != "1" ]; then
+    # Terminal/IDE users get the full command list
+    echo ""
+    echo -e "${GREEN}🎉 Installation Successful!${NC}"
+    echo "=========================================="
+    echo "Code Conductor is now installed with:"
+    if [ -n "$DETECTED_STACKS" ]; then
+        echo "  ✅ Auto-detected: $DETECTED_STACKS"
+    else
+        echo "  ✅ Auto-detected technology stack"
+    fi
+    echo "  ✅ AI code-reviewer for all PRs"
+    echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
+    echo "  ✅ Demo tasks ready to claim"
+    echo ""
+    echo "${YELLOW}Quick Start Commands:${NC}"
+    echo "  📋 View tasks:     ${GREEN}cat .conductor/workflow-state.json | jq '.available_tasks'${NC}"
+    echo "  🤖 Start agent:    ${GREEN}bash .conductor/scripts/bootstrap.sh dev${NC}"
+    echo "  📝 Create task:    ${GREEN}gh issue create -l 'conductor:task'${NC}"
+    echo "  🔧 Adjust config:  ${GREEN}$EDITOR .conductor/config.yaml${NC}"
+    echo ""
+    echo "${YELLOW}Your first PR will automatically get AI code reviews!${NC}"
+    echo ""
+    echo "📚 Documentation: https://github.com/ryanmac/code-conductor"
+    echo "🐛 Report issues: https://github.com/ryanmac/code-conductor/issues"
+    echo ""
+    echo -e "${GREEN}Happy orchestrating! 🎼${NC}"
 else
-    echo "  ✅ Auto-detected technology stack"
+    # Conductor app users get a simplified message (already shown above)
+    echo ""
+    echo -e "${GREEN}🎉 Setup Complete!${NC}"
+    echo "=========================================="
+    echo "Code Conductor is configured with:"
+    if [ -n "$DETECTED_STACKS" ]; then
+        echo "  ✅ Auto-detected: $DETECTED_STACKS"
+    else
+        echo "  ✅ Auto-detected technology stack"
+    fi
+    echo "  ✅ AI code-reviewer for all PRs"
+    echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
+    echo "  ✅ Demo tasks ready in Conductor"
+    echo ""
+    echo "📚 Documentation: https://github.com/ryanmac/code-conductor"
+    echo "🐛 Report issues: https://github.com/ryanmac/code-conductor/issues"
+    echo ""
+    echo -e "${GREEN}Happy orchestrating with Conductor! 🎼${NC}"
 fi
-echo "  ✅ AI code-reviewer for all PRs"
-echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
-echo "  ✅ Demo tasks ready to claim"
-echo ""
-echo "${YELLOW}Quick Start Commands:${NC}"
-echo "  📋 View tasks:     ${GREEN}cat .conductor/workflow-state.json | jq '.available_tasks'${NC}"
-echo "  🤖 Start agent:    ${GREEN}bash .conductor/scripts/bootstrap.sh dev${NC}"
-echo "  📝 Create task:    ${GREEN}gh issue create -l 'conductor:task'${NC}"
-echo "  🔧 Adjust config:  ${GREEN}$EDITOR .conductor/config.yaml${NC}"
-echo ""
-echo "${YELLOW}Your first PR will automatically get AI code reviews!${NC}"
-echo ""
-echo "📚 Documentation: https://github.com/ryanmac/code-conductor"
-echo "🐛 Report issues: https://github.com/ryanmac/code-conductor/issues"
-echo ""
-echo -e "${GREEN}Happy orchestrating! 🎼${NC}"
