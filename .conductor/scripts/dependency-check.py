@@ -21,9 +21,13 @@ class DependencyChecker:
     def check_github_api_status(self):
         """Verify GitHub API connectivity"""
         # Check if we're in a CI/CD environment
-        if os.getenv('CI') or os.getenv('GITHUB_ACTIONS'):
+        if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
             # In CI/CD, check if GITHUB_TOKEN is available
-            github_token = os.getenv('CONDUCTOR_GITHUB_TOKEN') or os.getenv('GITHUB_TOKEN') or os.getenv('GH_TOKEN')
+            github_token = (
+                os.getenv("CONDUCTOR_GITHUB_TOKEN")
+                or os.getenv("GITHUB_TOKEN")
+                or os.getenv("GH_TOKEN")
+            )
             if github_token:
                 # Test API access using curl instead of gh CLI
                 try:
@@ -31,13 +35,15 @@ class DependencyChecker:
                     import urllib.parse
 
                     # Create request with Authorization header
-                    req = urllib.request.Request('https://api.github.com/user')
-                    req.add_header('Authorization', f'token {github_token}')
-                    req.add_header('User-Agent', 'Code-Conductor-CI')
+                    req = urllib.request.Request("https://api.github.com/user")
+                    req.add_header("Authorization", f"token {github_token}")
+                    req.add_header("User-Agent", "Code-Conductor-CI")
 
                     with urllib.request.urlopen(req) as response:
                         if response.status == 200:
-                            self.results["dependencies_satisfied"].append("GitHub API accessible (CI/CD)")
+                            self.results["dependencies_satisfied"].append(
+                                "GitHub API accessible (CI/CD)"
+                            )
                             return True
                         else:
                             self.results["blockers"].append(
@@ -59,7 +65,9 @@ class DependencyChecker:
                     ["gh", "api", "user"], capture_output=True, text=True
                 )
                 if result.returncode == 0:
-                    self.results["dependencies_satisfied"].append("GitHub API accessible")
+                    self.results["dependencies_satisfied"].append(
+                        "GitHub API accessible"
+                    )
                     return True
                 else:
                     self.results["blockers"].append(
