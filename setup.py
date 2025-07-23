@@ -113,16 +113,37 @@ class ConductorSetup:
                 "suggested_roles": ["devops"],
                 "common_patterns": ["frontend", "backend", "extension"],
                 "subtypes": {
-                    "react": {"keywords": ["react", "react-dom"], "roles": ["frontend", "ui-designer"]},
+                    "react": {
+                        "keywords": ["react", "react-dom"],
+                        "roles": ["frontend", "ui-designer"],
+                    },
                     "nextjs": {"keywords": ["next"], "roles": ["frontend", "devops"]},
-                    "vue": {"keywords": ["vue", "@vue/"], "roles": ["frontend", "ui-designer"]},
-                    "angular": {"keywords": ["@angular/"], "roles": ["frontend", "ui-designer"]},
-                    "svelte": {"keywords": ["svelte", "@sveltejs/"], "roles": ["frontend", "ui-designer"]},
-                    "express": {"keywords": ["express"], "roles": ["devops", "security"]},
+                    "vue": {
+                        "keywords": ["vue", "@vue/"],
+                        "roles": ["frontend", "ui-designer"],
+                    },
+                    "angular": {
+                        "keywords": ["@angular/"],
+                        "roles": ["frontend", "ui-designer"],
+                    },
+                    "svelte": {
+                        "keywords": ["svelte", "@sveltejs/"],
+                        "roles": ["frontend", "ui-designer"],
+                    },
+                    "express": {
+                        "keywords": ["express"],
+                        "roles": ["devops", "security"],
+                    },
                     "nest": {"keywords": ["@nestjs/"], "roles": ["devops", "security"]},
-                    "electron": {"keywords": ["electron"], "roles": ["frontend", "devops"]},
-                    "react-native": {"keywords": ["react-native"], "roles": ["mobile", "frontend"]},
-                }
+                    "electron": {
+                        "keywords": ["electron"],
+                        "roles": ["frontend", "devops"],
+                    },
+                    "react-native": {
+                        "keywords": ["react-native"],
+                        "roles": ["mobile", "frontend"],
+                    },
+                },
             },
             "requirements.txt": {
                 "tech": "python",
@@ -131,54 +152,90 @@ class ConductorSetup:
                 "subtypes": {
                     "django": {"keywords": ["django"], "roles": ["devops", "security"]},
                     "flask": {"keywords": ["flask"], "roles": ["devops", "security"]},
-                    "fastapi": {"keywords": ["fastapi"], "roles": ["devops", "security"]},
-                    "ml": {"keywords": ["tensorflow", "torch", "scikit-learn"], "roles": ["ml-engineer", "data"]},
-                    "data": {"keywords": ["pandas", "numpy", "jupyter"], "roles": ["data", "ml-engineer"]},
-                }
+                    "fastapi": {
+                        "keywords": ["fastapi"],
+                        "roles": ["devops", "security"],
+                    },
+                    "ml": {
+                        "keywords": ["tensorflow", "torch", "scikit-learn"],
+                        "roles": ["ml-engineer", "data"],
+                    },
+                    "data": {
+                        "keywords": ["pandas", "numpy", "jupyter"],
+                        "roles": ["data", "ml-engineer"],
+                    },
+                },
             },
             "Cargo.toml": {
                 "tech": "rust",
                 "suggested_roles": ["devops", "security"],
                 "common_patterns": ["tauri", "wasm", "cli"],
                 "subtypes": {
-                    "tauri": {"keywords": ["tauri"], "roles": ["frontend", "devops", "security"]},
-                }
+                    "tauri": {
+                        "keywords": ["tauri"],
+                        "roles": ["frontend", "devops", "security"],
+                    },
+                },
             },
             "pom.xml": {
                 "tech": "java",
                 "suggested_roles": ["devops"],
                 "common_patterns": ["spring", "microservice"],
                 "subtypes": {
-                    "spring": {"keywords": ["spring-boot", "springframework"], "roles": ["devops", "security"]},
-                }
+                    "spring": {
+                        "keywords": ["spring-boot", "springframework"],
+                        "roles": ["devops", "security"],
+                    },
+                },
             },
             "go.mod": {
                 "tech": "go",
                 "suggested_roles": ["devops"],
                 "common_patterns": ["api", "cli", "microservice"],
                 "subtypes": {
-                    "gin": {"keywords": ["gin-gonic/gin"], "roles": ["devops", "security"]},
-                    "echo": {"keywords": ["labstack/echo"], "roles": ["devops", "security"]},
-                    "fiber": {"keywords": ["gofiber/fiber"], "roles": ["devops", "security"]},
-                }
+                    "gin": {
+                        "keywords": ["gin-gonic/gin"],
+                        "roles": ["devops", "security"],
+                    },
+                    "echo": {
+                        "keywords": ["labstack/echo"],
+                        "roles": ["devops", "security"],
+                    },
+                    "fiber": {
+                        "keywords": ["gofiber/fiber"],
+                        "roles": ["devops", "security"],
+                    },
+                },
             },
             "composer.json": {
                 "tech": "php",
                 "suggested_roles": ["devops", "security"],
                 "common_patterns": ["laravel", "symfony", "wordpress"],
                 "subtypes": {
-                    "laravel": {"keywords": ["laravel/"], "roles": ["devops", "security"]},
-                    "symfony": {"keywords": ["symfony/"], "roles": ["devops", "security"]},
-                }
+                    "laravel": {
+                        "keywords": ["laravel/"],
+                        "roles": ["devops", "security"],
+                    },
+                    "symfony": {
+                        "keywords": ["symfony/"],
+                        "roles": ["devops", "security"],
+                    },
+                },
             },
             "*.csproj": {
                 "tech": "dotnet",
                 "suggested_roles": ["devops", "security"],
                 "common_patterns": ["aspnet", "blazor"],
                 "subtypes": {
-                    "aspnet": {"keywords": ["Microsoft.AspNetCore"], "roles": ["devops", "security"]},
-                    "blazor": {"keywords": ["Microsoft.AspNetCore.Components"], "roles": ["frontend", "devops"]},
-                }
+                    "aspnet": {
+                        "keywords": ["Microsoft.AspNetCore"],
+                        "roles": ["devops", "security"],
+                    },
+                    "blazor": {
+                        "keywords": ["Microsoft.AspNetCore.Components"],
+                        "roles": ["frontend", "devops"],
+                    },
+                },
             },
             "pubspec.yaml": {
                 "tech": "flutter",
@@ -193,13 +250,13 @@ class ConductorSetup:
         }
 
         import glob
-        
+
         # Process each tech indicator
         for file_pattern, info in tech_indicators.items():
             found = False
-            
+
             # Handle glob patterns
-            if '*' in file_pattern:
+            if "*" in file_pattern:
                 matches = list(self.project_root.glob(file_pattern))
                 if matches:
                     found = True
@@ -208,35 +265,39 @@ class ConductorSetup:
                 file_to_check = self.project_root / file_pattern
                 if file_to_check.exists():
                     found = True
-            
+
             if found:
                 # Deep copy to avoid modifying the original
                 stack_info = info.copy()
-                
+
                 # Detect subtypes by reading file contents
                 if "subtypes" in info and file_to_check.exists():
                     try:
-                        content = file_to_check.read_text(encoding='utf-8')
+                        content = file_to_check.read_text(encoding="utf-8")
                         detected_subtypes = []
                         additional_roles = set()
-                        
+
                         for subtype_name, subtype_info in info["subtypes"].items():
                             for keyword in subtype_info["keywords"]:
                                 if keyword in content:
                                     detected_subtypes.append(subtype_name)
-                                    additional_roles.update(subtype_info.get("roles", []))
+                                    additional_roles.update(
+                                        subtype_info.get("roles", [])
+                                    )
                                     break
-                        
+
                         if detected_subtypes:
                             stack_info["detected_subtypes"] = detected_subtypes
                             # Merge additional roles from subtypes
                             existing_roles = set(stack_info.get("suggested_roles", []))
-                            stack_info["suggested_roles"] = list(existing_roles | additional_roles)
-                            
+                            stack_info["suggested_roles"] = list(
+                                existing_roles | additional_roles
+                            )
+
                     except Exception as e:
                         if self.debug:
                             self.logger.debug(f"Could not read {file_to_check}: {e}")
-                
+
                 self.detected_stack.append(stack_info)
                 subtypes_str = ""
                 if "detected_subtypes" in stack_info:
@@ -342,20 +403,22 @@ class ConductorSetup:
         # Detect roles based on enhanced stack detection
         suggested_roles = set()
         detected_stacks = []
-        
+
         for stack in self.detected_stack:
             suggested_roles.update(stack.get("suggested_roles", []))
             if "detected_subtypes" in stack:
-                detected_stacks.append(f"{stack['tech']} ({', '.join(stack['detected_subtypes'])})")
+                detected_stacks.append(
+                    f"{stack['tech']} ({', '.join(stack['detected_subtypes'])})"
+                )
             else:
-                detected_stacks.append(stack['tech'])
-        
+                detected_stacks.append(stack["tech"])
+
         # Always include code-reviewer role for AI-powered PR reviews
         specialized_roles = ["code-reviewer"]
-        
+
         # Add roles based on detected stack
         specialized_roles.extend(list(suggested_roles))
-        
+
         # Additional heuristics
         if any("docker" in str(f).lower() for f in self.project_root.glob("*")):
             if "devops" not in specialized_roles:
@@ -363,7 +426,7 @@ class ConductorSetup:
         if any("security" in str(f).lower() for f in self.project_root.glob("*")):
             if "security" not in specialized_roles:
                 specialized_roles.append("security")
-        
+
         # Remove duplicates while preserving order
         specialized_roles = list(dict.fromkeys(specialized_roles))
 
@@ -382,7 +445,9 @@ class ConductorSetup:
         print(f"✓ Project: {self.config['project_name']}")
         if detected_stacks:
             print(f"✓ Detected stacks: {', '.join(detected_stacks)}")
-        print(f"✓ Roles: dev + {len(specialized_roles)} specialized ({', '.join(specialized_roles)})")
+        print(
+            f"✓ Roles: dev + {len(specialized_roles)} specialized ({', '.join(specialized_roles)})"
+        )
         print(f"✓ Task management: {self.config['task_management']}")
         print(f"✓ Max agents: {self.config['max_concurrent_agents']}")
 
