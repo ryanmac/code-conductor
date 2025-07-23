@@ -51,6 +51,17 @@ if ! command -v tar >/dev/null 2>&1; then
     exit 1
 fi
 
+# Check for GitHub CLI (optional but recommended)
+if ! command -v gh >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️ GitHub CLI (gh) not found. Install it for full functionality:${NC}"
+    echo "  • macOS: brew install gh"
+    echo "  • Linux: See https://cli.github.com/manual/installation"
+    echo "  • Windows: winget install GitHub.cli"
+    echo ""
+elif ! gh auth status >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️ GitHub CLI not authenticated. Run 'gh auth login' after setup.${NC}"
+fi
+
 # **Improved: Check for pyenv and suggest version switch if Poetry fails later**
 if command -v pyenv >/dev/null 2>&1; then
     echo -e "${YELLOW}⚠️ pyenv detected. Ensure your active Python version has Poetry installed if using it.${NC}"
@@ -306,47 +317,62 @@ fi
 echo ""
 echo -e "${YELLOW}📝 Creating demo tasks...${NC}"
 
-# Create a sample workflow-state.json with demo tasks if it doesn't have any
-if [ -f ".conductor/workflow-state.json" ]; then
-    python3 -c "
-import json
-from datetime import datetime
-
-with open('.conductor/workflow-state.json', 'r') as f:
-    state = json.load(f)
-
-# Only add demo tasks if no tasks exist
-if not state.get('available_tasks'):
-    demo_tasks = [
-        {
-            'id': 'demo-1',
-            'title': 'Add README documentation',
-            'description': 'Create or update README.md with project overview, installation instructions, and usage examples',
-            'priority': 'medium',
-            'estimated_effort': 'small',
-            'required_skills': [],
-            'files_to_modify': ['README.md'],
-            'created_at': datetime.utcnow().isoformat()
-        },
-        {
-            'id': 'demo-2',
-            'title': 'Set up CI/CD pipeline',
-            'description': 'Create GitHub Actions workflow for automated testing and deployment',
-            'priority': 'high',
-            'estimated_effort': 'medium',
-            'required_skills': ['devops'],
-            'files_to_modify': ['.github/workflows/ci.yml'],
-            'created_at': datetime.utcnow().isoformat()
-        }
-    ]
-    state['available_tasks'] = demo_tasks
+# Check if GitHub CLI is available
+if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    # Check if demo tasks already exist
+    EXISTING_TASKS=$(gh issue list -l 'conductor:task' --limit 10 --json number 2>/dev/null | jq length 2>/dev/null || echo "0")
     
-    with open('.conductor/workflow-state.json', 'w') as f:
-        json.dump(state, f, indent=2)
-    print('✅ Demo tasks created')
-else:
-    print('✅ Tasks already exist')
-" || echo -e "${YELLOW}⚠️ Could not create demo tasks.${NC}"
+    if [ "$EXISTING_TASKS" = "0" ]; then
+        echo "Creating demo GitHub Issues..."
+        
+        # Create first demo task
+        gh issue create \
+            --title "Add README documentation" \
+            --body "## Description
+Create or update README.md with project overview, installation instructions, and usage examples.
+
+## Success Criteria
+- Clear project description
+- Installation steps for all platforms
+- Usage examples with code snippets
+- Contribution guidelines
+
+## Files to Modify
+- README.md" \
+            --label "conductor:task" \
+            --label "effort:small" \
+            --label "priority:medium" \
+            2>/dev/null && echo "  ✅ Created demo task: Add README documentation"
+        
+        # Create second demo task
+        gh issue create \
+            --title "Set up CI/CD pipeline" \
+            --body "## Description
+Create GitHub Actions workflow for automated testing and deployment.
+
+## Success Criteria
+- Automated test runs on PR
+- Code linting and formatting checks
+- Build validation
+- Optional: deployment automation
+
+## Files to Modify
+- .github/workflows/ci.yml" \
+            --label "conductor:task" \
+            --label "effort:medium" \
+            --label "priority:high" \
+            --label "skill:devops" \
+            2>/dev/null && echo "  ✅ Created demo task: Set up CI/CD pipeline"
+        
+        echo -e "${GREEN}✅ Demo tasks created as GitHub Issues${NC}"
+    else
+        echo -e "${GREEN}✅ Tasks already exist (found $EXISTING_TASKS tasks)${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️ GitHub CLI not available or not authenticated.${NC}"
+    echo "To create demo tasks later, run:"
+    echo "  gh auth login"
+    echo "  gh issue create --label 'conductor:task'"
 fi
 
 # Step 7: Auto-commit all generated files (with user consent)
@@ -483,7 +509,7 @@ if [ "$ENV_CHOICE" != "1" ]; then
     echo "  ✅ Demo tasks ready to claim"
     echo ""
     echo -e "${YELLOW}Quick Start Commands:${NC}"
-    echo -e "  📋 View tasks:     ${GREEN}cat .conductor/workflow-state.json | jq '.available_tasks'${NC}"
+    echo -e "  📋 View tasks:     ${GREEN}gh issue list -l 'conductor:task' --assignee '!*'${NC}"
     echo -e "  🤖 Start agent:    ${GREEN}bash .conductor/scripts/bootstrap.sh dev${NC}"
     echo -e "  📝 Create task:    ${GREEN}gh issue create -l 'conductor:task'${NC}"
     echo -e "  🔧 Adjust config:  ${GREEN}$EDITOR .conductor/config.yaml${NC}"

@@ -12,6 +12,10 @@ on:
     paths:
       - '.conductor/**'
       - 'examples/**'
+  issues:
+    types: [opened, edited, labeled, unlabeled, assigned, unassigned, closed, reopened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -35,6 +39,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pyyaml
+      
+      - name: Setup GitHub CLI
+        run: |
+          gh auth status || echo "Setting up GitHub CLI authentication"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate configuration
         run: |
@@ -48,22 +58,32 @@ jobs:
       - name: Run health check
         run: |
           python .conductor/scripts/health-check.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update system status
         run: |
           python .conductor/scripts/update-status.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate status summary
         run: |
           python .conductor/scripts/generate-summary.py > $GITHUB_STEP_SUMMARY
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up stale work
         run: |
           python .conductor/scripts/cleanup-stale.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Archive completed tasks
         run: |
           python .conductor/scripts/archive-completed.py --max-age 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check for critical issues
         id: critical_check
@@ -72,14 +92,14 @@ jobs:
           CRITICAL_ISSUES=0
 
           # Check for high number of stale agents
-          STALE_COUNT=$(python .conductor/scripts/health-check.py --json | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
+          STALE_COUNT=$(GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
           if [ "$STALE_COUNT" -gt 5 ]; then
             echo "⚠️ High stale agent count: $STALE_COUNT"
             CRITICAL_ISSUES=1
           fi
 
           # Check system health score
-          HEALTH_SCORE=$(python .conductor/scripts/update-status.py --json | jq -r '.health_score // 0' 2>/dev/null || echo "0")
+          HEALTH_SCORE=$(GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} python .conductor/scripts/update-status.py --json | jq -r '.health_score // 0' 2>/dev/null || echo "0")
           if (( $(echo "$HEALTH_SCORE < 0.5" | bc -l) )); then
             echo "⚠️ Low health score: $HEALTH_SCORE"
             CRITICAL_ISSUES=1
@@ -137,7 +157,7 @@ jobs:
   process-new-tasks:
     name: Process New GitHub Issues
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    if: github.event_name == 'issues' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
 
     steps:
       - name: Checkout repository
@@ -152,11 +172,11 @@ jobs:
         run: |
           pip install pyyaml
 
-      - name: Install GitHub CLI
+      - name: Setup GitHub CLI
         run: |
           gh auth status || echo "GitHub CLI not authenticated"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Process conductor:task issues
         run: |
@@ -168,7 +188,7 @@ jobs:
             python .conductor/scripts/issue-to-task.py --issue-number "$issue_number" || true
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   workspace-maintenance:
     name: Workspace Maintenance
@@ -195,10 +215,14 @@ jobs:
       - name: Archive old completed work
         run: |
           python .conductor/scripts/archive-completed.py --max-age 30
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update system metrics
         run: |
           python .conductor/scripts/update-status.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate maintenance summary
         run: |

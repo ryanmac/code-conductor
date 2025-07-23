@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
-"""Validate conductor configuration"""
+"""Validate conductor configuration for GitHub-native integration"""
 
 import json
 import yaml
 import sys
+import subprocess
 from pathlib import Path
 import os
+
+
+def run_gh_command(args):
+    """Run GitHub CLI command and return output"""
+    try:
+        result = subprocess.run(
+            ["gh"] + args, capture_output=True, text=True, check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return None
+    except FileNotFoundError:
+        return None
 
 
 def validate_config_yaml():
@@ -43,6 +57,21 @@ def validate_config_yaml():
             if "specialized" in roles and not isinstance(roles["specialized"], list):
                 errors.append("'specialized' roles must be a list")
 
+    # Validate GitHub integration settings
+    if "github_integration" in config:
+        gh_config = config["github_integration"]
+        if not isinstance(gh_config, dict):
+            errors.append("'github_integration' must be a dictionary")
+        else:
+            if gh_config.get("enabled", True) and not gh_config.get(
+                "issue_to_task", True
+            ):
+                warnings.append(
+                    "GitHub integration enabled but issue_to_task is disabled"
+                )
+    else:
+        warnings.append("No 'github_integration' section in config (using defaults)")
+
     # Validate agent settings
     if "agent_settings" in config:
         settings = config["agent_settings"]
@@ -51,7 +80,7 @@ def validate_config_yaml():
                 interval = int(settings["heartbeat_interval"])
                 if interval < 60:
                     warnings.append(
-                        "Heartbeat interval less than 60 seconds may cause issues"
+                        "Heartbeat interval less than 60 seconds may cause excessive API calls"
                     )
                 elif interval > 3600:
                     warnings.append(
@@ -73,47 +102,105 @@ def validate_config_yaml():
     return errors, warnings
 
 
-def validate_workflow_state():
-    """Validate the workflow state file"""
-    state_file = Path(".conductor/workflow-state.json")
+def validate_github_cli():
+    """Validate GitHub CLI availability and authentication"""
     errors = []
     warnings = []
 
-    if not state_file.exists():
-        warnings.append("workflow-state.json not found (will be created)")
+    # Check if gh is installed
+    output = run_gh_command(["--version"])
+    if not output:
+        errors.append(
+            "GitHub CLI (gh) not found. Please install it from https://cli.github.com/"
+        )
+        return errors, warnings
+
+    # Check authentication
+    output = run_gh_command(["auth", "status"])
+    if not output:
+        errors.append(
+            "GitHub CLI not authenticated. Run 'gh auth login' to authenticate"
+        )
+    else:
+        print(
+            f"  ✓ GitHub CLI version: {output.split()[2] if 'version' in output else 'Unknown'}"
+        )
+
+    # Check if we're in a git repository
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        warnings.append("Not in a git repository or git not installed")
+
+    # Check if remote is configured
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        remote_url = result.stdout.strip()
+        if "github.com" not in remote_url:
+            warnings.append(f"Remote origin is not a GitHub repository: {remote_url}")
+    except subprocess.CalledProcessError:
+        warnings.append("No remote 'origin' configured")
+
+    return errors, warnings
+
+
+def validate_github_labels():
+    """Validate required GitHub labels exist"""
+    errors = []
+    warnings = []
+
+    # Check if we can list labels
+    output = run_gh_command(["label", "list", "--limit", "100", "--json", "name"])
+
+    if not output:
+        warnings.append(
+            "Could not fetch repository labels (might not have permissions)"
+        )
         return errors, warnings
 
     try:
-        with open(state_file, "r") as f:
-            state = json.load(f)
-    except json.JSONDecodeError as e:
-        errors.append(f"Invalid JSON in workflow-state.json: {e}")
+        labels = json.loads(output)
+        label_names = [label["name"] for label in labels]
+    except json.JSONDecodeError:
+        warnings.append("Could not parse repository labels")
         return errors, warnings
 
-    # Required sections
-    required_sections = ["active_work", "available_tasks", "completed_work"]
-    for section in required_sections:
-        if section not in state:
-            warnings.append(f"Missing section in workflow-state.json: {section}")
+    # Required labels
+    required_labels = ["conductor:task", "conductor:status", "conductor:in-progress"]
 
-    # Validate task structure
-    if "available_tasks" in state:
-        for i, task in enumerate(state["available_tasks"]):
-            if not isinstance(task, dict):
-                errors.append(f"Task {i} is not a dictionary")
-                continue
+    for label in required_labels:
+        if label not in label_names:
+            warnings.append(f"Required label '{label}' not found in repository")
 
-            required_task_fields = ["id", "title"]
-            for field in required_task_fields:
-                if field not in task:
-                    errors.append(f"Task {i} missing required field: {field}")
+    # Recommended labels
+    recommended_labels = [
+        "conductor:blocked",
+        "conductor:archived",
+        "effort:small",
+        "effort:medium",
+        "effort:large",
+        "priority:high",
+        "priority:medium",
+        "priority:low",
+    ]
 
-            # Validate effort levels
-            if "estimated_effort" in task:
-                effort = task["estimated_effort"]
-                valid_efforts = ["small", "medium", "large"]
-                if effort not in valid_efforts:
-                    warnings.append(f"Task {i} has invalid effort level: {effort}")
+    missing_recommended = []
+    for label in recommended_labels:
+        if label not in label_names:
+            missing_recommended.append(label)
+
+    if missing_recommended:
+        warnings.append(f"Recommended labels missing: {', '.join(missing_recommended)}")
 
     return errors, warnings
 
@@ -182,7 +269,13 @@ def validate_scripts():
             warnings.append(f"Shell script not executable: {script}")
 
     # Optional but recommended scripts
-    optional_scripts = ["cleanup-stale.py", "update-status.py", "generate-summary.py"]
+    optional_scripts = [
+        "cleanup-stale.py",
+        "update-status.py",
+        "generate-summary.py",
+        "issue-to-task.py",
+        "archive-completed.py",
+    ]
 
     for script in optional_scripts:
         script_path = scripts_dir / script
@@ -192,8 +285,8 @@ def validate_scripts():
     return errors, warnings
 
 
-def validate_github_integration():
-    """Validate GitHub integration setup"""
+def validate_github_templates():
+    """Validate GitHub issue and workflow templates"""
     errors = []
     warnings = []
 
@@ -203,6 +296,17 @@ def validate_github_integration():
         conductor_workflow = workflows_dir / "conductor.yml"
         if not conductor_workflow.exists():
             warnings.append("conductor.yml workflow not found")
+        else:
+            # Check workflow content
+            try:
+                with open(conductor_workflow, "r") as f:
+                    content = f.read()
+                    if "workflow-state.json" in content:
+                        errors.append(
+                            "conductor.yml still references workflow-state.json (needs update)"
+                        )
+            except Exception as e:
+                warnings.append(f"Could not read conductor.yml: {e}")
     else:
         warnings.append(".github/workflows directory not found")
 
@@ -212,8 +316,81 @@ def validate_github_integration():
         task_template = issue_templates_dir / "conductor-task.yml"
         if not task_template.exists():
             warnings.append("conductor-task.yml issue template not found")
+        else:
+            # Validate template content
+            try:
+                with open(task_template, "r") as f:
+                    template = yaml.safe_load(f)
+                    if not template.get("labels"):
+                        warnings.append("Task template missing labels")
+                    elif "conductor:task" not in template.get("labels", []):
+                        errors.append(
+                            "Task template must include 'conductor:task' label"
+                        )
+            except Exception as e:
+                warnings.append(f"Could not parse task template: {e}")
     else:
-        warnings.append("GitHub issue templates not found")
+        warnings.append("GitHub issue templates directory not found")
+
+    return errors, warnings
+
+
+def validate_existing_issues():
+    """Check for existing conductor issues"""
+    errors = []
+    warnings = []
+
+    # Check for any conductor tasks
+    output = run_gh_command(
+        [
+            "issue",
+            "list",
+            "-l",
+            "conductor:task",
+            "--state",
+            "all",
+            "--limit",
+            "1",
+            "--json",
+            "number",
+        ]
+    )
+
+    if output:
+        try:
+            issues = json.loads(output)
+            if not issues:
+                warnings.append(
+                    "No conductor tasks found. Create issues with 'conductor:task' label"
+                )
+        except json.JSONDecodeError:
+            pass
+
+    # Check for status issue
+    output = run_gh_command(
+        [
+            "issue",
+            "list",
+            "-l",
+            "conductor:status",
+            "--state",
+            "open",
+            "--limit",
+            "1",
+            "--json",
+            "number",
+        ]
+    )
+
+    if output:
+        try:
+            issues = json.loads(output)
+            if not issues:
+                warnings.append(
+                    "No status issue found. Run 'python .conductor/scripts/update-status.py' to create one"
+                )
+        except json.JSONDecodeError:
+            pass
 
     return errors, warnings
 
@@ -225,10 +402,16 @@ def main():
     parser.add_argument(
         "--strict", action="store_true", help="Treat warnings as errors"
     )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Attempt to fix issues (create missing labels)",
+    )
 
     args = parser.parse_args()
 
-    print("🔍 Validating conductor configuration...")
+    print("🔍 Validating Code-Conductor configuration...")
+    print("   GitHub-native integration (v2.0.0+)")
 
     all_errors = []
     all_warnings = []
@@ -236,10 +419,12 @@ def main():
     # Run all validations
     validations = [
         ("Configuration", validate_config_yaml),
-        ("Workflow State", validate_workflow_state),
+        ("GitHub CLI", validate_github_cli),
+        ("GitHub Labels", validate_github_labels),
         ("Role Files", validate_role_files),
         ("Scripts", validate_scripts),
-        ("GitHub Integration", validate_github_integration),
+        ("GitHub Templates", validate_github_templates),
+        ("Existing Issues", validate_existing_issues),
     ]
 
     for name, validator in validations:
@@ -261,6 +446,16 @@ def main():
         if not errors and not warnings:
             print("✅ No issues found")
 
+    # Fix mode
+    if args.fix and all_warnings:
+        print("\n🔧 Attempting to fix issues...")
+        # Create missing labels
+        for warning in all_warnings:
+            if "Required label" in warning and "not found" in warning:
+                label = warning.split("'")[1]
+                print(f"   Creating label: {label}")
+                run_gh_command(["label", "create", label, "--color", "0e8a16"])
+
     # Summary
     print("\n📊 Validation Summary")
     print(f"  Errors: {len(all_errors)}")
@@ -268,15 +463,18 @@ def main():
 
     if all_errors:
         print("\n❌ Configuration validation failed")
+        print("   Fix the errors above and run validation again")
         sys.exit(1)
     elif all_warnings and args.strict:
         print("\n❌ Configuration validation failed (strict mode)")
         sys.exit(1)
     elif all_warnings:
         print("\n⚠️  Configuration validation passed with warnings")
+        print("   Consider addressing the warnings for optimal performance")
         sys.exit(0)
     else:
         print("\n✅ Configuration validation passed")
+        print("   Your Code-Conductor setup is ready for GitHub-native operation!")
         sys.exit(0)
 
 

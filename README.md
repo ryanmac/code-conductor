@@ -120,7 +120,7 @@ python setup.py
 ## How It Works
 
 1. **Setup Phase**: Use the universal installer (Option 1) or other setup methods to configure your project. The setup script detects your project type and configures roles.
-2. **Task Creation**: Create tasks via GitHub Issues or directly in the state file
+2. **Task Creation**: Create tasks via GitHub Issues with the `conductor:task` label
 3. **Agent Initialization**: Agents use the universal bootstrap to claim work
 4. **Isolated Development**: Each agent works in a git worktree to prevent conflicts
 5. **Automated Coordination**: GitHub Actions manage health, cleanup, and task flow
@@ -141,7 +141,6 @@ This reduces the complexity of managing many agent types while maintaining quali
 ```
 .conductor/
 ├── config.yaml           # Project configuration with auto-detected stack
-├── workflow-state.json   # Central coordination state
 ├── roles/               # Role definitions
 │   ├── dev.md          # Default generalist
 │   ├── code-reviewer.md # AI-powered PR reviewer
@@ -186,22 +185,32 @@ Each role has a Markdown file in `.conductor/roles/` defining:
 
 ### Task Format
 
-Tasks include complete specifications:
+Tasks are created as GitHub Issues with complete specifications:
 
-```json
-{
-  "id": "task_001",
-  "title": "Implement authentication",
-  "specs": "docs/auth-spec.md",
-  "best_practices": ["Use JWT", "Implement refresh tokens"],
-  "success_criteria": {
-    "tests": "100% coverage",
-    "security": "Pass security scan"
-  },
-  "required_skills": [],  // Empty = any dev can take it
-  "estimated_effort": "medium"
-}
+**Issue Title**: Implement authentication
+
+**Issue Body**:
+```markdown
+## Description
+Implement user authentication system for the application.
+
+## Specifications
+See: docs/auth-spec.md
+
+## Best Practices
+- Use JWT tokens
+- Implement refresh tokens
+
+## Success Criteria
+- Tests: 100% coverage
+- Security: Pass security scan
 ```
+
+**Labels**:
+- `conductor:task` (required)
+- `effort:medium`
+- `priority:medium`
+- `skill:backend` (optional, for specialized tasks)
 
 ## 🤖 AI Code Review - Built-In Quality Gates
 
@@ -268,7 +277,7 @@ ROLE: {role}
 PROJECT: {project_name}
 
 1. Read your role definition: .conductor/roles/{role}.md
-2. Check system state: .conductor/workflow-state.json
+2. Check available tasks: gh issue list -l 'conductor:task' --assignee '!*'
 3. Claim a task: python .conductor/scripts/task-claim.py --role {role}
 4. Work in your isolated worktree
 5. Commit and push changes when complete
@@ -373,9 +382,9 @@ matrix_builds: [ubuntu, macos, windows]
 ### Common Issues
 
 **No tasks available**
-- Check `.conductor/workflow-state.json` has tasks
+- Check GitHub issues: gh issue list -l 'conductor:task'
 - Verify no file conflicts blocking tasks
-- Create new tasks via GitHub issues
+- Create new tasks: gh issue create --label 'conductor:task'
 
 **Agent can't claim tasks**
 - Run `python .conductor/scripts/dependency-check.py`
@@ -394,7 +403,7 @@ matrix_builds: [ubuntu, macos, windows]
 python .conductor/scripts/dependency-check.py
 
 # View system state
-cat .conductor/workflow-state.json | jq
+gh issue list -l 'conductor:task' --json state,assignees,title
 
 # Force cleanup
 python .conductor/scripts/cleanup-stale.py --timeout 0

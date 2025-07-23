@@ -1,23 +1,137 @@
 #!/usr/bin/env python3
-"""Generate GitHub Actions summary from workflow state"""
+"""Generate GitHub Actions summary from GitHub Issues"""
 
 import json
-from pathlib import Path
+import subprocess
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 
-def load_state():
-    """Load workflow state"""
-    state_file = Path(".conductor/workflow-state.json")
-    if not state_file.exists():
-        print("No workflow state found")
-        return {}
+def run_gh_command(args):
+    """Run GitHub CLI command and return output"""
+    try:
+        result = subprocess.run(
+            ["gh"] + args, capture_output=True, text=True, check=True
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        return ""
+    except FileNotFoundError:
+        print("GitHub CLI (gh) not found. Please install it.")
+        return ""
+
+
+def get_all_conductor_issues():
+    """Get all conductor-related issues"""
+    output = run_gh_command(
+        [
+            "issue",
+            "list",
+            "-l",
+            "conductor:task",
+            "--state",
+            "all",
+            "--limit",
+            "1000",
+            "--json",
+            "number,title,body,labels,assignees,state,createdAt,updatedAt,comments",
+        ]
+    )
+
+    if not output:
+        return []
 
     try:
-        with open(state_file, "r") as f:
-            return json.load(f)
+        return json.loads(output)
     except json.JSONDecodeError:
-        print("Invalid workflow state file")
-        return {}
+        return []
+
+
+def get_active_agents(issues):
+    """Extract active agents from issue comments"""
+    active_agents = {}
+    now = datetime.utcnow()
+    stale_threshold = now - timedelta(minutes=30)
+
+    for issue in issues:
+        if issue["state"] == "OPEN" and issue.get("assignees"):
+            # Get recent comments to find agent metadata
+            issue_number = issue["number"]
+            comments_output = run_gh_command(
+                [
+                    "issue",
+                    "view",
+                    str(issue_number),
+                    "--json",
+                    "comments",
+                    "--jq",
+                    ".comments[-10:] | .[]",  # Get last 10 comments
+                ]
+            )
+
+            if comments_output:
+                for line in comments_output.strip().split("\n"):
+                    if line and "Agent Claimed Task" in line or "Heartbeat" in line:
+                        try:
+                            comment = json.loads(line)
+                            comment_time = datetime.fromisoformat(
+                                comment["createdAt"].replace("Z", "+00:00")
+                            ).replace(tzinfo=None)
+
+                            if comment_time > stale_threshold:
+                                # Parse agent metadata from comment
+                                body = comment.get("body", "")
+                                if "```json" in body:
+                                    json_start = body.find("```json") + 7
+                                    json_end = body.find("```", json_start)
+                                    if json_end > json_start:
+                                        try:
+                                            metadata = json.loads(
+                                                body[json_start:json_end]
+                                            )
+                                            agent_id = metadata.get("agent_id")
+                                            if agent_id:
+                                                active_agents[agent_id] = {
+                                                    "task": issue,
+                                                    "metadata": metadata,
+                                                    "last_heartbeat": comment_time,
+                                                }
+                                        except json.JSONDecodeError:
+                                            pass
+                        except (json.JSONDecodeError, KeyError):
+                            continue
+
+    return active_agents
+
+
+def calculate_health_score(metrics):
+    """Calculate system health score"""
+    score = 0.0
+    weights = {
+        "has_available_tasks": 0.3,
+        "has_active_agents": 0.3,
+        "low_stale_ratio": 0.2,
+        "recent_activity": 0.2,
+    }
+
+    if metrics["available_tasks"] > 0:
+        score += weights["has_available_tasks"]
+
+    if metrics["active_agents"] > 0:
+        score += weights["has_active_agents"]
+
+    # Stale ratio (lower is better)
+    if metrics["active_agents"] > 0:
+        stale_ratio = metrics["stale_agents"] / metrics["active_agents"]
+        if stale_ratio < 0.2:  # Less than 20% stale
+            score += weights["low_stale_ratio"]
+    else:
+        score += weights["low_stale_ratio"]  # No agents = no stale agents
+
+    if metrics["completions_24h"] > 0:
+        score += weights["recent_activity"]
+
+    return score
 
 
 def format_health_status(health_score):
@@ -34,17 +148,50 @@ def format_health_status(health_score):
 
 def generate_summary():
     """Generate markdown summary for GitHub Actions"""
-    state = load_state()
+    issues = get_all_conductor_issues()
 
-    if not state:
+    if not issues:
         print("## 🎼 Code-Conductor Status\n")
-        print("⚠️ No system data available")
+        print("⚠️ No conductor tasks found. Create tasks with `conductor:task` label.")
         return
 
-    status = state.get("system_status", {})
-    active_work = state.get("active_work", {})
-    available_tasks = state.get("available_tasks", [])
-    _ = state.get("completed_work", [])
+    # Calculate metrics
+    now = datetime.utcnow()
+    yesterday = now - timedelta(days=1)
+
+    available_tasks = [
+        i for i in issues if i["state"] == "OPEN" and not i.get("assignees")
+    ]
+    assigned_tasks = [i for i in issues if i["state"] == "OPEN" and i.get("assignees")]
+    completed_tasks = [i for i in issues if i["state"] == "CLOSED"]
+
+    # Get completions in last 24h
+    recent_completions = [
+        i
+        for i in completed_tasks
+        if datetime.fromisoformat(i["updatedAt"].replace("Z", "+00:00")).replace(
+            tzinfo=None
+        )
+        > yesterday
+    ]
+
+    # Get active agents
+    active_agents = get_active_agents(assigned_tasks)
+    stale_agents = sum(
+        1
+        for a in active_agents.values()
+        if (now - a["last_heartbeat"]).total_seconds() > 1800  # 30 minutes
+    )
+
+    metrics = {
+        "available_tasks": len(available_tasks),
+        "active_agents": len(active_agents),
+        "completed_tasks": len(completed_tasks),
+        "completions_24h": len(recent_completions),
+        "stale_agents": stale_agents,
+    }
+
+    health_score = calculate_health_score(metrics)
 
     print("## 🎼 Code-Conductor System Status\n")
 
@@ -52,21 +199,28 @@ def generate_summary():
     print("### 📊 Overview\n")
     print("| Metric | Value |")
     print("|--------|-------|")
-    print(f"| Active Agents | {status.get('active_agents', 0)} |")
-    print(f"| Available Tasks | {status.get('available_tasks', 0)} |")
-    print(f"| Completed Tasks | {status.get('completed_tasks', 0)} |")
-    print(f"| Health Score | {format_health_status(status.get('health_score', 0))} |")
-    print(f"| Last Updated | {status.get('last_updated', 'Unknown')} |")
+    print(f"| Active Agents | {metrics['active_agents']} |")
+    print(f"| Available Tasks | {metrics['available_tasks']} |")
+    print(f"| Completed Tasks | {metrics['completed_tasks']} |")
+    print(f"| Health Score | {format_health_status(health_score)} |")
+    print(f"| Last Updated | {now.strftime('%Y-%m-%d %H:%M:%S UTC')} |")
     print()
 
     # Active work breakdown
-    if active_work:
+    if active_agents:
         print("### 🤖 Active Agents\n")
-        for agent_id, work in active_work.items():
-            task = work.get("task", {})
-            role = agent_id.split("_")[0] if "_" in agent_id else "unknown"
+        for agent_id, agent_data in active_agents.items():
+            task = agent_data["task"]
+            metadata = agent_data["metadata"]
+            role = metadata.get("role", "unknown")
             task_title = task.get("title", "Unknown Task")
-            effort = task.get("estimated_effort", "unknown")
+
+            # Get effort from labels
+            effort = "unknown"
+            for label in task.get("labels", []):
+                if label["name"].startswith("effort:"):
+                    effort = label["name"].replace("effort:", "")
+                    break
 
             print(f"- **{role}**: {task_title} ({effort})")
         print()
@@ -76,11 +230,13 @@ def generate_summary():
         print("### 📋 Available Tasks\n")
 
         # Group by effort
-        tasks_by_effort = {}
+        tasks_by_effort = defaultdict(list)
         for task in available_tasks:
-            effort = task.get("estimated_effort", "unknown")
-            if effort not in tasks_by_effort:
-                tasks_by_effort[effort] = []
+            effort = "unknown"
+            for label in task.get("labels", []):
+                if label["name"].startswith("effort:"):
+                    effort = label["name"].replace("effort:", "")
+                    break
             tasks_by_effort[effort].append(task)
 
         for effort in ["small", "medium", "large", "unknown"]:
@@ -88,7 +244,10 @@ def generate_summary():
                 print(f"#### {effort.title()} Tasks")
                 for task in tasks_by_effort[effort]:
                     title = task.get("title", "Untitled")
-                    skills = task.get("required_skills", [])
+                    skills = []
+                    for label in task.get("labels", []):
+                        if label["name"].startswith("skill:"):
+                            skills.append(label["name"].replace("skill:", ""))
                     skill_text = f" ({', '.join(skills)})" if skills else " (general)"
                     print(f"- {title}{skill_text}")
                 print()
@@ -99,42 +258,41 @@ def generate_summary():
         )
 
     # Recent activity
-    recent_completions = status.get("completions_24h", 0)
-    if recent_completions > 0:
+    if metrics["completions_24h"] > 0:
         print("### 🏆 Recent Activity\n")
-        print(f"✅ {recent_completions} task(s) completed in the last 24 hours\n")
+        print(
+            f"✅ {metrics['completions_24h']} task(s) completed in the last 24 hours\n"
+        )
 
     # Health indicators
-    health = status.get("health", {})
-    if health:
-        print("### 🏥 System Health\n")
-        indicators = []
-        if health.get("has_available_tasks"):
-            indicators.append("✅ Tasks available")
-        else:
-            indicators.append("❌ No tasks available")
+    print("### 🏥 System Health\n")
+    indicators = []
 
-        if health.get("has_active_agents"):
-            indicators.append("✅ Agents active")
-        else:
-            indicators.append("❌ No active agents")
+    if metrics["available_tasks"] > 0:
+        indicators.append("✅ Tasks available")
+    else:
+        indicators.append("❌ No tasks available")
 
-        if health.get("low_stale_agents"):
-            indicators.append("✅ Low stale agents")
-        else:
-            indicators.append("⚠️ High stale agents")
+    if metrics["active_agents"] > 0:
+        indicators.append("✅ Agents active")
+    else:
+        indicators.append("❌ No active agents")
 
-        if health.get("recent_activity"):
-            indicators.append("✅ Recent activity")
-        else:
-            indicators.append("⚠️ No recent activity")
+    if metrics["active_agents"] == 0 or stale_agents < metrics["active_agents"] * 0.5:
+        indicators.append("✅ Low stale agents")
+    else:
+        indicators.append("⚠️ High stale agents")
 
-        for indicator in indicators:
-            print(f"- {indicator}")
-        print()
+    if metrics["completions_24h"] > 0:
+        indicators.append("✅ Recent activity")
+    else:
+        indicators.append("⚠️ No recent activity")
+
+    for indicator in indicators:
+        print(f"- {indicator}")
+    print()
 
     # Warnings
-    stale_agents = status.get("stale_agents", 0)
     if stale_agents > 0:
         print("### ⚠️ Warnings\n")
         print(f"- {stale_agents} stale agent(s) detected (cleanup recommended)\n")
@@ -145,7 +303,7 @@ def generate_summary():
         print(
             "- [Create a new task](../../issues/new?labels=conductor:task&template=conductor-task.yml)"
         )
-    if not active_work:
+    if not active_agents:
         print("- Launch an agent: `bash .conductor/scripts/bootstrap.sh dev`")
     if stale_agents > 0:
         print("- Clean up stale work: `python .conductor/scripts/cleanup-stale.py`")

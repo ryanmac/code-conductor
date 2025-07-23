@@ -66,11 +66,12 @@ gtr() {
 # Alias: gtl (git-task-list) - List available tasks
 gtl() {
     echo "📋 Available Tasks:"
-    if command -v jq >/dev/null; then
-        cat .conductor/workflow-state.json | jq -r '.available_tasks[] | "  \(.id): \(.title) (\(.estimated_effort))"' 2>/dev/null || echo "  No tasks found"
+    if command -v gh >/dev/null 2>&1; then
+        gh issue list -l 'conductor:task' --assignee '!*' --state open --limit 20 | head -20 || echo "  No tasks found"
     else
-        echo "  Install jq for better task listing"
-        echo "  Or check: .conductor/workflow-state.json"
+        echo "  Install GitHub CLI for task listing:"
+        echo "    brew install gh (macOS)"
+        echo "    See: https://cli.github.com/manual/installation"
     fi
 }
 
@@ -107,13 +108,56 @@ gtclean() {
     fi
 }
 
+# Alias: gti (git-task-issue) - View a specific task issue
+gti() {
+    local issue_number="$1"
+    if [ -z "$issue_number" ]; then
+        echo "Usage: gti <issue_number>"
+        return 1
+    fi
+    if command -v gh >/dev/null 2>&1; then
+        gh issue view "$issue_number"
+    else
+        echo "❌ GitHub CLI not installed"
+    fi
+}
+
+# Alias: gtn (git-task-new) - Create a new task issue
+gtn() {
+    if command -v gh >/dev/null 2>&1; then
+        echo "📝 Creating new task issue..."
+        echo "💡 Tip: Use clear, actionable titles"
+        gh issue create --label 'conductor:task' --label 'priority:medium' --label 'effort:medium'
+    else
+        echo "❌ GitHub CLI not installed"
+    fi
+}
+
+# Alias: gtst (git-task-status) - View system status issue
+gtst() {
+    if command -v gh >/dev/null 2>&1; then
+        echo "📊 Viewing system status..."
+        local status_issue=$(gh issue list -l 'conductor:status' --state open --limit 1 --json number | jq -r '.[0].number // empty')
+        if [ -n "$status_issue" ]; then
+            gh issue view "$status_issue"
+        else
+            echo "❌ No status issue found. Run: python .conductor/scripts/update-status.py"
+        fi
+    else
+        echo "❌ GitHub CLI not installed"
+    fi
+}
+
 # Print available commands when sourced
 echo "🎼 Code Conductor Worktree Helper Loaded"
 echo ""
 echo "Available commands:"
 echo "  gtr <task_id>  - Switch to task worktree"
-echo "  gtl            - List available tasks"
-echo "  gts            - Show system status"
+echo "  gtl            - List available tasks (GitHub Issues)"
+echo "  gts            - Show system health check"
+echo "  gtst           - View system status issue"
+echo "  gti <number>   - View specific task issue"
+echo "  gtn            - Create new task issue"
 echo "  gtc [role]     - Claim a task (default: dev)"
 echo "  gtw            - List all worktrees"
 echo "  gtclean        - Clean up stale worktrees"

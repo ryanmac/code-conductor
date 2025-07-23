@@ -476,7 +476,10 @@ class ConductorSetup:
             "task_management": self.config["task_management"],
             "roles": self.config["roles"],
             "conflict_prevention": {"use_worktrees": True, "file_locking": True},
-            "github": {
+            "github_integration": {
+                "enabled": True,
+                "issue_to_task": True,
+                "pr_reviews": True,
                 "use_issues": self.config["task_management"]
                 in ["github-issues", "hybrid"],
                 "use_actions": True,
@@ -501,25 +504,85 @@ class ConductorSetup:
                 self.logger.error(f"❌ Failed to create config file: {e}")
             sys.exit(1)
 
-        # Initialize workflow state
-        if not (self.conductor_dir / "workflow-state.json").exists():
-            state_data = {
-                "active_work": {},
-                "available_tasks": [],
-                "completed_work": [],
-                "system_status": {
-                    "ci_passing": True,
-                    "deployment_ready": False,
-                    "active_agents": 0,
-                    "idle_agents": 0,
-                    "last_updated": datetime.utcnow().isoformat(),
-                },
-            }
+        # Create GitHub issue templates directory
+        issue_templates_dir = self.project_root / ".github" / "ISSUE_TEMPLATE"
+        issue_templates_dir.mkdir(parents=True, exist_ok=True)
 
-            state_file = self.conductor_dir / "workflow-state.json"
-            with open(state_file, "w") as f:
-                json.dump(state_data, f, indent=2)
-            print(f"✓ Created {state_file}")
+        # Create conductor task template
+        task_template = {
+            "name": "Conductor Task",
+            "description": "Create a new task for AI agents to work on",
+            "title": "[Task] ",
+            "labels": ["conductor:task"],
+            "body": [
+                {
+                    "type": "markdown",
+                    "attributes": {
+                        "value": "## Task Details\n\nPlease provide clear specifications for this task."
+                    },
+                },
+                {
+                    "type": "textarea",
+                    "id": "description",
+                    "attributes": {
+                        "label": "Description",
+                        "description": "What needs to be done?",
+                        "placeholder": "Provide a clear description of the task...",
+                    },
+                    "validations": {"required": True},
+                },
+                {
+                    "type": "textarea",
+                    "id": "specifications",
+                    "attributes": {
+                        "label": "Specifications",
+                        "description": "Detailed technical specifications",
+                        "placeholder": "- [ ] Requirement 1\n- [ ] Requirement 2\n- [ ] Requirement 3",
+                    },
+                },
+                {
+                    "type": "textarea",
+                    "id": "success_criteria",
+                    "attributes": {
+                        "label": "Success Criteria",
+                        "description": "How will we know when this task is complete?",
+                        "placeholder": "- All tests pass\n- Code follows project conventions\n- Feature works as described",
+                    },
+                },
+                {
+                    "type": "dropdown",
+                    "id": "effort",
+                    "attributes": {
+                        "label": "Estimated Effort",
+                        "options": ["small", "medium", "large"],
+                    },
+                    "validations": {"required": True},
+                },
+                {
+                    "type": "dropdown",
+                    "id": "priority",
+                    "attributes": {
+                        "label": "Priority",
+                        "options": ["low", "medium", "high"],
+                    },
+                    "validations": {"required": True},
+                },
+                {
+                    "type": "input",
+                    "id": "skills",
+                    "attributes": {
+                        "label": "Required Skills",
+                        "description": "Comma-separated list of required skills (e.g., python, react, devops)",
+                        "placeholder": "Leave blank for general dev tasks",
+                    },
+                },
+            ],
+        }
+
+        template_file = issue_templates_dir / "conductor-task.yml"
+        with open(template_file, "w") as f:
+            yaml.dump(task_template, f, default_flow_style=False, sort_keys=False)
+        print(f"✓ Created {template_file}")
 
     def create_role_definitions(self):
         """Create role definition files"""
@@ -859,39 +922,35 @@ Custom role for {role} responsibilities.
         conductor_workflow = """name: Conductor Orchestration
 
 on:
-  push:
-    paths:
-      - '.conductor/workflow-state.json'
   schedule:
-    - cron: '*/15 * * * *'  # Every 15 minutes
+    - cron: '*/15 * * * *'  # Every 15 minutes for health checks
   workflow_dispatch:
   issues:
-    types: [labeled]
+    types: [opened, labeled, closed]
+  issue_comment:
+    types: [created]
 
 jobs:
-  task-from-issue:
-    if: github.event_name == 'issues' && contains(github.event.label.name, 'conductor:task')
+  format-task-issue:
+    if: github.event_name == 'issues' && github.event.action == 'opened' && !contains(github.event.issue.labels.*.name, 'conductor:task')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
 
-      - name: Convert Issue to Task
+      - name: Check if issue should be a task
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python .conductor/scripts/issue-to-task.py \\
-            --issue-number ${{ github.event.issue.number }}
-
-      - name: Commit task updates
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: '🎯 Add task from issue #${{ github.event.issue.number }}'
-          file_pattern: '.conductor/workflow-state.json'
+          # Auto-detect potential tasks based on keywords
+          if echo "${{ github.event.issue.title }}" | grep -iE "implement|add|fix|update|create|refactor"; then
+            gh issue edit ${{ github.event.issue.number }} --add-label "conductor:task"
+            python .conductor/scripts/issue-to-task.py ${{ github.event.issue.number }}
+          fi
 
   health-check:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -908,28 +967,31 @@ jobs:
         run: |
           pip install pyyaml
 
-      - name: Check agent heartbeats
+      - name: Run health check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python .conductor/scripts/health-check.py
 
-      - name: Clean up stale work
-        run: |
-          python .conductor/scripts/cleanup-stale.py --timeout 30
+      - name: Generate status summary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .conductor/scripts/generate-summary.py >> $GITHUB_STEP_SUMMARY
 
-      - name: Update system status
-        run: |
-          python .conductor/scripts/update-status.py
+  cleanup-stale:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Commit status updates
-        uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          commit_message: '🔄 Update system health status'
-          file_pattern: '.conductor/workflow-state.json'
+          python-version: '3.12'
 
-      - name: Generate status report
-        run: |
-          echo "## 🎯 Conductor System Status" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          python .conductor/scripts/generate-summary.py >> $GITHUB_STEP_SUMMARY
+      - name: Clean up stale work
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .conductor/scripts/cleanup-stale.py
 """
 
         conductor_file = workflows_dir / "conductor.yml"
@@ -1359,12 +1421,15 @@ if __name__ == "__main__":
 
         checks = [
             (self.conductor_dir / "config.yaml", "Configuration file"),
-            (self.conductor_dir / "workflow-state.json", "Workflow state"),
             (self.conductor_dir / "scripts" / "bootstrap.sh", "Bootstrap script"),
             (self.conductor_dir / "scripts" / "task-claim.py", "Task claim script"),
             (
                 self.project_root / ".github" / "workflows" / "conductor.yml",
                 "GitHub workflow",
+            ),
+            (
+                self.project_root / ".github" / "ISSUE_TEMPLATE" / "conductor-task.yml",
+                "GitHub issue template",
             ),
         ]
 
@@ -1404,10 +1469,15 @@ if __name__ == "__main__":
         print("5. Launch agents using: bash .conductor/scripts/bootstrap.sh [role]")
 
         print("\n💡 Quick Start:")
-        print("  # Create a task via GitHub issue")
+        print("  # Create a task via GitHub CLI:")
+        print(
+            "  gh issue create --label 'conductor:task' --title '[Task] Your task title'"
+        )
+        print("  ")
+        print("  # Or use the web interface with the task template")
+        print("  ")
         print("  # Then spawn an agent:")
-        print("  export AGENT_ROLE=dev")
-        print("  bash .conductor/scripts/bootstrap.sh")
+        print("  bash .conductor/scripts/bootstrap.sh dev")
 
         print("\n📚 Documentation:")
         print("  - Role definitions: .conductor/roles/")
