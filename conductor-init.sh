@@ -51,6 +51,11 @@ if ! command -v tar >/dev/null 2>&1; then
     exit 1
 fi
 
+# **Improved: Check for pyenv and suggest version switch if Poetry fails later**
+if command -v pyenv >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️ pyenv detected. Ensure your active Python version has Poetry installed if using it.${NC}"
+fi
+
 # Check for existing installation
 if [ -d ".conductor" ]; then
     echo -e "${YELLOW}⚠️ Existing .conductor directory found.${NC}"
@@ -127,15 +132,21 @@ echo ""
 # Step 3: Install Dependencies
 echo -e "${YELLOW}📦 Installing dependencies...${NC}"
 
-# Prefer Poetry if available, otherwise use pip + venv
-if command -v poetry >/dev/null 2>&1; then
-    echo "🎵 Poetry detected. Using Poetry for installation."
+# **Improved: Check if Poetry is functional before using it**
+POETRY_AVAILABLE=false
+if command -v poetry >/dev/null 2>&1 && poetry --version >/dev/null 2>&1; then
+    POETRY_AVAILABLE=true
+fi
+
+# Prefer Poetry if available and functional, otherwise use pip + venv
+if $POETRY_AVAILABLE; then
+    echo "🎵 Poetry detected and functional. Using Poetry for installation."
     poetry install || {
-        echo -e "${RED}❌ Poetry install failed.${NC}"
+        echo -e "${RED}❌ Poetry install failed. If using pyenv, try switching versions (e.g., pyenv shell 3.10.13) and re-run.${NC}"
         exit 1
     }
 else
-    echo "📦 Poetry not found. Using pip and virtual environment."
+    echo "📦 Poetry not found or not functional. Using pip and virtual environment."
     python3 -m venv .venv || {
         echo -e "${RED}❌ Failed to create virtual environment.${NC}"
         exit 1
@@ -158,7 +169,7 @@ echo ""
 echo -e "${YELLOW}🔧 Running automatic setup...${NC}"
 
 # Run setup.py with --auto flag
-if command -v poetry >/dev/null 2>&1; then
+if $POETRY_AVAILABLE; then
     poetry run python setup.py --auto || {
         echo -e "${RED}❌ Setup failed.${NC}"
         exit 1

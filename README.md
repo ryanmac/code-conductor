@@ -21,9 +21,9 @@
 
 **One command. Instant AI coordination.**
 
-**Prerequisites for all options:** Git, Python 3.9+, curl (for one-liner), and tar. Run from the root of an existing Git repository.
+**Prerequisites for all options:** Git, Python 3.9+, curl (for one-liner), and tar. Run from the root of an existing Git repository. **If using pyenv, ensure your active Python version (e.g., via `pyenv shell 3.12.x`) has Poetry installed if you prefer it; otherwise, the script falls back to pip.**
 
-### Option 1: Universal One-Liner (Recommended - No Cloning Required)
+### **Option 1: Universal One-Liner (Recommended - No Cloning Required)**
 Run this in your existing project's root directory to download and install Conductor-Score directly:
 
 ```bash
@@ -33,8 +33,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/conductor-score/main
 - This method avoids cloning the full Conductor-Score repo and is ideal for integrating into existing projects without repository pollution.
 - The script will prompt before overwriting any existing installation.
 - **Security best practice:** Review the script at the raw URL before running.
+- **Pyenv users:** If Poetry install fails, switch to the Python version that has Poetry installed (e.g., `pyenv shell 3.10.13`) and re-run.
 
-### Option 2: Poetry (Manual Clone)
+### Option 2: Poetry (For Cloned Repo)
 ```bash
 # Clone the repository
 git clone https://github.com/ryanmac/conductor-score.git
@@ -45,7 +46,7 @@ poetry install
 poetry run python setup.py
 ```
 
-### Option 3: Pip + Virtual Environment
+### Option 3: Pip + Virtual Environment (For Cloned Repo)
 ```bash
 # Clone the repository
 git clone https://github.com/ryanmac/conductor-score.git
@@ -62,7 +63,7 @@ pip install -r requirements.txt
 python setup.py
 ```
 
-### Option 4: One-Command Install Script (from cloned repo)
+### Option 4: One-Command Install Script (For Cloned Repo)
 ```bash
 # From the repository directory:
 ./install.sh
