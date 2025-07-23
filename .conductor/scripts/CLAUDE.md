@@ -1,7 +1,7 @@
 # CLAUDE.md: Instructions for Claude Code - Automation Scripts
 
 ## Purpose
-This directory contains Python and Bash scripts that power the Conductor-Score orchestration system. These scripts handle task management, agent coordination, health monitoring, and GitHub integration. Claude Code should understand their safe usage and guide modifications that maintain system integrity.
+This directory contains Python and Bash scripts that power the Code-Conductor orchestration system. These scripts handle task management, agent coordination, health monitoring, and GitHub integration. Claude Code should understand their safe usage and guide modifications that maintain system integrity.
 
 ## Guidelines
 - **Do**: Read scripts thoroughly before suggesting modifications

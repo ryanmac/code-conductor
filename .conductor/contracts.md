@@ -1,7 +1,7 @@
 # Cross-Role Contracts Matrix
 
 ## Overview
-This document defines the contracts and interfaces between different agent roles in Conductor-Score. Each contract specifies inputs, outputs, service level agreements (SLAs), and escalation protocols to ensure smooth collaboration.
+This document defines the contracts and interfaces between different agent roles in Code-Conductor. Each contract specifies inputs, outputs, service level agreements (SLAs), and escalation protocols to ensure smooth collaboration.
 
 ## Contract Definitions
 

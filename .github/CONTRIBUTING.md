@@ -1,11 +1,11 @@
-# 🎼 Contributing to Conductor-Score
+# 🎼 Contributing to Code-Conductor
 
-Thank you for your interest in making Conductor-Score even better! This project thrives on community contributions that help developers worldwide transform their workflows with AI agent coordination.
+Thank you for your interest in making Code-Conductor even better! This project thrives on community contributions that help developers worldwide transform their workflows with AI agent coordination.
 
 ## 🚀 Quick Start for Contributors
 
 ### The Vision
-Conductor-Score should enable any developer to go from **tweet discovery → clone → working AI agents** in under 5 minutes. Every contribution should move us closer to this "life-changing" developer experience.
+Code-Conductor should enable any developer to go from **tweet discovery → clone → working AI agents** in under 5 minutes. Every contribution should move us closer to this "life-changing" developer experience.
 
 ### Ways to Contribute
 
@@ -57,8 +57,8 @@ Conductor-Score should enable any developer to go from **tweet discovery → clo
 
 ```bash
 # Fork and clone
-git clone https://github.com/YOUR-USERNAME/conductor-score.git
-cd conductor-score
+git clone https://github.com/YOUR-USERNAME/Code-Conductor.git
+cd Code-Conductor
 
 # Test the current setup
 python setup.py --debug
@@ -73,7 +73,7 @@ python setup.py --debug
 ```bash
 # Test with a real project of that type
 cd /path/to/test-project
-python /path/to/conductor-score/setup.py --auto --debug
+python /path/to/Code-Conductor/setup.py --auto --debug
 
 # Verify the generated config makes sense
 cat .conductor/config.yaml

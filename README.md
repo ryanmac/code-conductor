@@ -1,7 +1,7 @@
 # 🎼 Code Conductor
 
 > ⚠️ **Repository Renamed**  
-> This project was previously named **Conductor's Score** (`conductor-score`).  
+> This project was previously named **Conductor's Score** (`Code-Conductor`).  
 > It has been renamed to **Code Conductor** (`code-conductor`) as of July 23, 2025.  
 > GitHub redirects all URLs, but please update any bookmarks or references.
 

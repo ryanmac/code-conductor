@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Conductor-Score Agent Bootstrap Script
+# Code-Conductor Agent Bootstrap Script
 # Universal agent initialization for both Conductor GUI and terminal workflows
 
-echo "🎼 Conductor-Score Agent Bootstrap"
+echo "🎼 Code-Conductor Agent Bootstrap"
 echo "=================================="
 
 # Load configuration

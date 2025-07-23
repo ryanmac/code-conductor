@@ -8,7 +8,7 @@ body:
       value: |
         ## 🎼 Create a Conductor Task
 
-        This template helps you create a structured task that can be automatically processed by Conductor-Score agents.
+        This template helps you create a structured task that can be automatically processed by Code-Conductor agents.
 
         **Note**: Adding the `conductor:task` label will automatically convert this issue into a task.
 
@@ -141,4 +141,4 @@ body:
         4. **Progress**: Monitor via GitHub Actions and system health checks
         5. **Completion**: Agent creates PR when task is finished
 
-        📚 **Learn more**: [Conductor-Score Documentation](docs/USAGE.md) 
+        📚 **Learn more**: [Code-Conductor Documentation](docs/USAGE.md) 

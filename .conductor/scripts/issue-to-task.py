@@ -103,7 +103,7 @@ def extract_task_data(issue, metadata, issue_number):
         "source": {
             "type": "github_issue",
             "issue_number": issue_number,
-            "url": f"https://github.com/ryanmac/conductor-score/issues/{issue_number}",
+            "url": f"https://github.com/ryanmac/Code-Conductor/issues/{issue_number}",
         },
         "created_at": datetime.utcnow().isoformat(),
     }

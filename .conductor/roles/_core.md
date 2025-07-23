@@ -2,7 +2,7 @@
 
 ## Agentic Workflow Loop (ReAct Pattern)
 
-Every Conductor-Score agent follows this core reasoning and acting pattern:
+Every Code-Conductor agent follows this core reasoning and acting pattern:
 
 ### 1. 🔍 **Observe**
 - Read task specification and success criteria
