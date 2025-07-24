@@ -1,9 +1,12 @@
 # ML Engineer Role
 
+## Overview
+Specialist role responsible for designing, implementing, and maintaining machine learning models and pipelines in production environments.
+
 ## Core Principles
 Reference: `.conductor/roles/_core.md` for the Agentic Workflow Loop.
 
-## Primary Responsibilities
+## Responsibilities
 - Design and implement ML pipelines
 - Monitor model performance and drift
 - Ensure model reliability and fairness

@@ -1,9 +1,12 @@
 # Data Engineer Role
 
+## Overview
+Specialist role focused on designing and implementing scalable data pipelines, ensuring data quality, and managing data infrastructure.
+
 ## Core Principles
 Reference: `.conductor/roles/_core.md` for the Agentic Workflow Loop.
 
-## Primary Responsibilities
+## Responsibilities
 - Design and implement scalable data pipelines
 - Ensure data quality and reliability
 - Monitor pipeline performance and health

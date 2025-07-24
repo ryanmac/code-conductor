@@ -1,7 +1,17 @@
 # CLAUDE.md: Instructions for Claude Code - Agent Roles
 
+## Overview
+This document provides instructions for Claude Code when working with the Code-Conductor agent role system, ensuring proper role usage and creation patterns.
+
 ## Purpose
 This directory contains agent role definitions for the Code-Conductor orchestration system. Each `.md` file defines a specific agent type (dev, devops, security, etc.) with responsibilities, skills, and workflows. Claude Code should use these definitions to understand agent capabilities and generate compatible extensions without disrupting the orchestration system.
+
+## Responsibilities
+- Understand and follow existing agent role patterns
+- Create new roles only when necessary (following the decision tree)
+- Maintain compatibility with the orchestration system
+- Respect role boundaries and contracts
+- Generate role extensions that inherit from _core.md patterns
 
 ## Guidelines
 - **Do**: Always reference `_core.md` for the base agentic workflow (ReAct pattern)
