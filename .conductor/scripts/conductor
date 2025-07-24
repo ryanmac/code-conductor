@@ -1,0 +1,375 @@
+#!/bin/bash
+# The ONLY command AI agents need to know for Code Conductor projects
+
+set -e
+
+# Check prerequisites
+if ! command -v gh >/dev/null 2>&1; then
+    echo "❌ GitHub CLI not found. Please install it first:"
+    echo "   Visit: https://cli.github.com"
+    exit 1
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+    echo "❌ GitHub CLI not authenticated"
+    echo "   Run: gh auth login"
+    exit 1
+fi
+
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    echo "❌ Not in a git repository"
+    exit 1
+fi
+
+# Ensure we're in the project root
+if [ ! -f ".conductor/config.yaml" ]; then
+    echo "❌ Error: Not in a Code Conductor project directory"
+    echo "   Please run from the project root where .conductor/ exists"
+    exit 1
+fi
+
+# Store project root for reference
+PROJECT_ROOT=$(pwd)
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+# Get command and role
+COMMAND=${1:-start}
+ROLE=${2:-dev}
+
+# Normalize role names (case-insensitive with common aliases)
+ROLE=$(echo "$ROLE" | tr '[:upper:]' '[:lower:]')
+case "$ROLE" in
+    frontend|front|fe) ROLE="frontend" ;;
+    backend|back|be) ROLE="backend" ;;
+    devops|ops|infra) ROLE="devops" ;;
+    security|sec) ROLE="security" ;;
+    ml|ml-engineer|ai) ROLE="ml-engineer" ;;
+    ui|ux|design*) ROLE="ui-designer" ;;
+    data|analytics) ROLE="data" ;;
+    mobile|ios|android) ROLE="mobile" ;;
+    qa|test*) ROLE="qa" ;;
+    dev|developer|*) ROLE="dev" ;;  # Default fallback
+esac
+
+# Ensure state directory exists
+mkdir -p .conductor
+
+case "$COMMAND" in
+    start|s)
+        echo "🎼 Code Conductor - $PROJECT_NAME"
+        echo "=================================="
+        echo "Role: $ROLE"
+        echo ""
+        
+        # Check for existing task
+        if [ -f .conductor/.current-task ]; then
+            CURRENT_TASK=$(cat .conductor/.current-task)
+            echo "⚠️  You have an active task: #$CURRENT_TASK"
+            echo "   Complete it first with: ./conductor complete"
+            echo "   Or check status with: ./conductor status"
+            exit 1
+        fi
+        
+        # Get available tasks
+        echo "🔍 Finding suitable tasks..."
+        TASKS=$(gh issue list \
+            --label "conductor:task" \
+            --state open \
+            --json number,title,labels,assignees \
+            --jq '.[] | select(.assignees | length == 0)')
+        
+        if [ -z "$TASKS" ]; then
+            echo ""
+            echo "📋 No tasks found. Let me check if this is a new project..."
+            
+            # Check if this is first run (no existing tasks at all)
+            ALL_TASKS=$(gh issue list --label "conductor:task" --state all --limit 1)
+            if [ -z "$ALL_TASKS" ]; then
+                echo ""
+                echo "🎉 Welcome to Code Conductor! Creating starter tasks..."
+                
+                # Create demo tasks for new projects
+                gh issue create \
+                    --title "[INIT] Discover project documentation and create task map" \
+                    --label "conductor:task,conductor:init,effort:medium,priority:high" \
+                    --body "## AI Agent Task: Documentation Discovery
+
+This is a special task for AI agents to explore and map this project's documentation.
+
+### Instructions
+1. Explore all documentation files (README, docs/, wikis, etc.)
+2. Identify the project's purpose, architecture, and components
+3. Create a comprehensive task map for development
+
+### Success Criteria
+- [ ] Created .conductor/documentation-map.yaml
+- [ ] Identified all major components
+- [ ] Proposed initial development tasks
+- [ ] Documented any unclear areas
+
+### Deliverable
+Create \`.conductor/documentation-map.yaml\` with discovered information." \
+                    >/dev/null
+                
+                gh issue create \
+                    --title "Set up comprehensive test suite" \
+                    --label "conductor:task,effort:medium,priority:high,skill:dev" \
+                    --body "Create or enhance the project's test coverage with appropriate testing framework" \
+                    >/dev/null
+                    
+                gh issue create \
+                    --title "Configure CI/CD pipeline" \
+                    --label "conductor:task,effort:medium,priority:medium,skill:devops" \
+                    --body "Set up GitHub Actions for automated testing, linting, and deployment" \
+                    >/dev/null
+                
+                echo "✓ Created 3 starter tasks"
+                echo ""
+                echo "🚀 Try again: ./conductor start $ROLE"
+                exit 0
+            else
+                echo "❌ No unassigned tasks available"
+                echo ""
+                echo "💡 Options:"
+                echo "   1. Create a new task as a GitHub issue with label 'conductor:task'"
+                echo "   2. Wait for tasks to be unassigned"
+                echo "   3. Check: gh issue list --label conductor:task"
+                exit 1
+            fi
+        fi
+        
+        # Claim a task using the Python script
+        echo ""
+        CLAIM_OUTPUT=$(python .conductor/scripts/task-claim.py --role "$ROLE" 2>&1)
+        CLAIM_STATUS=$?
+        
+        if [ $CLAIM_STATUS -ne 0 ]; then
+            echo "❌ Failed to claim task:"
+            echo "$CLAIM_OUTPUT"
+            exit 1
+        fi
+        
+        # Extract task ID from output
+        TASK_ID=$(echo "$CLAIM_OUTPUT" | grep -o "Claimed task #[0-9]*" | grep -o "[0-9]*")
+        
+        if [ -z "$TASK_ID" ]; then
+            echo "❌ Could not determine task ID"
+            exit 1
+        fi
+        
+        # Save current task
+        echo "$TASK_ID" > .conductor/.current-task
+        
+        # Create worktree
+        BRANCH_NAME="conductor/task-$TASK_ID"
+        WORKTREE_PATH="worktrees/agent-$ROLE-task-$TASK_ID"
+        
+        echo ""
+        echo "📁 Setting up worktree..."
+        
+        # Ensure we're on a branch (not detached HEAD)
+        if ! git symbolic-ref HEAD >/dev/null 2>&1; then
+            git checkout -b temp-branch >/dev/null 2>&1
+        fi
+        
+        # Create worktree
+        git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" >/dev/null 2>&1 || {
+            # If branch exists, use it
+            git worktree add "$WORKTREE_PATH" "$BRANCH_NAME" >/dev/null 2>&1
+        }
+        
+        # Save worktree path
+        echo "$WORKTREE_PATH" > .conductor/.current-worktree
+        
+        # Get task details for context file
+        TASK_JSON=$(gh issue view "$TASK_ID" --json title,body,labels)
+        TASK_TITLE=$(echo "$TASK_JSON" | jq -r '.title')
+        TASK_BODY=$(echo "$TASK_JSON" | jq -r '.body')
+        
+        # Create context file
+        cat > "$WORKTREE_PATH/.conductor-context" << EOF
+# Task Context for AI Agent
+
+## Task #$TASK_ID: $TASK_TITLE
+
+### Description
+$TASK_BODY
+
+### Your Role: $ROLE
+
+### Working Directory
+$WORKTREE_PATH
+
+### Next Steps
+1. Review the task requirements above
+2. Make necessary changes in this worktree
+3. Commit your changes
+4. Run: ./conductor complete
+
+### Available Commands
+- ./conductor status - Check current progress
+- ./conductor complete - Finish task and create PR
+EOF
+        
+        echo "✅ Ready to work on task #$TASK_ID!"
+        echo ""
+        echo "📋 Task: $TASK_TITLE"
+        echo "📁 Worktree: $WORKTREE_PATH"
+        echo ""
+        echo "🚀 To start working:"
+        echo "   cd $WORKTREE_PATH"
+        echo "   cat .conductor-context  # Review task details"
+        echo ""
+        echo "   When done: ./conductor complete"
+        ;;
+        
+    complete|c)
+        if [ ! -f .conductor/.current-task ]; then
+            echo "❌ No active task. Run: ./conductor start"
+            exit 1
+        fi
+        
+        TASK_ID=$(cat .conductor/.current-task)
+        WORKTREE=$(cat .conductor/.current-worktree)
+        
+        echo "✅ Completing task #$TASK_ID"
+        echo ""
+        
+        # Get task title for commit message
+        TASK_TITLE=$(gh issue view "$TASK_ID" --json title -q '.title')
+        
+        # Auto-commit if changes exist
+        cd "$WORKTREE"
+        if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo "📝 Committing changes..."
+            git add -A
+            git commit -m "Complete task #$TASK_ID: $TASK_TITLE
+
+Implements the requirements specified in issue #$TASK_ID.
+
+Co-Authored-By: AI Agent <conductor@ai>"
+        fi
+        
+        # Check if we have commits to push
+        if [ -z "$(git log origin/main..HEAD 2>/dev/null)" ]; then
+            echo "❌ No commits to push. Make some changes first!"
+            exit 1
+        fi
+        
+        # Push changes
+        echo "📤 Pushing changes..."
+        git push origin HEAD
+        
+        # Create PR
+        echo "🔄 Creating pull request..."
+        PR_URL=$(gh pr create \
+            --title "Complete: $TASK_TITLE" \
+            --body "## Summary
+Completes task #$TASK_ID
+
+## Changes
+$(git log origin/main..HEAD --oneline)
+
+## Testing
+- [ ] Tests pass
+- [ ] Code follows project standards
+
+Closes #$TASK_ID" \
+            --base main)
+        
+        echo ""
+        echo "✅ Task completed!"
+        echo "📎 PR: $PR_URL"
+        
+        # Update issue
+        gh issue comment "$TASK_ID" --body "Pull request created: $PR_URL"
+        
+        # Return to project root and cleanup
+        cd "$PROJECT_ROOT"
+        rm -f .conductor/.current-task .conductor/.current-worktree
+        
+        echo ""
+        echo "🎉 Great work! Ready for next task:"
+        echo "   ./conductor start $ROLE"
+        ;;
+        
+    status)
+        echo "📊 Code Conductor Status"
+        echo "========================"
+        echo "Project: $PROJECT_NAME"
+        echo ""
+        
+        if [ -f .conductor/.current-task ]; then
+            TASK_ID=$(cat .conductor/.current-task)
+            WORKTREE=$(cat .conductor/.current-worktree 2>/dev/null || echo "unknown")
+            
+            TASK_INFO=$(gh issue view "$TASK_ID" --json title,state,labels)
+            TASK_TITLE=$(echo "$TASK_INFO" | jq -r '.title')
+            TASK_STATE=$(echo "$TASK_INFO" | jq -r '.state')
+            
+            echo "Current Task:"
+            echo "  📌 #$TASK_ID: $TASK_TITLE"
+            echo "  📁 Worktree: $WORKTREE"
+            echo "  🏷️  State: $TASK_STATE"
+            echo ""
+            echo "Commands:"
+            echo "  ./conductor complete - Finish this task"
+            echo "  cd $WORKTREE - Go to work directory"
+        else
+            echo "No active task."
+            echo ""
+            echo "Available tasks:"
+            gh issue list \
+                --label "conductor:task" \
+                --state open \
+                --json number,title,assignees \
+                --jq '.[] | select(.assignees | length == 0) | "  #\(.number): \(.title)"' \
+                | head -5
+            echo ""
+            echo "Start with: ./conductor start $ROLE"
+        fi
+        ;;
+        
+    tasks|list)
+        echo "📋 Available Tasks"
+        echo "=================="
+        echo ""
+        gh issue list \
+            --label "conductor:task" \
+            --state open \
+            --json number,title,labels,assignees \
+            --jq '.[] | select(.assignees | length == 0) | "
+#\(.number): \(.title)
+  Labels: \(.labels | map(.name) | join(", "))
+"'
+        ;;
+        
+    help|*)
+        echo "🎼 Code Conductor - AI Agent Command"
+        echo "===================================="
+        echo ""
+        echo "Usage: ./conductor [command] [role]"
+        echo ""
+        echo "Commands:"
+        echo "  start [role]    Begin work on a new task (default: dev)"
+        echo "  complete        Finish current task and create PR"
+        echo "  status          Show current task and project info"
+        echo "  tasks           List available tasks"
+        echo "  help            Show this help message"
+        echo ""
+        echo "Roles:"
+        echo "  dev       General development (default)"
+        echo "  frontend  UI/React/Vue work (aliases: fe, front)"
+        echo "  backend   API/server work (aliases: be, back)"
+        echo "  devops    Infrastructure/CI (aliases: ops)"
+        echo "  security  Security tasks (alias: sec)"
+        echo "  mobile    iOS/Android development"
+        echo "  ml        Machine learning (aliases: ai, ml-engineer)"
+        echo "  data      Data engineering/analytics"
+        echo ""
+        echo "Quick Start:"
+        echo "  ./conductor start         # Start as dev"
+        echo "  ./conductor start fe      # Start as frontend"
+        echo "  ./conductor complete      # Finish current task"
+        ;;
+esac

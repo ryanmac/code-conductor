@@ -598,7 +598,7 @@ You are operating in a Code Conductor orchestrated project with automated task m
 ## Quick Start
 To begin work as an agent, simply run:
 ```bash
-conductor-agent start [role]
+./conductor start [role]
 ```
 
 This single command will:
@@ -612,16 +612,16 @@ This single command will:
 {roles_list}
 
 ## Core Commands
-- `conductor-agent status` - View system status and your current task
-- `conductor-agent tasks` - List all available tasks
-- `conductor-agent complete` - Mark current task complete and get next
-- `conductor-agent help` - Show role-specific guidance
+- `./conductor status` - View system status and your current task
+- `./conductor tasks` - List all available tasks
+- `./conductor complete` - Mark current task complete and get next
+- `./conductor help` - Show role-specific guidance
 
 ## Workflow
-1. Start: `conductor-agent start [role]`
+1. Start: `./conductor start [role]`
 2. Work in the created worktree following task specifications
 3. Commit with conventional commits: `feat:`, `fix:`, `test:`, etc.
-4. Run: `conductor-agent complete` when done
+4. Run: `./conductor complete` when done
 5. The system handles PR creation and moves you to the next task
 
 <!-- CONDUCTOR:END -->"""
@@ -1647,8 +1647,8 @@ if __name__ == "__main__":
         os.chmod(task_claim_file, 0o755)
         print(f"✓ Created {task_claim_file}")
 
-        # Create universal conductor-agent command
-        conductor_agent_content = """#!/bin/bash
+        # Create universal conductor command
+        conductor_content = """#!/bin/bash
 # The ONLY command AI agents need to know
 
 set -e
@@ -1736,8 +1736,8 @@ $(gh issue view $TASK_ID 2>/dev/null || echo "Task details not available")
 
 ## Quick Commands
 - Update progress: gh issue comment $TASK_ID --body "Progress update..."
-- Complete: conductor-agent complete
-- Help: conductor-agent help
+- Complete: ./conductor complete
+- Help: ./conductor help
 EOF
             
             echo "✅ Claimed task #$TASK_ID"
@@ -1788,7 +1788,7 @@ EOF
             rm -f .conductor/.current-task .conductor/.current-worktree
             
             echo ""
-            echo "Ready for next task! Run: conductor-agent start $ROLE"
+            echo "Ready for next task! Run: ./conductor start $ROLE"
         else
             echo "❌ No active task to complete"
         fi
@@ -1817,9 +1817,9 @@ EOF
         
     help|*)
         cat << EOF
-🤖 conductor-agent - The only command you need
+🤖 conductor - The only command you need
 
-Usage: conductor-agent <command> [role]
+Usage: ./conductor <command> [role]
 
 Commands:
   start [role]  - Start work (default: dev)
@@ -1831,20 +1831,36 @@ Commands:
 Roles: dev, frontend, backend, devops, security, ui-designer, ml-engineer, data
 
 Example workflow:
-  conductor-agent start frontend    # Start as frontend agent
+  ./conductor start frontend    # Start as frontend agent
   cd worktrees/agent-frontend-123  # Enter your workspace
   # ... do work ...
-  conductor-agent complete          # Finish and get next task
+  ./conductor complete          # Finish and get next task
 EOF
         ;;
 esac
 """
 
-        conductor_agent_file = scripts_dir / "conductor-agent"
-        with open(conductor_agent_file, "w") as f:
-            f.write(conductor_agent_content)
-        os.chmod(conductor_agent_file, 0o755)
-        print(f"✓ Created {conductor_agent_file}")
+        conductor_file = scripts_dir / "conductor"
+        with open(conductor_file, "w") as f:
+            f.write(conductor_content)
+        os.chmod(conductor_file, 0o755)
+        print(f"✓ Created {conductor_file}")
+
+        # Create project-root wrapper for easy access
+        self.create_conductor_shortcut()
+
+    def create_conductor_shortcut(self):
+        """Create easy-to-find shortcut in project root"""
+        wrapper_content = """#!/bin/bash
+# Conductor command wrapper - project-specific
+exec .conductor/scripts/conductor "$@"
+"""
+
+        wrapper_path = self.project_root / "conductor"
+        with open(wrapper_path, "w") as f:
+            f.write(wrapper_content)
+        os.chmod(wrapper_path, 0o755)
+        print(f"✓ Created ./conductor shortcut command")
 
     def create_discovery_task_if_needed(self):
         """Create initialization task for AI agents to discover project structure"""
@@ -2122,7 +2138,7 @@ python .conductor/scripts/generate-tasks-from-map.py
         print("-" * 30)
         print("For Claude Code or other AI agents, simply run:")
         print()
-        print("  conductor-agent start [role]")
+        print("  ./conductor start [role]")
         print()
         print("This ONE command automatically:")
         print("  ✓ Shows role description")
@@ -2144,7 +2160,7 @@ python .conductor/scripts/generate-tasks-from-map.py
                 f"I'm a dev agent in a Code Conductor project. Let me start by running:"
             )
             print(f"")
-            print(f"conductor-agent start dev")
+            print(f"./conductor start dev")
             print(f"")
             print(
                 f"This should show me initialization task #{discovery_task_number} to map the project."
@@ -2159,10 +2175,10 @@ python .conductor/scripts/generate-tasks-from-map.py
 
         print("\n💡 Examples:")
         print("  # AI agent workflow:")
-        print("  conductor-agent start frontend    # Start as frontend agent")
+        print("  ./conductor start frontend    # Start as frontend agent")
         print("  cd worktrees/agent-frontend-123  # Enter workspace")
         print("  # ... implement feature ...")
-        print("  conductor-agent complete          # Finish and get next task")
+        print("  ./conductor complete          # Finish and get next task")
         print()
         print("  # Create tasks manually:")
         print(
@@ -2173,7 +2189,7 @@ python .conductor/scripts/generate-tasks-from-map.py
         print("  - CLAUDE.md - AI agent instructions (auto-created)")
         print("  - .conductor/config.yaml - Main configuration")
         print("  - .conductor/roles/ - Role definitions")
-        print("  - .conductor/scripts/conductor-agent - Universal agent command")
+        print("  - .conductor/scripts/conductor - Universal agent command")
 
         print("\n🚀 Happy coding with Code Conductor!")
 

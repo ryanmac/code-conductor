@@ -224,7 +224,7 @@ class TaskGenerator:
         if self.generated_count > 0:
             print("\n📋 Next steps:")
             print("1. Review the created issues on GitHub")
-            print("2. Launch AI agents with: conductor-agent start [role]")
+            print("2. Launch AI agents with: ./conductor start [role]")
             print("3. Agents will automatically claim and work on tasks")
 
     def format_task_body(self, task, documentation):
@@ -298,7 +298,7 @@ def main():
         print("❌ No documentation map found!")
         print()
         print("To create one:")
-        print("1. Run: conductor-agent start dev")
+        print("1. Run: ./conductor start dev")
         print("2. The agent will claim the discovery task")
         print("3. It will analyze your project and create the map")
         print("4. Then run this script again")
