@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: 🔍 PR Review Tasks
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  create-review-task:
+    name: Create Review Task
+    runs-on: ubuntu-latest
+    # Skip drafts and bot PRs
+    if: |
+      (github.event_name == 'pull_request' && 
+       !github.event.pull_request.draft &&
+       github.actor != 'dependabot[bot]' &&
+       github.actor != 'github-actions[bot]') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '/conductor review'))
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml requests
+
+      - name: Setup GitHub CLI
+        run: |
+          echo "${{ secrets.CONDUCTOR_GITHUB_TOKEN }}" > token.txt
+          gh auth login --with-token < token.txt
+          rm -f token.txt
+
+      - name: Create review task issue
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+            EVENT_TYPE="pr_event"
+          else
+            # Extract PR number from comment
+            PR_NUMBER=$(echo "${{ github.event.issue.number }}")
+            EVENT_TYPE="comment_trigger"
+          fi
+          
+          python .conductor/scripts/create-review-task.py \
+            --pr-number "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --event-type "$EVENT_TYPE"
+        env:
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+
+      - name: Add acknowledgment comment
+        if: github.event_name == 'issue_comment'
+        run: |
+          gh pr comment ${{ github.event.issue.number }} \
+            --body "✅ Review task created! An AI agent will claim and complete the code review."
+        env:
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
