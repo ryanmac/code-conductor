@@ -12,8 +12,15 @@ from datetime import datetime
 def run_gh_command(args):
     """Run GitHub CLI command and return output"""
     try:
+        # Pass environment variables and map GITHUB_TOKEN to GH_TOKEN
+        env = os.environ.copy()
+        if "GITHUB_TOKEN" in env and "GH_TOKEN" not in env:
+            env["GH_TOKEN"] = env["GITHUB_TOKEN"]
+        elif "CONDUCTOR_GITHUB_TOKEN" in env and "GH_TOKEN" not in env:
+            env["GH_TOKEN"] = env["CONDUCTOR_GITHUB_TOKEN"]
+        
         result = subprocess.run(
-            ["gh"] + args, capture_output=True, text=True, check=True
+            ["gh"] + args, capture_output=True, text=True, check=True, env=env
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:

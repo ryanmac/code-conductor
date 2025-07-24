@@ -12,8 +12,15 @@ from collections import defaultdict
 def run_gh_command(args):
     """Run GitHub CLI command and return output"""
     try:
+        # Pass environment variables and map GITHUB_TOKEN to GH_TOKEN
+        env = os.environ.copy()
+        if "GITHUB_TOKEN" in env and "GH_TOKEN" not in env:
+            env["GH_TOKEN"] = env["GITHUB_TOKEN"]
+        elif "CONDUCTOR_GITHUB_TOKEN" in env and "GH_TOKEN" not in env:
+            env["GH_TOKEN"] = env["CONDUCTOR_GITHUB_TOKEN"]
+        
         result = subprocess.run(
-            ["gh"] + args, capture_output=True, text=True, check=True
+            ["gh"] + args, capture_output=True, text=True, check=True, env=env
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
@@ -391,10 +398,13 @@ def main():
     if not args.json:
         print("🔄 Updating system status...")
 
-    # Check GitHub CLI authentication
-    if not run_gh_command(["auth", "status"]):
+    # Check if we have a token available
+    if not any(
+        os.environ.get(var)
+        for var in ["GH_TOKEN", "GITHUB_TOKEN", "CONDUCTOR_GITHUB_TOKEN"]
+    ):
         if not args.json:
-            print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
+            print("❌ No GitHub token found. Please set CONDUCTOR_GITHUB_TOKEN.")
         sys.exit(1)
 
     # Get or create status issue
