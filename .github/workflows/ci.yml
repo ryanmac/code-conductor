@@ -70,10 +70,10 @@ jobs:
       - name: Install safety
         run: pip install safety
 
-      - name: Check for security vulnerabilities
+      - name: Scan for security vulnerabilities
         run: |
           if [ -f "requirements.txt" ]; then
-            safety check -r requirements.txt
+            safety scan -r requirements.txt
           else
             echo "No requirements.txt found, skipping security check"
           fi 
