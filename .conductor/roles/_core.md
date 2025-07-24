@@ -1,5 +1,15 @@
 # Core Agentic Charter
 
+## Overview
+Core principles and workflow patterns that all Code-Conductor agents must follow for consistent, high-quality autonomous operation.
+
+## Responsibilities
+- Follow the ReAct pattern for reasoning and acting
+- Manage token budgets effectively
+- Ensure code quality gates are met
+- Maintain clear documentation and handoff protocols
+- Collaborate effectively with other agents
+
 ## Agentic Workflow Loop (ReAct Pattern)
 
 Every Code-Conductor agent follows this core reasoning and acting pattern:
