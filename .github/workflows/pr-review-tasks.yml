@@ -4,9 +4,15 @@ name: 🔍 PR Review Tasks
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review]
+    types: [labeled]  # Only when 'needs-review' label is added
   issue_comment:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
 
 permissions:
   contents: read
@@ -14,18 +20,111 @@ permissions:
   pull-requests: read
 
 jobs:
+  check-review-needed:
+    name: Check if Review Needed
+    runs-on: ubuntu-latest
+    outputs:
+      should_review: ${{ steps.check.outputs.should_review }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+    
+    steps:
+      - name: Check review triggers
+        id: check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          script: |
+            let shouldReview = false;
+            let prNumber = null;
+            
+            // Check different trigger types
+            if (context.eventName === 'pull_request') {
+              // Only if 'needs-review' label was added
+              if (context.payload.label?.name === 'needs-review') {
+                prNumber = context.payload.pull_request.number;
+                shouldReview = true;
+              }
+            } else if (context.eventName === 'issue_comment') {
+              // Check for review commands
+              const comment = context.payload.comment.body.toLowerCase();
+              const reviewTriggers = ['/review', '/conductor review', '@conductor review'];
+              
+              if (context.payload.issue.pull_request && 
+                  reviewTriggers.some(trigger => comment.includes(trigger))) {
+                prNumber = context.payload.issue.number;
+                shouldReview = true;
+              }
+            } else if (context.eventName === 'workflow_dispatch') {
+              // Manual trigger
+              prNumber = context.payload.inputs.pr_number;
+              shouldReview = true;
+            }
+            
+            // If we have a PR number, check if it should be skipped
+            if (shouldReview && prNumber) {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              // Skip conditions
+              const skipConditions = [
+                pr.draft,  // Skip drafts
+                pr.user.type === 'Bot',  // Skip bot PRs
+                pr.user.login === 'dependabot[bot]',  // Skip dependabot
+                pr.labels.some(l => l.name === 'skip-review'),  // Skip if labeled
+                pr.additions + pr.deletions < 10,  // Skip tiny PRs
+              ];
+              
+              // Check if only docs changed
+              const { data: files } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              const onlyDocs = files.every(f => 
+                f.filename.match(/\.(md|txt|rst)$/i) || 
+                f.filename.includes('docs/')
+              );
+              
+              if (onlyDocs) {
+                skipConditions.push(true);
+              }
+              
+              // Check if already has review task
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'conductor:task,code-review',
+                state: 'open'
+              });
+              
+              const hasReviewTask = issues.some(issue => 
+                issue.title.includes(`PR #${prNumber}`) || 
+                issue.body.includes(`PR #${prNumber}`)
+              );
+              
+              if (hasReviewTask) {
+                console.log(`Review task already exists for PR #${prNumber}`);
+                shouldReview = false;
+              }
+              
+              if (skipConditions.some(condition => condition)) {
+                console.log(`Skipping review for PR #${prNumber} based on skip conditions`);
+                shouldReview = false;
+              }
+            }
+            
+            core.setOutput('should_review', shouldReview);
+            core.setOutput('pr_number', prNumber);
+
   create-review-task:
     name: Create Review Task
+    needs: check-review-needed
+    if: needs.check-review-needed.outputs.should_review == 'true'
     runs-on: ubuntu-latest
-    # Skip drafts and bot PRs
-    if: |
-      (github.event_name == 'pull_request' && 
-       !github.event.pull_request.draft &&
-       github.actor != 'dependabot[bot]' &&
-       github.actor != 'github-actions[bot]') ||
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request &&
-       contains(github.event.comment.body, '/conductor review'))
 
     steps:
       - name: Checkout repository
@@ -46,31 +145,26 @@ jobs:
           gh auth login --with-token < token.txt
           rm -f token.txt
 
-      - name: Ensure code-review label exists
+      - name: Ensure labels exist
         run: |
-          # Create code-review label if it doesn't exist
-          gh label list | grep -q "^code-review" || \
-            gh label create "code-review" \
-              --color "5319e7" \
-              --description "Code review task for pull requests" || true
+          # Create labels if they don't exist
+          labels=("code-review:5319e7:Code review task for pull requests"
+                  "needs-review:fbca04:PR needs code review")
+          
+          for label_data in "${labels[@]}"; do
+            IFS=':' read -r name color desc <<< "$label_data"
+            gh label list | grep -q "^${name}" || \
+              gh label create "${name}" --color "${color}" --description "${desc}" || true
+          done
         env:
           GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Create review task issue
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            EVENT_TYPE="pr_event"
-          else
-            # Extract PR number from comment
-            PR_NUMBER=$(echo "${{ github.event.issue.number }}")
-            EVENT_TYPE="comment_trigger"
-          fi
-          
           python .conductor/scripts/create-review-task.py \
-            --pr-number "$PR_NUMBER" \
+            --pr-number "${{ needs.check-review-needed.outputs.pr_number }}" \
             --repo "${{ github.repository }}" \
-            --event-type "$EVENT_TYPE"
+            --event-type "${{ github.event_name }}"
         env:
           GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
@@ -80,5 +174,14 @@ jobs:
         run: |
           gh pr comment ${{ github.event.issue.number }} \
             --body "✅ Review task created! An AI agent will claim and complete the code review."
+        env:
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+
+      - name: Remove needs-review label
+        if: github.event_name == 'pull_request'
+        run: |
+          # Remove the trigger label after creating task
+          gh pr edit ${{ needs.check-review-needed.outputs.pr_number }} \
+            --remove-label "needs-review" || true
         env:
           GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}

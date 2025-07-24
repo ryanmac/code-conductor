@@ -179,6 +179,8 @@ jobs:
             "conductor:alert|e11d21|System health alert"
             "conductor:init|7057ff|Initialization task for discovery"
             "code-review|5319e7|Code review task for pull requests"
+            "needs-review|fbca04|PR needs code review"
+            "skip-review|c5def5|Skip AI code review"
             "effort:small|76d7c4|Small effort task"
             "effort:medium|f39c12|Medium effort task"
             "effort:large|e74c3c|Large effort task"

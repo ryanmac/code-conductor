@@ -15,7 +15,7 @@
 
 - ⚡ **Focus on architecture, let agents handle implementation** - Spend time on what matters most
 - 🎯 **Zero config for 90% of projects** - Auto-detects your stack and configures optimal roles
-- 🔒 **AI code reviews on every PR** - Task-based reviews by AI agents catch bugs before merge
+- 🔒 **Smart AI code reviews** - Opt-in reviews when you need them, not spam on every PR
 - 🤖 **Smart agent roles** - Generalist "dev" handles most tasks, specialists for complex work
 - 📊 **Native GitHub integration** - Issues become tasks, Actions monitor health
 - 🔄 **Self-healing coordination** - Automatic cleanup, heartbeat monitoring, stale work recovery
@@ -266,31 +266,41 @@ See: docs/auth-spec.md
 - `priority:medium`
 - `skill:backend` (optional, for specialized tasks)
 
-## 🤖 AI Code Review - Task-Based Quality Gates
+## 🤖 AI Code Review - Smart, Opt-In Quality Gates
 
-Every pull request automatically creates a review task that AI agents can claim:
+Request AI code reviews when you need them - no more review spam for trivial changes:
 
+- 🎯 **Opt-in reviews** - Add `needs-review` label or comment `/conductor review` to request
 - 🔒 **Security scanning** - Agents check for hardcoded secrets, SQL injection risks, unsafe operations
 - 🐛 **Bug detection** - Comprehensive analysis for null references, race conditions, logic errors
-- 💡 **Improvement suggestions** - Performance optimizations, better patterns, refactoring opportunities
-- 🎨 **Style consistency** - Ensures coding standards across the team
+- 💡 **Smart filtering** - Automatically skips docs-only changes, tiny PRs, and bot updates
 - 🧪 **Test coverage** - Suggests missing tests and edge cases
 
 ### How It Works
 
-1. **PR triggers task creation** - New review tasks appear as GitHub Issues
-2. **Agents claim review tasks** - AI agents pick up review tasks like any other work
-3. **Thorough analysis** - Agents check out code locally for comprehensive review
-4. **Posted as PR comments** - Detailed feedback appears directly on the pull request
+1. **Request a review** - Add `needs-review` label or comment `/conductor review` on your PR
+2. **Smart filtering** - System checks if review is needed (skips trivial changes)
+3. **Task creation** - Review task appears as GitHub Issue (only if needed)
+4. **Agent review** - AI agents claim and complete thorough code review
+5. **PR feedback** - Detailed review posted as PR comment
 
-```yaml
-# .github/workflows/pr-review-tasks.yml (auto-created)
-name: PR Review Tasks
-on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review]
-  issue_comment:
-    types: [created]  # Supports '/conductor review' command
+### Automatic Skip Conditions
+- PRs with less than 10 lines changed
+- Documentation-only changes
+- Dependabot and bot PRs
+- PRs labeled with `skip-review`
+- Draft PRs
+
+### Triggering Reviews
+```bash
+# Option 1: Add label
+gh pr edit 123 --add-label needs-review
+
+# Option 2: Comment on PR
+@conductor review  # or /conductor review
+
+# Option 3: Manual workflow
+gh workflow run pr-review-tasks.yml -f pr_number=123
 ```
 
 ## Agent Workflow
