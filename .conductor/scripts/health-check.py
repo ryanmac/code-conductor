@@ -204,22 +204,22 @@ class HealthChecker:
 
         # Remove "no tasks available" warning - it's normal for stable repos
         # Only warn if there are assigned tasks but no activity
-        
+
         return True
 
-    def update_status_issue(self, report, summary_type='daily'):
+    def update_status_issue(self, report, summary_type="daily"):
         """Update or create a status issue with the health report"""
         # Determine if we should create a new issue based on summary type
         should_create_new = False
         issue_title_prefix = "🏥 Code-Conductor"
-        
-        if summary_type == 'weekly':
+
+        if summary_type == "weekly":
             issue_title_prefix = "📅 Weekly Status:"
             should_create_new = True
-        elif summary_type == 'monthly':
+        elif summary_type == "monthly":
             issue_title_prefix = "📊 Monthly Status:"
             should_create_new = True
-        
+
         # Check if status issue exists
         output = self.run_gh_command(
             [
@@ -247,7 +247,13 @@ class HealthChecker:
                     # Close old status issues
                     for issue in issues:
                         self.run_gh_command(
-                            ["issue", "close", str(issue["number"]), "-c", "Archiving old status issue"]
+                            [
+                                "issue",
+                                "close",
+                                str(issue["number"]),
+                                "-c",
+                                "Archiving old status issue",
+                            ]
                         )
             except json.JSONDecodeError:
                 pass
@@ -273,7 +279,11 @@ class HealthChecker:
                 status_content += f"- **{issue['type']}** ({issue['severity']})\n"
                 if issue["type"] == "stale_agents":
                     for agent in issue["agents"]:
-                        status_content += f"  - Agent `{agent['agent_id']}` - Last seen: {agent['last_seen']}\n"
+                        agent_id = agent["agent_id"]
+                        last_seen = agent["last_seen"]
+                        status_content += (
+                            f"  - Agent `{agent_id}` - " f"Last seen: {last_seen}\n"
+                        )
 
         if report["warnings"]:
             status_content += "\n### 💡 Warnings\n"
@@ -284,21 +294,21 @@ class HealthChecker:
 
         # Check if we should comment based on significant changes
         should_comment = False
-        days_inactive = int(os.environ.get('DAYS_INACTIVE', '0'))
-        
+        days_inactive = int(os.environ.get("DAYS_INACTIVE", "0"))
+
         # Always comment for weekly/monthly summaries
-        if summary_type in ['weekly', 'monthly']:
+        if summary_type in ["weekly", "monthly"]:
             should_comment = True
         # Comment if there are issues or it's been active recently
         elif report["issues"] or days_inactive < 3:
             should_comment = True
-        
+
         if status_issue_number and not should_create_new:
             # Update existing issue body
             self.run_gh_command(
                 ["issue", "edit", str(status_issue_number), "--body", status_content]
             )
-            
+
             # Only add comment if significant
             if should_comment:
                 comment = f"### 📊 Status Update ({summary_type})"
@@ -307,7 +317,7 @@ class HealthChecker:
                 else:
                     comment += "\n\nSystem healthy - status refreshed."
                 comment += f"\n\n*Timestamp: {datetime.utcnow().isoformat()}*"
-                
+
                 self.run_gh_command(
                     ["issue", "comment", str(status_issue_number), "--body", comment]
                 )
@@ -377,7 +387,7 @@ class HealthChecker:
 
         return report
 
-    def run_checks(self, summary_type='daily'):
+    def run_checks(self, summary_type="daily"):
         """Run all health checks"""
         # Get all conductor issues
         all_issues = self.get_conductor_issues()
@@ -423,12 +433,16 @@ class HealthChecker:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run health checks for Code Conductor')
-    parser.add_argument('--summary-type', choices=['daily', 'weekly', 'monthly'], 
-                        default='daily', help='Type of summary to generate')
-    parser.add_argument('--json', action='store_true', help='Output JSON format')
+    parser = argparse.ArgumentParser(description="Run health checks for Code Conductor")
+    parser.add_argument(
+        "--summary-type",
+        choices=["daily", "weekly", "monthly"],
+        default="daily",
+        help="Type of summary to generate",
+    )
+    parser.add_argument("--json", action="store_true", help="Output JSON format")
     args = parser.parse_args()
-    
+
     checker = HealthChecker()
     success = checker.run_checks(args.summary_type)
     sys.exit(0 if success else 1)
