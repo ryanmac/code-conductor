@@ -250,7 +250,6 @@ class ConductorSetup:
             },
         }
 
-
         # Process each tech indicator
         for file_pattern, info in tech_indicators.items():
             found = False
