@@ -46,6 +46,16 @@ jobs:
           gh auth login --with-token < token.txt
           rm -f token.txt
 
+      - name: Ensure code-review label exists
+        run: |
+          # Create code-review label if it doesn't exist
+          gh label list | grep -q "^code-review" || \
+            gh label create "code-review" \
+              --color "5319e7" \
+              --description "Code review task for pull requests" || true
+        env:
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+
       - name: Create review task issue
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
