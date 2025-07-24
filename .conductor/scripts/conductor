@@ -3,22 +3,30 @@
 
 set -e
 
-# Check prerequisites
-if ! command -v gh >/dev/null 2>&1; then
-    echo "❌ GitHub CLI not found. Please install it first:"
-    echo "   Visit: https://cli.github.com"
-    exit 1
-fi
+# Skip prerequisite checks for diagnose/help commands
+if [ "$COMMAND" != "diagnose" ] && [ "$COMMAND" != "doctor" ] && [ "$COMMAND" != "help" ]; then
+    # Check prerequisites
+    if ! command -v gh >/dev/null 2>&1; then
+        echo "❌ GitHub CLI not found. Please install it first:"
+        echo "   Visit: https://cli.github.com"
+        echo ""
+        echo "💡 Run './conductor diagnose' to check all requirements"
+        exit 1
+    fi
 
-if ! gh auth status >/dev/null 2>&1; then
-    echo "❌ GitHub CLI not authenticated"
-    echo "   Run: gh auth login"
-    exit 1
-fi
+    if ! gh auth status >/dev/null 2>&1; then
+        echo "❌ GitHub CLI not authenticated"
+        echo "   Run: gh auth login"
+        echo ""
+        echo "💡 Run './conductor diagnose' for more details"
+        exit 1
+    fi
 
-if ! git rev-parse --git-dir >/dev/null 2>&1; then
-    echo "❌ Not in a git repository"
-    exit 1
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        echo "❌ Not in a git repository"
+        echo "   Please run from your project root directory"
+        exit 1
+    fi
 fi
 
 # Ensure we're in the project root
@@ -31,6 +39,21 @@ fi
 # Store project root for reference
 PROJECT_ROOT=$(pwd)
 PROJECT_NAME=$(basename "$PROJECT_ROOT")
+
+# First-run check
+if [ ! -f .conductor/.initialized ] && [ "${1:-}" != "diagnose" ] && [ "${1:-}" != "doctor" ] && [ "${1:-}" != "help" ]; then
+    echo "👋 Welcome to Code Conductor!"
+    echo ""
+    echo "It looks like this is your first time using conductor."
+    echo "Let's check your setup..."
+    echo ""
+    sleep 1
+    ./conductor diagnose
+    echo ""
+    touch .conductor/.initialized
+    echo "💡 Run './conductor help' for available commands"
+    exit 0
+fi
 
 # Get command and role
 COMMAND=${1:-start}
@@ -319,12 +342,15 @@ Closes #$TASK_ID" \
             echo "No active task."
             echo ""
             echo "Available tasks:"
-            gh issue list \
+            if AVAILABLE=$(gh issue list \
                 --label "conductor:task" \
                 --state open \
                 --json number,title,assignees \
-                --jq '.[] | select(.assignees | length == 0) | "  #\(.number): \(.title)"' \
-                | head -5
+                --jq '.[] | select(.assignees | length == 0) | "  #\(.number): \(.title)"' 2>&1); then
+                echo "$AVAILABLE" | head -5
+            else
+                echo "  (Unable to fetch tasks)"
+            fi
             echo ""
             echo "Start with: ./conductor start $ROLE"
         fi
@@ -333,15 +359,48 @@ Closes #$TASK_ID" \
     tasks|list)
         echo "📋 Available Tasks"
         echo "=================="
+        
+        # Check GitHub CLI auth first
+        if ! gh auth status >/dev/null 2>&1; then
+            echo "❌ GitHub CLI not authenticated. Run: gh auth login"
+            exit 1
+        fi
+        
+        # Check if in git repo
+        if ! git rev-parse --git-dir >/dev/null 2>&1; then
+            echo "❌ Not in a git repository"
+            exit 1
+        fi
+        
         echo ""
-        gh issue list \
+        # Try to list tasks and show any errors
+        if ! TASKS_OUTPUT=$(gh issue list \
             --label "conductor:task" \
             --state open \
-            --json number,title,labels,assignees \
-            --jq '.[] | select(.assignees | length == 0) | "
-#\(.number): \(.title)
-  Labels: \(.labels | map(.name) | join(", "))
-"'
+            --json number,title,labels,assignees 2>&1); then
+            echo "❌ Error fetching tasks:"
+            echo "$TASKS_OUTPUT"
+            echo ""
+            echo "💡 Troubleshooting:"
+            echo "   1. Ensure you're authenticated: gh auth status"
+            echo "   2. Check repository permissions: gh repo view"
+            echo "   3. Verify labels exist: gh label list | grep conductor"
+            exit 1
+        fi
+        
+        # Parse and display tasks
+        UNASSIGNED_TASKS=$(echo "$TASKS_OUTPUT" | jq -r '.[] | select(.assignees | length == 0) | "#\(.number): \(.title)\n  Labels: \(.labels | map(.name) | join(", "))\n"' 2>/dev/null || echo "")
+        
+        if [ -z "$UNASSIGNED_TASKS" ]; then
+            echo "No unassigned tasks available."
+            echo ""
+            echo "💡 Options:"
+            echo "   1. Create a new task: gh issue create -l 'conductor:task'"
+            echo "   2. Check all tasks: gh issue list -l 'conductor:task'"
+            echo "   3. Run setup if new project: python setup.py"
+        else
+            echo "$UNASSIGNED_TASKS"
+        fi
         ;;
         
     progress|p)
@@ -529,6 +588,152 @@ $PROGRESS_UPDATE
         fi
         ;;
         
+    diagnose|doctor)
+        echo "🔍 Code Conductor Diagnostics"
+        echo "============================"
+        echo ""
+        
+        # 1. Check git
+        echo -n "1. Git Repository: "
+        if git rev-parse --git-dir >/dev/null 2>&1; then
+            echo "✅ In git repository"
+            REPO_ROOT=$(git rev-parse --show-toplevel)
+            echo "   Root: $REPO_ROOT"
+            echo "   Remote: $(git config --get remote.origin.url 2>/dev/null || echo 'No remote configured')"
+        else
+            echo "❌ Not in a git repository"
+        fi
+        echo ""
+        
+        # 2. Check GitHub CLI
+        echo -n "2. GitHub CLI: "
+        if command -v gh >/dev/null 2>&1; then
+            GH_VERSION=$(gh --version | head -1)
+            echo "✅ Installed ($GH_VERSION)"
+        else
+            echo "❌ Not installed"
+            echo "   Install from: https://cli.github.com"
+        fi
+        echo ""
+        
+        # 3. Check GitHub auth
+        echo -n "3. GitHub Auth: "
+        if gh auth status >/dev/null 2>&1; then
+            echo "✅ Authenticated"
+            gh auth status 2>&1 | grep "Logged in" | sed 's/^/   /'
+        else
+            echo "❌ Not authenticated"
+            echo "   Fix: gh auth login"
+        fi
+        echo ""
+        
+        # 4. Check conductor config
+        echo -n "4. Conductor Config: "
+        if [ -f ".conductor/config.yaml" ]; then
+            echo "✅ Found"
+            echo "   Project: $(grep "project_name:" .conductor/config.yaml | cut -d: -f2 | xargs)"
+        else
+            echo "❌ Not configured"
+            echo "   Fix: python setup.py"
+        fi
+        echo ""
+        
+        # 5. Check labels
+        echo "5. GitHub Labels:"
+        if gh label list >/dev/null 2>&1; then
+            CONDUCTOR_LABELS=$(gh label list | grep "conductor:" | cut -f1)
+            if [ -n "$CONDUCTOR_LABELS" ]; then
+                echo "   ✅ Found conductor labels:"
+                echo "$CONDUCTOR_LABELS" | sed 's/^/      - /'
+            else
+                echo "   ❌ No conductor labels found"
+                echo "   Fix: python setup.py (will create labels)"
+            fi
+        else
+            echo "   ⚠️  Cannot check labels (auth or permissions issue)"
+        fi
+        echo ""
+        
+        # 6. Check worktree support
+        echo -n "6. Git Worktree Support: "
+        if git worktree list >/dev/null 2>&1; then
+            echo "✅ Supported"
+            WORKTREE_COUNT=$(git worktree list | wc -l | tr -d ' ')
+            echo "   Active worktrees: $WORKTREE_COUNT"
+        else
+            echo "❌ Not supported (old git version?)"
+        fi
+        echo ""
+        
+        # 7. Check tasks
+        echo "7. Task Status:"
+        if [ -f ".conductor/.current-task" ]; then
+            CURRENT_TASK=$(cat .conductor/.current-task)
+            echo "   📌 Active task: #$CURRENT_TASK"
+            if [ -f ".conductor/.current-worktree" ]; then
+                WORKTREE=$(cat .conductor/.current-worktree)
+                if [ -d "$WORKTREE" ]; then
+                    echo "   ✅ Worktree exists: $WORKTREE"
+                else
+                    echo "   ❌ Worktree missing: $WORKTREE"
+                fi
+            fi
+        else
+            echo "   No active task"
+        fi
+        
+        # Try to count available tasks
+        if gh auth status >/dev/null 2>&1; then
+            TASK_COUNT=$(gh issue list -l 'conductor:task' --state open --json assignees -q '[.[] | select(.assignees | length == 0)] | length' 2>/dev/null || echo "unknown")
+            echo "   Available tasks: $TASK_COUNT"
+        fi
+        echo ""
+        
+        # 8. Check workflow state
+        echo "8. Workflow State:"
+        if [ -f ".conductor/workflow-state.json" ]; then
+            echo "   ✅ State file exists"
+            if command -v jq >/dev/null 2>&1; then
+                TASK_COUNT_JSON=$(jq '.available_tasks | length' .conductor/workflow-state.json 2>/dev/null || echo "invalid")
+                echo "   Tasks in state file: $TASK_COUNT_JSON"
+            fi
+        else
+            echo "   No state file (normal for new projects)"
+        fi
+        echo ""
+        
+        # Summary
+        echo "📊 Summary"
+        echo "=========="
+        ISSUES=0
+        
+        if ! git rev-parse --git-dir >/dev/null 2>&1; then
+            echo "❌ Not in a git repository - cd to project root"
+            ((ISSUES++))
+        fi
+        
+        if ! gh auth status >/dev/null 2>&1; then
+            echo "❌ GitHub CLI not authenticated - run: gh auth login"
+            ((ISSUES++))
+        fi
+        
+        if [ ! -f ".conductor/config.yaml" ]; then
+            echo "❌ Conductor not configured - run: python setup.py"
+            ((ISSUES++))
+        fi
+        
+        if [ $ISSUES -eq 0 ]; then
+            echo "✅ All systems operational!"
+            echo ""
+            echo "Next steps:"
+            echo "  ./conductor tasks    - List available tasks"
+            echo "  ./conductor start    - Begin working on a task"
+        else
+            echo ""
+            echo "⚠️  Found $ISSUES issue(s) - fix them to use conductor"
+        fi
+        ;;
+        
     help|*)
         echo "🎼 Code Conductor - AI Agent Command"
         echo "===================================="
@@ -541,7 +746,8 @@ $PROGRESS_UPDATE
         echo "  status          Show current task and project info"
         echo "  progress        Update progress on current task (alias: p)"
         echo "  tasks           List available tasks"
-        echo "  recover         Diagnose and fix common issues (aliases: debug, fix)"
+        echo "  recover         Fix common issues (aliases: debug, fix)"
+        echo "  diagnose        Run system diagnostics (alias: doctor)"
         echo "  help            Show this help message"
         echo ""
         echo "Roles:"

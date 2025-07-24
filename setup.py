@@ -715,6 +715,11 @@ This single command will:
                 "description": "System health alert",
             },
             {
+                "name": "conductor:init",
+                "color": "7057ff",
+                "description": "Initialization task for discovery",
+            },
+            {
                 "name": "effort:small",
                 "color": "76d7c4",
                 "description": "Small effort task",
@@ -739,6 +744,11 @@ This single command will:
                 "name": "priority:high",
                 "color": "e11d21",
                 "description": "High priority",
+            },
+            {
+                "name": "priority:critical",
+                "color": "b60205",
+                "description": "Critical priority - urgent",
             },
             {
                 "name": "skill:frontend",
@@ -2156,15 +2166,28 @@ python .conductor/scripts/generate-tasks-from-map.py
             print()
             print("Suggested first agent prompt:")
             print("```")
+            print(f"I'm a new agent in a Code Conductor project. Please help me:")
+            print(f"1. Run './conductor status' to check system health")
+            print(f"2. If tasks exist, run './conductor start dev' to claim one")
             print(
-                f"I'm a dev agent in a Code Conductor project. Let me start by running:"
+                f"3. If no tasks show, check 'gh issue list -l conductor:task' to debug"
             )
+            print(f"4. Review CLAUDE.md for my instructions")
             print(f"")
-            print(f"./conductor start dev")
-            print(f"")
+            print(f"I see initialization task #{discovery_task_number} is available.")
+            print("```")
+        else:
+            print()
+            print("🤖 Suggested AI agent prompt:")
+            print("```")
+            print("I'm a new agent in a Code Conductor project. Please help me:")
+            print("1. Run './conductor status' to check system health")
+            print("2. Run './conductor diagnose' if there are any issues")
+            print("3. If tasks exist, run './conductor start dev' to claim one")
             print(
-                f"This should show me initialization task #{discovery_task_number} to map the project."
+                "4. If no tasks show, check 'gh issue list -l conductor:task' to debug"
             )
+            print("5. Review CLAUDE.md for my instructions")
             print("```")
 
         print("\n📋 Traditional Setup Steps:")
