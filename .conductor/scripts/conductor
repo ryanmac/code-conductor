@@ -344,6 +344,191 @@ Closes #$TASK_ID" \
 "'
         ;;
         
+    progress|p)
+        if [ ! -f .conductor/.current-task ]; then
+            echo "❌ No active task. Run: ./conductor start"
+            exit 1
+        fi
+        
+        TASK_ID=$(cat .conductor/.current-task)
+        WORKTREE=$(cat .conductor/.current-worktree 2>/dev/null || echo "unknown")
+        
+        # Get task info
+        TASK_INFO=$(gh issue view "$TASK_ID" --json title,number)
+        TASK_TITLE=$(echo "$TASK_INFO" | jq -r '.title')
+        
+        echo "📝 Progress Update for Task #$TASK_ID"
+        echo "=================================="
+        echo "Task: $TASK_TITLE"
+        echo ""
+        echo "Enter your progress update (Markdown supported):"
+        echo "Press Ctrl+D when finished"
+        echo ""
+        
+        # Read multiline input
+        PROGRESS_UPDATE=$(cat)
+        
+        if [ -z "$PROGRESS_UPDATE" ]; then
+            echo "❌ No update provided. Cancelled."
+            exit 1
+        fi
+        
+        # Post comment to GitHub issue
+        COMMENT_BODY="### 📊 Progress Update
+
+$PROGRESS_UPDATE
+
+---
+*Updated by AI Agent (Role: ${ROLE}) at $(date '+%Y-%m-%d %H:%M:%S')*
+*Worktree: \`$WORKTREE\`*"
+        
+        echo ""
+        echo "📤 Posting update to GitHub..."
+        
+        gh issue comment "$TASK_ID" --body "$COMMENT_BODY"
+        
+        echo "✅ Progress update posted!"
+        echo ""
+        echo "💡 Recent updates:"
+        gh issue view "$TASK_ID" --comments --json comments \
+            --jq '.comments[-3:] | .[] | "  - \(.author.login) (\(.createdAt | split("T")[0])): \(.body | split("\n")[0] | .[0:60])..."' 2>/dev/null || echo "  (Unable to fetch recent comments)"
+        ;;
+        
+    recover|debug|fix)
+        echo "🔧 Code Conductor Recovery Tool"
+        echo "==============================="
+        echo ""
+        
+        # Check 1: Git repository
+        echo "1️⃣ Checking git repository..."
+        if ! git rev-parse --git-dir >/dev/null 2>&1; then
+            echo "   ❌ Not in a git repository!"
+            echo "   Fix: Run conductor commands from project root"
+            exit 1
+        fi
+        echo "   ✅ Git repository detected"
+        echo ""
+        
+        # Check 2: GitHub CLI authentication
+        echo "2️⃣ Checking GitHub CLI..."
+        if ! gh auth status >/dev/null 2>&1; then
+            echo "   ❌ GitHub CLI not authenticated!"
+            echo "   Fix: Run 'gh auth login'"
+            exit 1
+        fi
+        echo "   ✅ GitHub CLI authenticated"
+        echo ""
+        
+        # Check 3: Conductor configuration
+        echo "3️⃣ Checking conductor configuration..."
+        if [ ! -f ".conductor/config.yaml" ]; then
+            echo "   ❌ Conductor not configured!"
+            echo "   Fix: Run 'python setup.py' first"
+            exit 1
+        fi
+        echo "   ✅ Conductor configured"
+        echo ""
+        
+        # Check 4: Current task state
+        echo "4️⃣ Checking task state..."
+        if [ -f .conductor/.current-task ]; then
+            TASK_ID=$(cat .conductor/.current-task)
+            WORKTREE=$(cat .conductor/.current-worktree 2>/dev/null || echo "none")
+            echo "   📌 Found active task: #$TASK_ID"
+            echo "   📁 Worktree: $WORKTREE"
+            
+            # Check if worktree still exists
+            if [ "$WORKTREE" != "none" ] && [ ! -d "$WORKTREE" ]; then
+                echo "   ⚠️  Worktree missing! State is inconsistent."
+                echo ""
+                echo "   Options:"
+                echo "   1) Clear state and start fresh"
+                echo "   2) Try to recover worktree"
+                echo "   3) Cancel"
+                read -p "   Choice [1-3]: " choice
+                
+                case $choice in
+                    1)
+                        rm -f .conductor/.current-task .conductor/.current-worktree
+                        echo "   ✅ State cleared. Run './conductor start' to begin fresh."
+                        ;;
+                    2)
+                        echo "   Attempting to recreate worktree..."
+                        BRANCH_NAME="conductor/task-$TASK_ID"
+                        git worktree add -b "$BRANCH_NAME" "$WORKTREE" >/dev/null 2>&1 || \
+                            git worktree add "$WORKTREE" "$BRANCH_NAME" >/dev/null 2>&1 || \
+                            echo "   ❌ Could not recover. Use option 1 to clear state."
+                        ;;
+                    *)
+                        echo "   Cancelled."
+                        ;;
+                esac
+            else
+                echo "   ✅ Task state appears valid"
+            fi
+        else
+            echo "   ✅ No active task (clean state)"
+        fi
+        echo ""
+        
+        # Check 5: Worktrees
+        echo "5️⃣ Checking worktrees..."
+        if [ -d worktrees ]; then
+            WORKTREE_COUNT=$(ls -1 worktrees 2>/dev/null | wc -l | tr -d ' ')
+            if [ "$WORKTREE_COUNT" -gt 0 ]; then
+                echo "   📁 Found $WORKTREE_COUNT worktree(s):"
+                for wt in worktrees/*; do
+                    if [ -d "$wt" ]; then
+                        echo -n "      - $(basename $wt)"
+                        # Check for uncommitted changes
+                        if cd "$wt" 2>/dev/null && ! git diff --quiet; then
+                            echo " ⚠️  (has uncommitted changes)"
+                            cd - >/dev/null
+                        else
+                            echo " ✅"
+                            cd - >/dev/null 2>&1
+                        fi
+                    fi
+                done
+                
+                echo ""
+                echo "   Clean up old worktrees?"
+                echo "   1) Yes - Remove all worktrees older than 7 days"
+                echo "   2) No - Keep all worktrees"
+                read -p "   Choice [1-2]: " cleanup_choice
+                
+                if [ "$cleanup_choice" = "1" ]; then
+                    echo "   Cleaning old worktrees..."
+                    find worktrees -type d -mtime +7 -maxdepth 1 -exec rm -rf {} \; 2>/dev/null
+                    echo "   ✅ Cleanup complete"
+                fi
+            else
+                echo "   ✅ No worktrees found"
+            fi
+        else
+            echo "   ✅ No worktrees directory"
+        fi
+        echo ""
+        
+        # Summary
+        echo "📊 Recovery Summary"
+        echo "=================="
+        echo "All checks complete. Your conductor setup is:"
+        if [ -f .conductor/.current-task ]; then
+            echo "✅ Ready to continue with task #$TASK_ID"
+            echo ""
+            echo "Next steps:"
+            echo "  ./conductor status    - See current task"
+            echo "  ./conductor progress  - Update task progress"
+            echo "  ./conductor complete  - Finish current task"
+        else
+            echo "✅ Ready for new work"
+            echo ""
+            echo "Next step:"
+            echo "  ./conductor start    - Begin a new task"
+        fi
+        ;;
+        
     help|*)
         echo "🎼 Code Conductor - AI Agent Command"
         echo "===================================="
@@ -354,7 +539,9 @@ Closes #$TASK_ID" \
         echo "  start [role]    Begin work on a new task (default: dev)"
         echo "  complete        Finish current task and create PR"
         echo "  status          Show current task and project info"
+        echo "  progress        Update progress on current task (alias: p)"
         echo "  tasks           List available tasks"
+        echo "  recover         Diagnose and fix common issues (aliases: debug, fix)"
         echo "  help            Show this help message"
         echo ""
         echo "Roles:"
@@ -370,6 +557,8 @@ Closes #$TASK_ID" \
         echo "Quick Start:"
         echo "  ./conductor start         # Start as dev"
         echo "  ./conductor start fe      # Start as frontend"
+        echo "  ./conductor progress      # Update task progress"
         echo "  ./conductor complete      # Finish current task"
+        echo "  ./conductor recover       # Fix issues if stuck"
         ;;
 esac
