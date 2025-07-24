@@ -126,7 +126,7 @@ jobs:
           echo "$GITHUB_TOKEN" | gh auth login --with-token || true
           gh auth status
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Ensure required labels exist
         if: steps.activity_check.outputs.should_run == 'true'
@@ -161,14 +161,14 @@ jobs:
               gh label create "${name}" --color "${color}" --description "${description}" || true
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Validate configuration
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/validate-config.py
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Check system dependencies
         if: steps.activity_check.outputs.should_run == 'true'
@@ -181,7 +181,7 @@ jobs:
         run: |
           python .conductor/scripts/health-check.py --summary-type ${{ steps.activity_check.outputs.summary_type }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
           DAYS_INACTIVE: ${{ steps.activity_check.outputs.days_inactive }}
 
       - name: Update system status
@@ -189,28 +189,28 @@ jobs:
         run: |
           python .conductor/scripts/update-status.py --no-comment
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Generate status summary
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/generate-summary.py > $GITHUB_STEP_SUMMARY
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Clean up stale work
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/cleanup-stale.py
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Archive completed tasks
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/archive-completed.py --max-age 7
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Check for critical issues
         if: steps.activity_check.outputs.should_run == 'true'
@@ -220,14 +220,14 @@ jobs:
           CRITICAL_ISSUES=0
 
           # Check for high number of stale agents
-          STALE_COUNT=$(GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
+          STALE_COUNT=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
           if [ "$STALE_COUNT" -gt 3 ]; then
             echo "⚠️ High stale agent count: $STALE_COUNT"
             CRITICAL_ISSUES=1
           fi
 
           # Check system health score
-          HEALTH_SCORE=$(GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} python .conductor/scripts/update-status.py --json | jq -r '.health_score // 0' 2>/dev/null || echo "0")
+          HEALTH_SCORE=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/update-status.py --json | jq -r '.health_score // 0' 2>/dev/null || echo "0")
           if (( $(echo "$HEALTH_SCORE < 0.5" | bc -l) )); then
             echo "⚠️ Low health score: $HEALTH_SCORE"
             CRITICAL_ISSUES=1
@@ -309,7 +309,7 @@ jobs:
           echo "$GITHUB_TOKEN" | gh auth login --with-token || true
           gh auth status
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Process conductor:task issues
         run: |
@@ -321,7 +321,7 @@ jobs:
             python .conductor/scripts/issue-to-task.py --issue-number "$issue_number" || true
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
   workspace-maintenance:
     name: Workspace Maintenance
@@ -349,13 +349,13 @@ jobs:
         run: |
           python .conductor/scripts/archive-completed.py --max-age 30
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Update system metrics
         run: |
           python .conductor/scripts/update-status.py
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Generate maintenance summary
         run: |
