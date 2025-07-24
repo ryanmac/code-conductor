@@ -95,13 +95,26 @@ case "$COMMAND" in
         
         # Get available tasks
         echo "🔍 Finding suitable tasks..."
-        TASKS=$(gh issue list \
+        echo "   Querying GitHub for unassigned conductor:task issues..."
+        
+        # First get all conductor:task issues
+        ALL_TASK_ISSUES=$(gh issue list \
             --label "conductor:task" \
             --state open \
             --json number,title,labels,assignees \
-            --jq '.[] | select(.assignees | length == 0)')
+            --limit 50)
         
-        if [ -z "$TASKS" ]; then
+        # Then filter for unassigned ones
+        TASKS=$(echo "$ALL_TASK_ISSUES" | jq -c '.[] | select(.assignees | length == 0)')
+        
+        # Count tasks for feedback
+        TOTAL_TASKS=$(echo "$ALL_TASK_ISSUES" | jq 'length')
+        UNASSIGNED_COUNT=$(echo "$TASKS" | grep -c '^{' || echo "0")
+        
+        echo "   Found $TOTAL_TASKS total tasks, $UNASSIGNED_COUNT unassigned"
+        echo ""
+        
+        if [ -z "$TASKS" ] || [ "$UNASSIGNED_COUNT" = "0" ]; then
             echo ""
             echo "📋 No tasks found. Let me check if this is a new project..."
             
@@ -162,23 +175,35 @@ Create \`.conductor/documentation-map.yaml\` with discovered information." \
         fi
         
         # Claim a task using the Python script
+        echo "🎯 Attempting to claim a task..."
+        echo "   Running task-claim.py with role: $ROLE"
         echo ""
+        
         CLAIM_OUTPUT=$(python .conductor/scripts/task-claim.py --role "$ROLE" 2>&1)
         CLAIM_STATUS=$?
         
         if [ $CLAIM_STATUS -ne 0 ]; then
             echo "❌ Failed to claim task:"
             echo "$CLAIM_OUTPUT"
+            echo ""
+            echo "💡 Try running: ./conductor debug-info"
             exit 1
         fi
+        
+        # Show claim output for transparency
+        echo "$CLAIM_OUTPUT"
         
         # Extract task ID from output
         TASK_ID=$(echo "$CLAIM_OUTPUT" | grep -o "Claimed task #[0-9]*" | grep -o "[0-9]*")
         
         if [ -z "$TASK_ID" ]; then
-            echo "❌ Could not determine task ID"
+            echo "❌ Could not determine task ID from output"
+            echo "   Output was: $CLAIM_OUTPUT"
             exit 1
         fi
+        
+        echo ""
+        echo "✅ Successfully claimed task #$TASK_ID"
         
         # Save current task
         echo "$TASK_ID" > .conductor/.current-task
@@ -373,34 +398,43 @@ Closes #$TASK_ID" \
         fi
         
         echo ""
-        # Try to list tasks and show any errors
-        if ! TASKS_OUTPUT=$(gh issue list \
+        
+        # Debug: Show raw output first (commented out for production)
+        # echo "Debug: Raw GitHub CLI output:"
+        # gh issue list -l 'conductor:task' --state open
+        # echo ""
+        
+        # Use a simpler approach that works more reliably
+        echo "Unassigned tasks:"
+        echo ""
+        
+        # Get all open conductor:task issues and filter unassigned ones
+        TASKS=$(gh issue list \
             --label "conductor:task" \
             --state open \
-            --json number,title,labels,assignees 2>&1); then
-            echo "❌ Error fetching tasks:"
-            echo "$TASKS_OUTPUT"
-            echo ""
-            echo "💡 Troubleshooting:"
-            echo "   1. Ensure you're authenticated: gh auth status"
-            echo "   2. Check repository permissions: gh repo view"
-            echo "   3. Verify labels exist: gh label list | grep conductor"
-            exit 1
-        fi
+            --json number,title,labels,assignees,createdAt \
+            --limit 50)
         
-        # Parse and display tasks
-        UNASSIGNED_TASKS=$(echo "$TASKS_OUTPUT" | jq -r '.[] | select(.assignees | length == 0) | "#\(.number): \(.title)\n  Labels: \(.labels | map(.name) | join(", "))\n"' 2>/dev/null || echo "")
-        
-        if [ -z "$UNASSIGNED_TASKS" ]; then
-            echo "No unassigned tasks available."
+        if [ -z "$TASKS" ]; then
+            echo "No tasks found."
             echo ""
-            echo "💡 Options:"
-            echo "   1. Create a new task: gh issue create -l 'conductor:task'"
-            echo "   2. Check all tasks: gh issue list -l 'conductor:task'"
-            echo "   3. Run setup if new project: python setup.py"
+            echo "💡 Create a new task with: gh issue create -l 'conductor:task'"
         else
-            echo "$UNASSIGNED_TASKS"
+            # Parse tasks and show unassigned ones
+            UNASSIGNED=$(echo "$TASKS" | jq -r '.[] | select(.assignees | length == 0) | "[#\(.number)] \(.title)\n    Labels: \(.labels | map(.name) | join(", "))\n    Created: \(.createdAt[:10])\n"')
+            
+            if [ -z "$UNASSIGNED" ]; then
+                echo "No unassigned tasks available."
+                echo ""
+                echo "All tasks assigned:"
+                echo "$TASKS" | jq -r '.[] | select(.assignees | length > 0) | "  [#\(.number)] \(.title) (assigned to: \(.assignees | map(.login) | join(", ")))"'
+            else
+                echo "$UNASSIGNED"
+            fi
         fi
+        
+        echo ""
+        echo "💡 View all tasks: gh issue list -l 'conductor:task'"
         ;;
         
     progress|p)
@@ -451,6 +485,29 @@ $PROGRESS_UPDATE
         echo "💡 Recent updates:"
         gh issue view "$TASK_ID" --comments --json comments \
             --jq '.comments[-3:] | .[] | "  - \(.author.login) (\(.createdAt | split("T")[0])): \(.body | split("\n")[0] | .[0:60])..."' 2>/dev/null || echo "  (Unable to fetch recent comments)"
+        ;;
+        
+    debug-info)
+        echo "🔍 Conductor Debug Info"
+        echo "======================"
+        
+        echo "1. GitHub CLI Check:"
+        gh auth status || echo "Not authenticated"
+        
+        echo -e "\n2. All issues with conductor labels:"
+        gh issue list --search "label:conductor:task OR label:conductor:status" --limit 20
+        
+        echo -e "\n3. Unassigned task issues:"
+        gh issue list -l 'conductor:task' --assignee @none --state open
+        
+        echo -e "\n4. My assigned issues:"
+        gh issue list -l 'conductor:task' --assignee @me --state open
+        
+        echo -e "\n5. All conductor:task issues (no filters):"
+        gh issue list -l 'conductor:task' --state open
+        
+        echo -e "\n6. Raw JSON output:"
+        gh issue list -l 'conductor:task' --state open --json number,title,assignees --limit 5
         ;;
         
     recover|debug|fix)
@@ -748,6 +805,7 @@ $PROGRESS_UPDATE
         echo "  tasks           List available tasks"
         echo "  recover         Fix common issues (aliases: debug, fix)"
         echo "  diagnose        Run system diagnostics (alias: doctor)"
+        echo "  debug-info      Show detailed debug information"
         echo "  help            Show this help message"
         echo ""
         echo "Roles:"
