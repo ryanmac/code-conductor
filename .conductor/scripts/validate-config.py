@@ -259,7 +259,7 @@ def validate_scripts():
 
     # Required scripts
     required_scripts = [
-        "bootstrap.sh",
+        "conductor",
         "task-claim.py",
         "dependency-check.py",
         "health-check.py",
