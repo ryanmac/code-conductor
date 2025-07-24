@@ -148,11 +148,17 @@ When modifying code-conductor itself:
 # Check your current task status
 ./conductor status
 
+# Update progress on current task
+./conductor progress  # or: ./conductor p
+
 # Complete task and create PR
 ./conductor complete
 
 # List available tasks
 ./conductor tasks
+
+# Diagnose and fix issues
+./conductor recover  # or: ./conductor debug, ./conductor fix
 ```
 
 ### Available Roles
@@ -170,6 +176,8 @@ When modifying code-conductor itself:
 cd /path/to/project  # MUST be in project root
 ./conductor start frontend
 # ... work on task ...
+./conductor progress  # Post update to GitHub
+# ... continue work ...
 ./conductor complete
 ```
 <!-- CONDUCTOR:END -->
@@ -179,10 +187,12 @@ cd /path/to/project  # MUST be in project root
 When working in a project with Code Conductor:
 
 1. **Start work**: Use `./conductor start [role]` from the project root
-2. **Check status**: Use `./conductor status` to see your current task
-3. **Complete work**: Use `./conductor complete` to finish and create PR
-4. **Work in isolation**: The conductor command creates your worktree automatically
-5. **Validate changes**: Always run the project's test/lint commands before committing
+2. **Track progress**: Use `./conductor progress` to post updates to GitHub
+3. **Check status**: Use `./conductor status` to see your current task
+4. **Complete work**: Use `./conductor complete` to finish and create PR
+5. **Fix issues**: Use `./conductor recover` if you encounter problems
+6. **Work in isolation**: The conductor command creates your worktree automatically
+7. **Validate changes**: Always run the project's test/lint commands before committing
 
 ## Common Tasks
 
