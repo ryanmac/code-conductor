@@ -8,6 +8,17 @@ Code Conductor is an AI agent coordination system designed to orchestrate multip
 
 **IMPORTANT**: This is a template repository. When you encounter Code Conductor files in a project, they have been imported to enable automated agent coordination. Work autonomously based on GitHub Issues with the `conductor:task` label and the guidance in these files.
 
+## Documentation Map
+
+**CRITICAL**: When starting work on any task, check if `.conductor/documentation-map.yaml` exists. This file contains:
+- Comprehensive project analysis and structure
+- Technology stack details and dependencies  
+- List of completed vs. pending features
+- Implementation status and critical paths
+- Architectural decisions and constraints
+
+If this file exists, load it to understand the project context before beginning work. This map is created by the `[INIT]` discovery task and provides essential context for all subsequent tasks.
+
 ## Key Development Commands
 
 ### Running Tests

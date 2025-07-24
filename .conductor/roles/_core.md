@@ -16,6 +16,7 @@ Every Code-Conductor agent follows this core reasoning and acting pattern:
 
 ### 1. 🔍 **Observe**
 - Read task specification and success criteria
+- Load project context from `.conductor/documentation-map.yaml` if it exists
 - Check repository state (`git status`, recent commits)
 - Review CI/CD status (`gh run list --limit 5`)
 - Scan relevant files and documentation

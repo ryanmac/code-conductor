@@ -45,6 +45,11 @@ The setup process detected your project's stack. Prioritize using:
 ### 1. 🔍 **Context Loading**
 ```bash
 # Start every task with context
+# First, check for documentation map
+if [ -f ".conductor/documentation-map.yaml" ]; then
+    echo "Loading project documentation map..."
+    cat .conductor/documentation-map.yaml | head -50
+fi
 gh pr checks  # Current CI status
 git log --oneline -10  # Recent changes
 cat .conductor/workflow-state.json | jq '.active_work'

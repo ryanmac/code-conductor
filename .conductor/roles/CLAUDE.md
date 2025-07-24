@@ -56,6 +56,7 @@ New skill requirement detected?
 
 ### 1. Observe - Understanding Existing Roles
 Automatically read and analyze:
+- **Documentation Map**: First check if `../.conductor/documentation-map.yaml` exists and load it for project context
 - **Structure**: Each role has sections for Overview, Responsibilities, Skills, Task Selection, etc.
 - **Patterns**: Notice how specialized roles build on the `_core.md` foundation
 - **Contracts**: Check `../contracts.md` for how roles interact
