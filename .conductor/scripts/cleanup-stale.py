@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Clean up stale work and abandoned tasks using GitHub Issues"""
 
+import os
 import json
 import sys
 import argparse
@@ -22,7 +23,7 @@ class StaleCleaner:
                 env["GH_TOKEN"] = env["GITHUB_TOKEN"]
             elif "CONDUCTOR_GITHUB_TOKEN" in env and "GH_TOKEN" not in env:
                 env["GH_TOKEN"] = env["CONDUCTOR_GITHUB_TOKEN"]
-            
+
             result = subprocess.run(
                 ["gh"] + args, capture_output=True, text=True, check=True, env=env
             )
