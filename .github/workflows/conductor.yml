@@ -160,12 +160,11 @@ jobs:
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           # Use CONDUCTOR_GITHUB_TOKEN for all operations
+          # IMPORTANT: Do not set GH_TOKEN here as it conflicts with gh auth login
           echo "${{ secrets.CONDUCTOR_GITHUB_TOKEN }}" > token.txt
           gh auth login --with-token < token.txt
           rm -f token.txt
           gh auth status
-        env:
-          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Ensure required labels exist
         if: steps.activity_check.outputs.should_run == 'true'
