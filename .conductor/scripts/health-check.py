@@ -241,8 +241,22 @@ class HealthChecker:
             try:
                 issues = json.loads(output)
                 if issues and not should_create_new:
-                    # Use the most recent daily status issue
+                    # Sort by creation date and use the most recent
+                    issues.sort(key=lambda x: x["createdAt"], reverse=True)
                     status_issue_number = issues[0]["number"]
+
+                    # Close any duplicate status issues
+                    if len(issues) > 1:
+                        for issue in issues[1:]:
+                            self.run_gh_command(
+                                [
+                                    "issue",
+                                    "close",
+                                    str(issue["number"]),
+                                    "-c",
+                                    "Closing duplicate status issue",
+                                ]
+                            )
                 elif should_create_new:
                     # Close old status issues
                     for issue in issues:
@@ -324,6 +338,42 @@ class HealthChecker:
         else:
             # Create new status issue
             title = f"{issue_title_prefix} {datetime.utcnow().strftime('%Y-%m-%d')}"
+
+            # Double-check no issue was created in the meantime
+            final_check = self.run_gh_command(
+                [
+                    "issue",
+                    "list",
+                    "-l",
+                    "conductor:status",
+                    "--state",
+                    "open",
+                    "--limit",
+                    "1",
+                    "--json",
+                    "number",
+                ]
+            )
+
+            if final_check:
+                try:
+                    existing = json.loads(final_check)
+                    if existing:
+                        # Use existing instead of creating new
+                        self.run_gh_command(
+                            [
+                                "issue",
+                                "edit",
+                                str(existing[0]["number"]),
+                                "--body",
+                                status_content,
+                            ]
+                        )
+                        return
+                except json.JSONDecodeError:
+                    pass
+
+            # Create the issue
             self.run_gh_command(
                 [
                     "issue",
@@ -444,6 +494,20 @@ def main():
     args = parser.parse_args()
 
     checker = HealthChecker()
+
+    if args.json:
+        # For JSON output, just return the stale agent count
+        all_issues = checker.get_conductor_issues()
+        assigned_tasks = [i for i in all_issues if i.get("assignees")]
+        checker.check_agent_heartbeats(assigned_tasks)
+        result = {
+            "stale_agents": len(checker.stale_agents),
+            "active_agents": len(checker.active_agents),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        print(json.dumps(result))
+        sys.exit(0)
+
     success = checker.run_checks(args.summary_type)
     sys.exit(0 if success else 1)
 
