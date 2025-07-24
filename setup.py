@@ -12,7 +12,6 @@ import subprocess
 import argparse
 import logging
 from pathlib import Path
-from datetime import datetime
 
 
 class ConductorSetup:
@@ -48,7 +47,8 @@ class ConductorSetup:
         self.ensure_github_labels()
         self.create_bootstrap_scripts()
         self.validate_setup()
-        self.display_completion_message()
+        discovery_task_number = self.create_discovery_task_if_needed()
+        self.display_completion_message(discovery_task_number)
 
     def print_header(self):
         """Display setup header"""
@@ -250,7 +250,6 @@ class ConductorSetup:
             },
         }
 
-        import glob
 
         # Process each tech indicator
         for file_pattern, info in tech_indicators.items():
@@ -505,6 +504,9 @@ class ConductorSetup:
                 self.logger.error(f"❌ Failed to create config file: {e}")
             sys.exit(1)
 
+        # Create or update CLAUDE.md for AI agent context
+        self.manage_claude_instructions()
+
         # Create GitHub issue templates directory
         issue_templates_dir = self.project_root / ".github" / "ISSUE_TEMPLATE"
         issue_templates_dir.mkdir(parents=True, exist_ok=True)
@@ -584,6 +586,99 @@ class ConductorSetup:
         with open(template_file, "w") as f:
             yaml.dump(task_template, f, default_flow_style=False, sort_keys=False)
         print(f"✓ Created {template_file}")
+
+    def manage_claude_instructions(self):
+        """Intelligently manage CLAUDE.md for AI agent context"""
+        claude_file = self.project_root / "CLAUDE.md"
+
+        conductor_section = """<!-- CONDUCTOR:START -->
+# 🤖 Code Conductor Agent Instructions
+
+You are operating in a Code Conductor orchestrated project with automated task management via GitHub Issues.
+
+## Quick Start
+To begin work as an agent, simply run:
+```bash
+conductor-agent start [role]
+```
+
+This single command will:
+1. Show your role definition and capabilities
+2. List available tasks appropriate for your role
+3. Claim a task atomically
+4. Set up your isolated workspace
+5. Provide task context and success criteria
+
+## Available Roles
+{roles_list}
+
+## Core Commands
+- `conductor-agent status` - View system status and your current task
+- `conductor-agent tasks` - List all available tasks
+- `conductor-agent complete` - Mark current task complete and get next
+- `conductor-agent help` - Show role-specific guidance
+
+## Workflow
+1. Start: `conductor-agent start [role]`
+2. Work in the created worktree following task specifications
+3. Commit with conventional commits: `feat:`, `fix:`, `test:`, etc.
+4. Run: `conductor-agent complete` when done
+5. The system handles PR creation and moves you to the next task
+
+<!-- CONDUCTOR:END -->"""
+
+        try:
+            if claude_file.exists():
+                content = claude_file.read_text()
+
+                # Check if conductor section exists
+                if "<!-- CONDUCTOR:START -->" in content:
+                    # Update existing section
+                    import re
+
+                    pattern = r"<!-- CONDUCTOR:START -->.*?<!-- CONDUCTOR:END -->"
+                    new_content = re.sub(
+                        pattern, conductor_section, content, flags=re.DOTALL
+                    )
+                else:
+                    # Prepend to existing file
+                    new_content = conductor_section + "\n\n---\n\n" + content
+            else:
+                # Create new file
+                new_content = conductor_section
+
+            # Fill in dynamic content
+            roles_list = "\n".join(
+                [
+                    f"- `{role}`: {self.get_role_summary(role)}"
+                    for role in ["dev"] + self.config["roles"].get("specialized", [])
+                ]
+            )
+            new_content = new_content.replace("{roles_list}", roles_list)
+
+            claude_file.write_text(new_content)
+            print(f"✓ Created/Updated {claude_file}")
+
+        except Exception as e:
+            if self.debug:
+                self.logger.debug(f"Failed to create CLAUDE.md: {e}")
+            print(f"⚠️  Could not create CLAUDE.md: {e}")
+
+    def get_role_summary(self, role):
+        """Get a brief summary for a role"""
+        role_summaries = {
+            "dev": "Default generalist developer role",
+            "devops": "CI/CD, infrastructure, deployments",
+            "security": "Security audits and vulnerability management",
+            "ml-engineer": "Machine learning and AI tasks",
+            "ui-designer": "UI/UX design and frontend components",
+            "code-reviewer": "Automated AI-powered PR reviews",
+            "frontend": "Client-side development and UI",
+            "mobile": "Mobile application development",
+            "data": "Data pipelines and analytics",
+            "backend": "Server-side development and APIs",
+        }
+        return role_summaries.get(role, f"Specialized {role} tasks")
 
     def ensure_github_labels(self):
         """Ensure required GitHub labels exist"""
@@ -1553,6 +1648,432 @@ if __name__ == "__main__":
         os.chmod(task_claim_file, 0o755)
         print(f"✓ Created {task_claim_file}")
 
+        # Create universal conductor-agent command
+        conductor_agent_content = """#!/bin/bash
+# The ONLY command AI agents need to know
+
+set -e
+
+# Smart defaults
+COMMAND=${1:-start}
+ROLE=${2:-dev}
+
+# Handle role aliases for flexibility
+case "$ROLE" in
+    fe|front*) ROLE="frontend" ;;
+    be|back*) ROLE="backend" ;;
+    ops|devops) ROLE="devops" ;;
+    sec*) ROLE="security" ;;
+    ml|ai) ROLE="ml-engineer" ;;
+esac
+
+case "$COMMAND" in
+    start|s)
+        echo "🤖 Code Conductor Agent: $ROLE"
+        echo "=================================="
+        
+        # Show role capabilities (brief)
+        echo "📋 Role: $ROLE"
+        if [ -f ".conductor/roles/$ROLE.md" ]; then
+            head -10 .conductor/roles/$ROLE.md | tail -8
+        fi
+        echo ""
+        
+        # Auto-discover if this is first run
+        if ! gh issue list -l 'conductor:task' --limit 1 >/dev/null 2>&1; then
+            echo "🔍 First run detected. Checking for initialization task..."
+            INIT_TASK=$(gh issue list -l 'conductor:init' --state open --limit 1 --json number -q '.[0].number' 2>/dev/null || echo "")
+            
+            if [ -n "$INIT_TASK" ]; then
+                echo "📚 Found initialization task #$INIT_TASK"
+                echo "This will help discover your project structure."
+                echo ""
+            fi
+        fi
+        
+        # Show available tasks
+        echo "📊 Available Tasks:"
+        TASKS=$(gh issue list -l 'conductor:task' --assignee '!*' --state open \\
+            --json number,title,labels -q '.[] | "  #\\(.number): \\(.title)"' 2>/dev/null | head -5 || echo "")
+        
+        if [ -z "$TASKS" ]; then
+            echo "  No tasks available yet."
+            echo ""
+            echo "💡 Creating demo tasks..."
+            gh issue create --title "Add comprehensive README" \\
+                --label "conductor:task,effort:small" \\
+                --body "Create project documentation" >/dev/null 2>&1 || true
+            echo "  ✓ Created demo task"
+            TASKS=$(gh issue list -l 'conductor:task' --assignee '!*' --state open \\
+                --json number,title -q '.[] | "  #\\(.number): \\(.title)"' 2>/dev/null || echo "")
+        fi
+        
+        echo "$TASKS"
+        echo ""
+        
+        # Claim best matching task
+        echo "🎯 Claiming task..."
+        TASK_JSON=$(python3 .conductor/scripts/task-claim.py --role "$ROLE" 2>&1)
+        
+        if echo "$TASK_JSON" | grep -q '"status": "claimed"'; then
+            TASK_ID=$(echo "$TASK_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['task_id'])" 2>/dev/null || echo "unknown")
+            BRANCH="agent-$ROLE-$TASK_ID"
+            WORKTREE="worktrees/$BRANCH"
+            
+            # Create worktree
+            mkdir -p worktrees
+            git worktree add "$WORKTREE" -b "$BRANCH" >/dev/null 2>&1
+            
+            # Create context file
+            cat > "$WORKTREE/TASK_CONTEXT.md" << EOF
+# Task #$TASK_ID Context
+
+Role: $ROLE
+Branch: $BRANCH
+Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+## Task Details
+$(gh issue view $TASK_ID 2>/dev/null || echo "Task details not available")
+
+## Quick Commands
+- Update progress: gh issue comment $TASK_ID --body "Progress update..."
+- Complete: conductor-agent complete
+- Help: conductor-agent help
+EOF
+            
+            echo "✅ Claimed task #$TASK_ID"
+            echo "📁 Workspace: $WORKTREE"
+            echo ""
+            echo "Next: cd $WORKTREE"
+            
+            # Save state
+            mkdir -p .conductor
+            echo "$TASK_ID" > .conductor/.current-task
+            echo "$WORKTREE" > .conductor/.current-worktree
+        else
+            echo "😴 No suitable tasks available"
+        fi
+        ;;
+        
+    complete|c)
+        if [ -f .conductor/.current-task ]; then
+            TASK_ID=$(cat .conductor/.current-task)
+            WORKTREE=$(cat .conductor/.current-worktree 2>/dev/null || echo "")
+            
+            echo "✅ Completing task #$TASK_ID"
+            
+            # Create PR from worktree
+            if [ -n "$WORKTREE" ] && [ -d "$WORKTREE" ]; then
+                cd "$WORKTREE"
+                git add -A
+                git commit -m "Complete: Task #$TASK_ID" || true
+                git push origin HEAD 2>/dev/null || git push --set-upstream origin HEAD
+                
+                # Create PR
+                PR_URL=$(gh pr create --title "Complete: Task #$TASK_ID" \\
+                    --body "Completes #$TASK_ID\\n\\nAuto-generated by Code Conductor agent: $ROLE" \\
+                    --label "conductor:pr" 2>/dev/null || echo "")
+                
+                if [ -n "$PR_URL" ]; then
+                    echo "✓ PR created: $PR_URL"
+                    
+                    # Close issue
+                    gh issue close $TASK_ID --comment "Completed via $PR_URL" 2>/dev/null || true
+                fi
+                
+                # Return to main dir
+                cd - > /dev/null
+            fi
+            
+            # Clean up state
+            rm -f .conductor/.current-task .conductor/.current-worktree
+            
+            echo ""
+            echo "Ready for next task! Run: conductor-agent start $ROLE"
+        else
+            echo "❌ No active task to complete"
+        fi
+        ;;
+        
+    status)
+        echo "📊 Code Conductor Status"
+        echo "======================="
+        if [ -f .conductor/.current-task ]; then
+            TASK_ID=$(cat .conductor/.current-task)
+            echo "Current task: #$TASK_ID"
+            gh issue view $TASK_ID --json title,state,assignees -q '"Title: \\(.title)\\nStatus: \\(.state)\\nAssigned: \\(.assignees[0].login)"' 2>/dev/null || echo "Task details not available"
+        else
+            echo "No active task"
+        fi
+        echo ""
+        python3 .conductor/scripts/health-check.py --brief 2>/dev/null || echo "Health check not available"
+        ;;
+        
+    tasks)
+        echo "📋 Available Tasks"
+        echo "=================="
+        gh issue list -l 'conductor:task' --assignee '!*' --json number,title,labels,createdAt \\
+            -q '.[] | "[\\(.number)] \\(.title)\\n    Labels: \\(.labels|map(.name)|join(", "))\\n    Created: \\(.createdAt)\\n"' 2>/dev/null || echo "No tasks available"
+        ;;
+        
+    help|*)
+        cat << EOF
+🤖 conductor-agent - The only command you need
+
+Usage: conductor-agent <command> [role]
+
+Commands:
+  start [role]  - Start work (default: dev)
+  complete      - Complete current task
+  status        - Show current status
+  tasks         - List available tasks
+  help          - Show this help
+
+Roles: dev, frontend, backend, devops, security, ui-designer, ml-engineer, data
+
+Example workflow:
+  conductor-agent start frontend    # Start as frontend agent
+  cd worktrees/agent-frontend-123  # Enter your workspace
+  # ... do work ...
+  conductor-agent complete          # Finish and get next task
+EOF
+        ;;
+esac
+"""
+
+        conductor_agent_file = scripts_dir / "conductor-agent"
+        with open(conductor_agent_file, "w") as f:
+            f.write(conductor_agent_content)
+        os.chmod(conductor_agent_file, 0o755)
+        print(f"✓ Created {conductor_agent_file}")
+
+    def create_discovery_task_if_needed(self):
+        """Create initialization task for AI agents to discover project structure"""
+
+        # Check if project has substantial existing content
+        indicators = {
+            "has_docs": any(
+                (self.project_root / p).exists()
+                for p in ["docs/", "README.md", "ARCHITECTURE.md"]
+            ),
+            "has_code": any(self.project_root.glob("**/*.py"))
+            or any(self.project_root.glob("**/*.js")),
+            "has_tests": (self.project_root / "tests").exists()
+            or (self.project_root / "test").exists(),
+        }
+
+        # Skip for new projects or if no GitHub CLI
+        try:
+            subprocess.run(["gh", "--version"], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("\n⚠️  GitHub CLI not available - skipping discovery task creation")
+            return None
+
+        # Check if authenticated
+        try:
+            subprocess.run(["gh", "auth", "status"], capture_output=True, check=True)
+        except subprocess.CalledProcessError:
+            print(
+                "\n⚠️  GitHub CLI not authenticated - skipping discovery task creation"
+            )
+            return None
+
+        if not any(indicators.values()):
+            print("\n📋 New project detected - skipping discovery task")
+            return None
+
+        print("\n📚 Existing project detected. Creating discovery task...")
+
+        discovery_task_body = """## 🔍 Documentation Discovery and Task Generation
+
+**This is a special initialization task for AI agents to map the project and create all subsequent tasks.**
+
+## Your Mission
+
+Investigate this repository to understand:
+1. What the project does
+2. What documentation exists  
+3. What's been implemented vs. what's still needed
+4. What tasks should be created for other agents
+
+## Step-by-Step Instructions
+
+### 1. Explore Project Structure
+```bash
+# Get overview of the repository
+find . -type f -name "*.md" | grep -v node_modules | head -20
+ls -la docs/ doc/ documentation/ 2>/dev/null
+tree -d -L 3 -I 'node_modules|.git|dist|build' 2>/dev/null || find . -type d | head -20
+
+# Check for key files
+cat README.md | head -50
+cat package.json 2>/dev/null | jq '.name, .description, .scripts'
+cat setup.py 2>/dev/null | head -20
+```
+
+### 2. Identify Documentation
+Look for:
+- README files at any level
+- docs/ or documentation/ directories  
+- Architecture documents (ARCHITECTURE.md, DESIGN.md)
+- API documentation (swagger, openapi files)
+- Requirements or specifications
+- Development guides (CONTRIBUTING.md, DEVELOPMENT.md)
+- TODO files or ROADMAP documents
+
+### 3. Analyze Implementation Status
+```bash
+# Check source code structure
+find src/ -type f -name "*.py" -o -name "*.js" -o -name "*.ts" 2>/dev/null | head -20
+find test/ tests/ -type f 2>/dev/null | head -10
+
+# Look for TODO/FIXME comments
+grep -r "TODO\\|FIXME\\|HACK\\|BUG" --include="*.py" --include="*.js" --include="*.ts" . | head -20
+
+# Check test coverage if available
+npm test -- --coverage 2>/dev/null || pytest --cov 2>/dev/null || echo "No coverage data"
+```
+
+### 4. Create Documentation Map
+
+Create `.conductor/documentation-map.yaml` with this structure:
+
+```yaml
+# Project overview - REQUIRED
+project:
+  name: "[detect from package.json, setup.py, or README]"
+  description: "[brief description of what this project does]"
+  type: "[web-app|api|library|cli|mobile|desktop]"
+  primary_language: "[python|javascript|typescript|go|rust|etc]"
+  framework: "[react|django|express|etc]"
+  status: "[prototype|development|beta|production]"
+  estimated_completion: "[0-100]%"
+
+# Documentation sources - Fill in what exists
+documentation:
+  readme:
+    - path: "README.md"
+      summary: "[what this README covers]"
+      quality: "[excellent|good|needs-work|missing]"
+  
+  architecture:
+    - path: "[path to architecture docs]"
+      summary: "[what it describes]"
+      decisions: "[list key architectural decisions]"
+  
+  api:
+    - path: "[path to API docs]"
+      format: "[openapi|swagger|markdown|other]"
+      completeness: "[complete|partial|outdated|missing]"
+  
+  requirements:
+    - path: "[path to requirements]"
+      type: "[functional|technical|business]"
+      status: "[current|outdated|draft]"
+
+# Current implementation state
+implementation:
+  completed_features:
+    - name: "[feature name]"
+      description: "[what it does]"
+      location: "[where in codebase]"
+      has_tests: [true|false]
+      documentation: "[documented|needs-docs|undocumented]"
+  
+  missing_features:
+    - name: "[feature from requirements not yet started]"
+      description: "[what it should do]"
+      source_requirement: "[where this requirement comes from]"
+      priority: "[critical|high|medium|low]"
+      estimated_effort: "[small|medium|large]"
+
+# Proposed tasks - MOST IMPORTANT SECTION
+proposed_tasks:
+  # Create 10-20 specific, actionable tasks based on your investigation
+  - title: "[Clear, specific task title]"
+    description: "[What needs to be done]"
+    type: "[feature|bugfix|refactor|documentation|testing|deployment]"
+    source_requirement: "[which doc/requirement this comes from]"
+    estimated_effort: "[small|medium|large]"
+    priority: "[critical|high|medium|low]" 
+    assigned_role: "[dev|frontend|backend|devops|etc]"
+    success_criteria:
+      - "[Specific, measurable criterion]"
+      - "[Another criterion]"
+    implementation_notes: "[Any helpful context for the implementer]"
+
+# Summary for humans
+summary:
+  total_tasks: [number]
+  critical_tasks: [number]
+  estimated_total_effort: "[in ideal dev days]"
+  recommended_next_steps:
+    - "[First thing to do]"
+    - "[Second thing to do]"
+```
+
+### 5. Validate Your Work
+
+Before marking complete:
+1. Ensure the YAML is valid: `python -c "import yaml; yaml.safe_load(open('.conductor/documentation-map.yaml'))"`
+2. Check you've created at least 10 concrete tasks
+3. Verify each task has clear success criteria
+4. Make sure priorities are reasonable
+
+## Success Criteria
+
+- [ ] Created valid `.conductor/documentation-map.yaml`
+- [ ] Identified all major documentation sources
+- [ ] Assessed project completion percentage
+- [ ] Created 10-20 specific, actionable tasks
+- [ ] Each task has clear source documentation/requirements
+- [ ] Tasks are properly prioritized
+- [ ] Tasks have appropriate role assignments
+
+## Completion
+
+After creating the documentation map, comment on this issue:
+"Documentation discovery complete. Ready to generate tasks."
+
+A human will review and then run:
+```bash
+python .conductor/scripts/generate-tasks-from-map.py
+```
+
+---
+*This is a one-time initialization task. Once complete, all future work will be properly coordinated.*
+"""
+
+        # Create the discovery task
+        try:
+            result = subprocess.run(
+                [
+                    "gh",
+                    "issue",
+                    "create",
+                    "--title",
+                    "🔍 [INIT] Discover project documentation and create task map",
+                    "--body",
+                    discovery_task_body,
+                    "--label",
+                    "conductor:task,conductor:init,priority:critical,effort:medium",
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode == 0:
+                issue_url = result.stdout.strip()
+                issue_number = issue_url.split("/")[-1]
+                print(f"✅ Created initialization task #{issue_number}")
+                return issue_number
+            else:
+                print(f"⚠️  Could not create discovery task: {result.stderr}")
+                return None
+        except Exception as e:
+            print(f"⚠️  Could not create discovery task: {e}")
+            return None
+
     def validate_setup(self):
         """Validate the setup is correct"""
         print("\n✅ Validating setup...")
@@ -1591,36 +2112,69 @@ if __name__ == "__main__":
 
         return all_valid
 
-    def display_completion_message(self):
+    def display_completion_message(self, discovery_task_number=None):
         """Show completion message and next steps"""
         print("\n" + "=" * 50)
         print("🎉 Code Conductor Setup Complete!")
         print("=" * 50)
 
-        print("\n📋 Next Steps:")
+        # AI-First Quick Start
+        print("\n🤖 AI Agent Quick Start")
+        print("-" * 30)
+        print("For Claude Code or other AI agents, simply run:")
+        print()
+        print("  conductor-agent start [role]")
+        print()
+        print("This ONE command automatically:")
+        print("  ✓ Shows role description")
+        print("  ✓ Lists available tasks")
+        print("  ✓ Claims best matching task")
+        print("  ✓ Creates isolated workspace")
+        print("  ✓ Provides all context needed")
+
+        if discovery_task_number:
+            print()
+            print(f"📚 First Task Available: #{discovery_task_number}")
+            print(
+                "This special task will help map your project and create all other tasks."
+            )
+            print()
+            print("Suggested first agent prompt:")
+            print("```")
+            print(
+                f"I'm a dev agent in a Code Conductor project. Let me start by running:"
+            )
+            print(f"")
+            print(f"conductor-agent start dev")
+            print(f"")
+            print(
+                f"This should show me initialization task #{discovery_task_number} to map the project."
+            )
+            print("```")
+
+        print("\n📋 Traditional Setup Steps:")
         print("1. Review the generated configuration in .conductor/config.yaml")
         print("2. Customize role definitions in .conductor/roles/ if needed")
         print("3. Commit these changes to your repository")
-        print(
-            "4. Create your first tasks via GitHub issues with 'conductor:task' label"
-        )
-        print("5. Launch agents using: bash .conductor/scripts/bootstrap.sh [role]")
+        print("4. Create tasks via GitHub issues with 'conductor:task' label")
 
-        print("\n💡 Quick Start:")
-        print("  # Create a task via GitHub CLI:")
+        print("\n💡 Examples:")
+        print("  # AI agent workflow:")
+        print("  conductor-agent start frontend    # Start as frontend agent")
+        print("  cd worktrees/agent-frontend-123  # Enter workspace")
+        print("  # ... implement feature ...")
+        print("  conductor-agent complete          # Finish and get next task")
+        print()
+        print("  # Create tasks manually:")
         print(
-            "  gh issue create --label 'conductor:task' --title '[Task] Your task title'"
+            "  gh issue create --label 'conductor:task' --title 'Implement user auth'"
         )
-        print("  ")
-        print("  # Or use the web interface with the task template")
-        print("  ")
-        print("  # Then spawn an agent:")
-        print("  bash .conductor/scripts/bootstrap.sh dev")
 
-        print("\n📚 Documentation:")
-        print("  - Role definitions: .conductor/roles/")
-        print("  - Configuration: .conductor/config.yaml")
-        print("  - Scripts: .conductor/scripts/")
+        print("\n📚 Key Files:")
+        print("  - CLAUDE.md - AI agent instructions (auto-created)")
+        print("  - .conductor/config.yaml - Main configuration")
+        print("  - .conductor/roles/ - Role definitions")
+        print("  - .conductor/scripts/conductor-agent - Universal agent command")
 
         print("\n🚀 Happy coding with Code Conductor!")
 

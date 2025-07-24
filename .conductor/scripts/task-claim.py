@@ -2,7 +2,6 @@
 """Claim and assign tasks to agents using GitHub Issues"""
 
 import json
-import os
 import sys
 import uuid
 import argparse
@@ -83,53 +82,79 @@ def get_available_tasks():
 
 
 def find_suitable_task(tasks, role):
-    """Find a task suitable for the given role"""
+    """Find a task suitable for the given role with smart matching"""
     if not tasks:
         return None
 
-    # Try to find tasks that match the role's skills
-    role_tasks = []
-    general_tasks = []
+    # Role relationships for smart matching
+    role_affinities = {
+        "frontend": ["ui-designer", "ui", "react", "vue", "angular", "css"],
+        "backend": ["api", "database", "server", "devops"],
+        "devops": ["infrastructure", "ci-cd", "deployment", "monitoring"],
+        "security": ["auth", "authentication", "vulnerability", "audit"],
+        "ml-engineer": ["ml", "ai", "data-science", "model", "training"],
+        "data": ["etl", "pipeline", "analytics", "database"],
+        "mobile": ["ios", "android", "react-native", "flutter"],
+        "ui-designer": ["design", "ux", "frontend", "css", "accessibility"],
+    }
+
+    # Score each task for the role
+    scored_tasks = []
 
     for task in tasks:
+        score = 0
         required_skills = task.get("required_skills", [])
+        title_lower = task.get("title", "").lower()
+        desc_lower = task.get("description", "").lower()
 
-        # If no specific skills required, it's a general task
+        # Exact role match gets highest score
+        if role in required_skills:
+            score += 100
+
+        # Check if task requires no specific skills (general task)
         if not required_skills:
-            general_tasks.append(task)
-        # If role matches required skills
-        elif role in required_skills:
-            role_tasks.append(task)
-        # Special mapping for common roles
-        elif role == "dev" and not required_skills:
-            general_tasks.append(task)
+            if role == "dev":
+                score += 50  # Dev role is perfect for general tasks
+            else:
+                score += 10  # Other roles can do general tasks too
 
-    # Prefer tasks that specifically need this role
-    if role_tasks:
-        # Sort by effort (small tasks first) and priority
-        effort_order = {"small": 1, "medium": 2, "large": 3}
-        priority_order = {"high": 1, "medium": 2, "low": 3}
-        role_tasks.sort(
-            key=lambda x: (
-                priority_order.get(x.get("priority", "medium"), 2),
-                effort_order.get(x.get("estimated_effort", "medium"), 2),
-            )
-        )
-        return role_tasks[0]
+        # Check role affinities
+        if role in role_affinities:
+            for affinity in role_affinities[role]:
+                if affinity in required_skills:
+                    score += 30
+                # Check title and description for keywords
+                if affinity in title_lower or affinity in desc_lower:
+                    score += 20
 
-    # Fall back to general tasks if we're a dev role
-    if general_tasks and role == "dev":
-        effort_order = {"small": 1, "medium": 2, "large": 3}
-        priority_order = {"high": 1, "medium": 2, "low": 3}
-        general_tasks.sort(
-            key=lambda x: (
-                priority_order.get(x.get("priority", "medium"), 2),
-                effort_order.get(x.get("estimated_effort", "medium"), 2),
-            )
-        )
-        return general_tasks[0]
+        # Check for init tasks - everyone should be able to claim these
+        # Note: labels might be in the raw issue data, not processed into task
+        if (
+            "init" in title_lower
+            or "initialization" in title_lower
+            or "discovery" in title_lower
+        ):
+            score += 80  # High priority for initialization tasks
 
-    return None
+        # Priority scoring
+        priority_scores = {"critical": 30, "high": 20, "medium": 10, "low": 5}
+        score += priority_scores.get(task.get("priority", "medium"), 10)
+
+        # Effort scoring (prefer smaller tasks for faster iteration)
+        effort_scores = {"small": 15, "medium": 10, "large": 5}
+        score += effort_scores.get(task.get("estimated_effort", "medium"), 10)
+
+        if score > 0:
+            scored_tasks.append((score, task))
+
+    if not scored_tasks:
+        return None
+
+    # Sort by score (highest first)
+    scored_tasks.sort(key=lambda x: x[0], reverse=True)
+
+    # Return the best matching task
+    return scored_tasks[0][1]
 
 
 def claim_task(task, role):

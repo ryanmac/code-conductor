@@ -117,6 +117,60 @@ python setup.py
 
 **That's it.** Now create a GitHub Issue with `conductor:task` label, launch an agent via [Conductor.build](https://conductor.build) (macOS only as of 2024-07-22) or terminal workflow (all platforms), and watch it work.
 
+## 🤖 **AI Agent Quick Start**
+
+**NEW: AI-first experience with automatic onboarding!**
+
+After setup, Code Conductor creates a `CLAUDE.md` file with AI agent instructions. For Claude Code or other AI coding assistants:
+
+```bash
+# The ONLY command AI agents need to know:
+conductor-agent start [role]
+```
+
+This single command:
+- ✅ Shows your role and capabilities
+- ✅ Lists available tasks (creates demo tasks if needed)
+- ✅ Claims the best matching task automatically
+- ✅ Creates an isolated git worktree
+- ✅ Provides all context needed to start
+
+### Example AI Agent Session
+
+```
+> conductor-agent start frontend
+
+🤖 Code Conductor Agent: frontend
+==================================
+📋 Role: frontend
+
+📊 Available Tasks:
+  #42: Implement dark mode toggle
+  #43: [INIT] Discover project documentation and create task map
+  #44: Add responsive navigation menu
+
+🎯 Claiming task...
+✅ Claimed task #42
+📁 Workspace: worktrees/agent-frontend-42
+
+Next: cd worktrees/agent-frontend-42
+```
+
+### AI Agent Workflow
+
+1. **Start work**: `conductor-agent start dev`
+2. **Implement**: Work in the created worktree
+3. **Complete**: `conductor-agent complete`
+4. **Repeat**: Automatically moves to next task
+
+### Smart Task Discovery
+
+For existing projects, Code Conductor creates a special discovery task that AI agents can claim to:
+- Map all project documentation
+- Identify implemented vs missing features
+- Generate 10-20 specific development tasks
+- Create proper GitHub issues automatically
+
 ## How It Works
 
 1. **Setup Phase**: Use the universal installer (Option 1) or other setup methods to configure your project. The setup script detects your project type and configures roles.
@@ -151,7 +205,8 @@ This reduces the complexity of managing many agent types while maintaining quali
 │   ├── ml-engineer.md  # ML/AI specialist
 │   └── data.md         # Data engineer
 ├── scripts/            # Automation scripts
-│   ├── bootstrap.sh    # Universal agent init
+│   ├── conductor-agent # Universal AI agent command
+│   ├── bootstrap.sh    # Legacy compatibility wrapper
 │   ├── task-claim.py   # Atomic task assignment
 │   ├── code-reviewer.py # AI code review engine
 │   └── health-check.py # System monitoring
@@ -244,13 +299,13 @@ on:
 **Option A: Conductor Desktop App (macOS only)**
 ```bash
 export AGENT_ROLE=dev  # or devops, security, etc.
-bash .conductor/scripts/bootstrap.sh
+conductor-agent start
 # Follow the printed instructions to open in Conductor app
 ```
 
 **Option B: Multiple Terminals (All Platforms)**
 ```bash
-bash .conductor/scripts/bootstrap.sh dev
+conductor-agent start dev
 cd worktrees/agent-dev-[task_id]
 # Use tmux or screen for session management on Linux/Windows
 # Start your Claude Code session in the worktree
