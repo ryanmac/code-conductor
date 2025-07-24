@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate GitHub Actions summary from GitHub Issues"""
 
+import os
 import json
 import subprocess
 from datetime import datetime, timedelta

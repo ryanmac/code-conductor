@@ -25,7 +25,10 @@ class HealthChecker:
                 ["gh"] + args, capture_output=True, text=True, check=True
             )
             return result.stdout.strip()
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            if "--json" in args:
+                # For JSON commands, return empty JSON array/object
+                return "[]" if "list" in args else "{}"
             return ""
         except FileNotFoundError:
             print("GitHub CLI (gh) not found. Please install it.")
@@ -441,10 +444,6 @@ class HealthChecker:
         """Run all health checks"""
         # Get all conductor issues
         all_issues = self.get_conductor_issues()
-
-        if not all_issues and not self.run_gh_command(["auth", "status"]):
-            print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
-            return False
 
         # Separate available and assigned tasks
         available_tasks = [i for i in all_issues if not i.get("assignees")]

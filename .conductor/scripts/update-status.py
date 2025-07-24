@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Update system status using GitHub Issues"""
 
+import os
 import json
 import sys
 import subprocess
@@ -390,12 +391,6 @@ def main():
 
     if not args.json:
         print("🔄 Updating system status...")
-
-    # Check GitHub CLI authentication
-    if not run_gh_command(["auth", "status"]):
-        if not args.json:
-            print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
-        sys.exit(1)
 
     # Get or create status issue
     issue_number = get_status_issue()

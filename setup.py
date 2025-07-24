@@ -1348,7 +1348,7 @@ jobs:
 
       - name: Run AI Code Review
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |

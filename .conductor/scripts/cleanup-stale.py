@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Clean up stale work and abandoned tasks using GitHub Issues"""
 
+import os
 import json
 import sys
 import argparse
@@ -281,11 +282,6 @@ def main():
     args = parser.parse_args()
 
     cleaner = StaleCleaner(timeout_minutes=args.timeout)
-
-    # Check GitHub CLI authentication
-    if not cleaner.run_gh_command(["auth", "status"]):
-        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
-        sys.exit(1)
 
     # Run cleanup
     success = cleaner.clean_stale_work()

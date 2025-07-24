@@ -160,12 +160,11 @@ jobs:
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           # Use CONDUCTOR_GITHUB_TOKEN for all operations
+          # IMPORTANT: Do not set GH_TOKEN here as it conflicts with gh auth login
           echo "${{ secrets.CONDUCTOR_GITHUB_TOKEN }}" > token.txt
           gh auth login --with-token < token.txt
           rm -f token.txt
           gh auth status
-        env:
-          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Ensure required labels exist
         if: steps.activity_check.outputs.should_run == 'true'
@@ -207,22 +206,21 @@ jobs:
         run: |
           python .conductor/scripts/validate-config.py || echo "Config validation completed with warnings"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Check system dependencies
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/dependency-check.py || echo "Dependency check completed with warnings"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
-          CONDUCTOR_GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Run health check
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/health-check.py --summary-type ${{ steps.activity_check.outputs.summary_type }} || echo "Health check completed with warnings"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
           DAYS_INACTIVE: ${{ steps.activity_check.outputs.days_inactive }}
 
       - name: Update system status
@@ -230,28 +228,28 @@ jobs:
         run: |
           python .conductor/scripts/update-status.py --no-comment || echo "Status update completed with warnings"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Generate status summary
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/generate-summary.py > $GITHUB_STEP_SUMMARY || echo "Summary generation completed"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Clean up stale work
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/cleanup-stale.py || echo "Cleanup completed"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Archive completed tasks
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/archive-completed.py --max-age 7 || echo "Archival completed"
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Check for critical issues
         if: steps.activity_check.outputs.should_run == 'true'
@@ -261,14 +259,14 @@ jobs:
           CRITICAL_ISSUES=0
 
           # Check for high number of stale agents
-          STALE_COUNT=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json 2>/dev/null | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
+          STALE_COUNT=$(GH_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json 2>/dev/null | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
           if [ "$STALE_COUNT" -gt 3 ]; then
             echo "⚠️ High stale agent count: $STALE_COUNT"
             CRITICAL_ISSUES=1
           fi
 
           # Check system health score
-          HEALTH_SCORE=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/update-status.py --json 2>/dev/null | jq -r '.health_score // 0' 2>/dev/null || echo "0")
+          HEALTH_SCORE=$(GH_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/update-status.py --json 2>/dev/null | jq -r '.health_score // 0' 2>/dev/null || echo "0")
           if (( $(echo "$HEALTH_SCORE < 0.5" | bc -l 2>/dev/null || echo 0) )); then
             echo "⚠️ Low health score: $HEALTH_SCORE"
             CRITICAL_ISSUES=1

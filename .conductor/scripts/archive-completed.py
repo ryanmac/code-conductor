@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Archive old completed tasks and generate cleanup reports using GitHub Issues"""
 
+import os
 import json
 import sys
 import subprocess
@@ -340,11 +341,6 @@ def main():
     print("🧹 Starting archive and cleanup process...")
 
     archiver = TaskArchiver()
-
-    # Check GitHub CLI authentication
-    if not archiver.run_gh_command(["auth", "status"]):
-        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
-        sys.exit(1)
 
     # Archive old issues
     archiver.archive_old_issues(max_age_days=args.max_age, dry_run=args.dry_run)

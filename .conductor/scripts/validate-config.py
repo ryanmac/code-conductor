@@ -12,10 +12,8 @@ import os
 def run_gh_command(args):
     """Run GitHub CLI command and return output"""
     try:
-        # Pass through environment variables including GITHUB_TOKEN
-        env = os.environ.copy()
         result = subprocess.run(
-            ["gh"] + args, capture_output=True, text=True, check=True, env=env
+            ["gh"] + args, capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError:

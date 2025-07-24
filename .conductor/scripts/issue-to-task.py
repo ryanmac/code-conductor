@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Format GitHub Issue as a Conductor Task"""
 
+import os
 import json
 import sys
 import argparse
@@ -256,11 +257,6 @@ def main():
     )
 
     args = parser.parse_args()
-
-    # Check GitHub CLI authentication
-    if not run_gh_command(["auth", "status"]):
-        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
-        sys.exit(1)
 
     # Format the issue
     success = format_issue_as_task(args.issue_number, args.dry_run)

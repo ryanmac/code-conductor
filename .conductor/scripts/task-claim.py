@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Claim and assign tasks to agents using GitHub Issues"""
 
+import os
 import json
 import sys
 import uuid

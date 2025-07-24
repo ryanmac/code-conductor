@@ -203,6 +203,21 @@ When working in a project with Code Conductor:
 - **Continuous flow**: Complete tasks, create PRs, and move to the next task without pausing
 - **Trust the process**: The system has guardrails; agents should proceed confidently
 
+## GitHub Authentication Setup
+
+Code Conductor requires a GitHub token with appropriate permissions for managing issues, pull requests, and labels. 
+
+### Quick Setup
+1. Create a GitHub Personal Access Token with `repo` scope at https://github.com/settings/tokens
+2. Add it as `CONDUCTOR_GITHUB_TOKEN` in your repository's Settings → Secrets → Actions
+3. The token is automatically passed to all conductor scripts
+
+### Required Permissions
+- **repo** scope (includes all repository permissions)
+- Optional: **workflow** scope if modifying GitHub Actions
+
+For detailed setup instructions and troubleshooting, see [.conductor/GITHUB_TOKEN_SETUP.md](.conductor/GITHUB_TOKEN_SETUP.md).
+
 ## Common Tasks
 
 ### Adding a New Role

@@ -16,7 +16,12 @@ class CodeReviewer:
     def __init__(self, pr_number: str, repo: str):
         self.pr_number = pr_number
         self.repo = repo
-        self.github_token = os.getenv("CONDUCTOR_GITHUB_TOKEN")
+        # Try multiple token sources in order of preference
+        self.github_token = (
+            os.getenv("GH_TOKEN")
+            or os.getenv("GITHUB_TOKEN")
+            or os.getenv("CONDUCTOR_GITHUB_TOKEN")
+        )
         self.review_comments = []
         self.summary = {
             "security_issues": [],
