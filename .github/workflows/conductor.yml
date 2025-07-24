@@ -51,28 +51,30 @@ jobs:
         run: |
           # Create labels if they don't exist
           labels=(
-            "conductor:task:0e8a16:Tasks for AI agents"
-            "conductor:status:1d76db:System status tracking"
-            "conductor:in-progress:fbca04:Task being worked on"
-            "conductor:blocked:d93f0b:Task is blocked"
-            "conductor:archived:c5def5:Completed and archived"
-            "conductor:alert:e11d21:System health alert"
-            "conductor:init:7057ff:Initialization task for discovery"
-            "effort:small:76d7c4:Small effort task"
-            "effort:medium:f39c12:Medium effort task"
-            "effort:large:e74c3c:Large effort task"
-            "priority:low:c5def5:Low priority"
-            "priority:medium:fbca04:Medium priority"
-            "priority:high:e11d21:High priority"
-            "priority:critical:b60205:Critical priority - urgent"
-            "skill:frontend:7057ff:Frontend development"
-            "skill:backend:008672:Backend development"
-            "skill:devops:0052cc:DevOps and infrastructure"
-            "skill:ml:ff6b6b:Machine learning"
+            "conductor:task|0e8a16|Tasks for AI agents"
+            "conductor:status|1d76db|System status tracking"
+            "conductor:in-progress|fbca04|Task being worked on"
+            "conductor:blocked|d93f0b|Task is blocked"
+            "conductor:archived|c5def5|Completed and archived"
+            "conductor:alert|e11d21|System health alert"
+            "conductor:init|7057ff|Initialization task for discovery"
+            "effort:small|76d7c4|Small effort task"
+            "effort:medium|f39c12|Medium effort task"
+            "effort:large|e74c3c|Large effort task"
+            "priority:low|c5def5|Low priority"
+            "priority:medium|fbca04|Medium priority"
+            "priority:high|e11d21|High priority"
+            "priority:critical|b60205|Critical priority - urgent"
+            "skill:frontend|7057ff|Frontend development"
+            "skill:backend|008672|Backend development"
+            "skill:devops|0052cc|DevOps and infrastructure"
+            "skill:ml|ff6b6b|Machine learning"
           )
           
           for label_info in "${labels[@]}"; do
-            IFS=':' read -r name color description <<< "$label_info"
+            # Split on pipe characters
+            IFS='|' read -r name color description <<< "$label_info"
+            
             gh label list | grep -q "^${name}" || \
               gh label create "${name}" --color "${color}" --description "${description}" || true
           done
