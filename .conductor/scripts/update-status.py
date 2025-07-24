@@ -4,6 +4,7 @@
 import json
 import sys
 import subprocess
+import argparse
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -58,7 +59,8 @@ def get_status_issue():
             "--title",
             "🏥 Code-Conductor System Status",
             "--body",
-            "This issue tracks the system status and health metrics for Code-Conductor.",
+            "This issue tracks the system status and health metrics "
+            "for Code-Conductor.",
             "--label",
             "conductor:status",
         ]
@@ -140,11 +142,12 @@ def collect_metrics():
                 tasks_by_skill[name.replace("skill:", "")] += 1
 
         # Default counts
-        if not any(l["name"].startswith("effort:") for l in task.get("labels", [])):
+        labels = task.get("labels", [])
+        if not any(label["name"].startswith("effort:") for label in labels):
             tasks_by_effort["unspecified"] += 1
-        if not any(l["name"].startswith("priority:") for l in task.get("labels", [])):
+        if not any(label["name"].startswith("priority:") for label in labels):
             tasks_by_priority["unspecified"] += 1
-        if not any(l["name"].startswith("skill:") for l in task.get("labels", [])):
+        if not any(label["name"].startswith("skill:") for label in labels):
             tasks_by_skill["general"] += 1
 
     metrics["tasks"]["by_effort"] = dict(tasks_by_effort)
@@ -174,7 +177,6 @@ def collect_metrics():
     metrics["tasks"]["completions_7d"] = completions_7d
 
     # Analyze active agents (from assigned tasks)
-    active_agents = {}
     stale_agents = 0
 
     for task in assigned_tasks:
@@ -237,7 +239,8 @@ def format_status_report(metrics):
     report = f"""## 🏥 Code-Conductor System Status
 
 **Last Updated**: {metrics['timestamp']}
-**Health Score**: {metrics['health']['score']:.0%} {get_health_emoji(metrics['health']['score'])}
+**Health Score**: {metrics['health']['score']:.0%} "
+    f"{get_health_emoji(metrics['health']['score'])}
 
 ### 📊 Task Metrics
 
@@ -283,9 +286,12 @@ def format_status_report(metrics):
 
     # Add health indicators
     report += "### 🏥 Health Indicators\n\n"
-    report += f"- {'✅' if metrics['health']['has_available_tasks'] else '❌'} Has available tasks\n"
-    report += f"- {'✅' if metrics['health']['has_active_agents'] else '❌'} Has active agents\n"
-    report += f"- {'✅' if metrics['health']['low_stale_ratio'] else '❌'} Low stale agent ratio\n"
+    available = "✅" if metrics["health"]["has_available_tasks"] else "❌"
+    report += f"- {available} Has available tasks\n"
+    active = "✅" if metrics["health"]["has_active_agents"] else "❌"
+    report += f"- {active} Has active agents\n"
+    stale_ok = "✅" if metrics["health"]["low_stale_ratio"] else "❌"
+    report += f"- {stale_ok} Low stale agent ratio\n"
     report += (
         f"- {'✅' if metrics['health']['recent_activity'] else '❌'} Recent activity\n"
     )
@@ -318,13 +324,14 @@ def get_health_emoji(score):
         return "🔴"
 
 
-def update_status_issue(issue_number, report):
+def update_status_issue(issue_number, report, add_comment=True):
     """Update the status issue with the latest report"""
     # Update issue body
     run_gh_command(["issue", "edit", str(issue_number), "--body", report])
 
-    # Add update comment
-    comment = f"""### 📊 Status Updated
+    # Add update comment only if requested
+    if add_comment:
+        comment = f"""### 📊 Status Updated
 
 System status has been refreshed with the latest metrics.
 
@@ -332,16 +339,16 @@ View the updated status in the issue description above.
 
 *Timestamp: {datetime.utcnow().isoformat()}*"""
 
-    run_gh_command(["issue", "comment", str(issue_number), "--body", comment])
+        run_gh_command(["issue", "comment", str(issue_number), "--body", comment])
 
 
 def print_summary(metrics):
     """Print a summary to console"""
     print("\n📊 System Status Summary")
     print("=" * 40)
-    print(
-        f"Health Score:      {metrics['health']['score']:.0%} {get_health_emoji(metrics['health']['score'])}"
-    )
+    score = metrics["health"]["score"]
+    emoji = get_health_emoji(score)
+    print(f"Health Score:      {score:.0%} {emoji}")
     print(f"Available Tasks:   {metrics['tasks']['available']}")
     print(f"Active Agents:     {metrics['agents']['active']}")
     print(f"Completions (24h): {metrics['tasks']['completions_24h']}")
@@ -353,31 +360,53 @@ def print_summary(metrics):
 
 
 def main():
-    print("🔄 Updating system status...")
+    parser = argparse.ArgumentParser(description="Update system status")
+    parser.add_argument(
+        "--no-comment",
+        action="store_true",
+        help="Update issue body without adding a comment",
+    )
+    parser.add_argument("--json", action="store_true", help="Output metrics as JSON")
+    args = parser.parse_args()
+
+    if not args.json:
+        print("🔄 Updating system status...")
 
     # Check GitHub CLI authentication
     if not run_gh_command(["auth", "status"]):
-        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
+        if not args.json:
+            print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
         sys.exit(1)
 
     # Get or create status issue
     issue_number = get_status_issue()
     if not issue_number:
-        print("❌ Failed to get or create status issue")
+        if not args.json:
+            print("❌ Failed to get or create status issue")
         sys.exit(1)
 
-    print(f"📍 Using status issue #{issue_number}")
+    if not args.json:
+        print(f"📍 Using status issue #{issue_number}")
 
     # Collect metrics
-    print("📊 Collecting system metrics...")
+    if not args.json:
+        print("📊 Collecting system metrics...")
     metrics = collect_metrics()
+
+    # Output JSON if requested
+    if args.json:
+        # Add computed values for the workflow
+        metrics["stale_agents"] = metrics.get("agents", {}).get("stale", 0)
+        metrics["health_score"] = metrics.get("health", {}).get("score", 0)
+        print(json.dumps(metrics))
+        return
 
     # Format report
     report = format_status_report(metrics)
 
     # Update status issue
     print("✏️  Updating status issue...")
-    update_status_issue(issue_number, report)
+    update_status_issue(issue_number, report, add_comment=not args.no_comment)
 
     print("✅ System status updated successfully!")
 
