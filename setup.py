@@ -1546,10 +1546,9 @@ from pathlib import Path
 class TaskClaimer:
     def __init__(self, role):
         self.role = role
-        self.state_file = Path(".conductor/workflow-state.json")
 
     def claim_task(self):
-        """Atomically claim an available task"""
+        """Atomically claim an available task using GitHub Issues"""
         # Ensure file exists
         if not self.state_file.exists():
             return {"status": "ERROR", "message": "State file not found"}
@@ -2105,7 +2104,7 @@ python .conductor/scripts/generate-tasks-from-map.py
 
         checks = [
             (self.conductor_dir / "config.yaml", "Configuration file"),
-            (self.conductor_dir / "scripts" / "bootstrap.sh", "Bootstrap script"),
+            (self.conductor_dir / "scripts" / "conductor", "Conductor script"),
             (self.conductor_dir / "scripts" / "task-claim.py", "Task claim script"),
             (
                 self.project_root / ".github" / "workflows" / "conductor.yml",

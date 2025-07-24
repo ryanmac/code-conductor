@@ -459,20 +459,20 @@ case "$ENV_CHOICE" in
                 if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
                     git stash push -m "Auto-stash before Conductor agent startup" || {
                         echo -e "${RED}❌ Failed to stash changes.${NC}"
-                        echo "Please commit or stash changes manually, then run: bash .conductor/scripts/bootstrap.sh dev"
+                        echo "Please commit or stash changes manually, then run: ./conductor start dev"
                         exit 1
                     }
                     echo -e "${GREEN}✅ Changes stashed. You can restore them later with: git stash pop${NC}"
                 else
                     echo -e "${YELLOW}⚠️ Skipping agent startup. Please handle uncommitted changes first.${NC}"
-                    echo "Then run: bash .conductor/scripts/bootstrap.sh dev"
+                    echo "Then run: ./conductor start dev"
                     exit 0
                 fi
             fi
             
-            bash .conductor/scripts/bootstrap.sh dev || {
+            ./conductor start dev || {
                 echo -e "${YELLOW}⚠️ Agent startup failed.${NC}"
-                echo "You can try again with: bash .conductor/scripts/bootstrap.sh dev"
+                echo "You can try again with: ./conductor start dev"
                 if git stash list | grep -q "Auto-stash before Conductor"; then
                     echo "To restore your stashed changes: git stash pop"
                 fi
@@ -480,7 +480,7 @@ case "$ENV_CHOICE" in
         else
             echo ""
             echo "📋 To start an agent later:"
-            echo -e "   ${GREEN}bash .conductor/scripts/bootstrap.sh dev${NC}"
+            echo -e "   ${GREEN}./conductor start dev${NC}"
         fi
         ;;
         

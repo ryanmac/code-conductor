@@ -41,7 +41,7 @@ demo: ## Create and run a full demo
 	@echo "📋 Creating demo task..."
 	@echo "⚠️  Note: Demo tasks require GitHub CLI authentication."
 	@echo "   Run 'gh auth login' if not authenticated."
-	@echo "   Tasks will be created as GitHub Issues when you run bootstrap.sh"
+	@echo "   Tasks will be created as GitHub Issues when you run ./conductor start"
 	@echo "✅ Demo environment ready"
 	@echo ""
 	@echo "🎯 Demo is ready!"
@@ -50,7 +50,7 @@ demo: ## Create and run a full demo
 	@echo ""
 	@echo "Try these commands:"
 	@echo "  cd /tmp/conductor-demo"
-	@echo "  bash .conductor/scripts/bootstrap.sh dev"
+	@echo "  ./conductor start dev"
 	@echo "  python .conductor/scripts/health-check.py"
 	@echo "  python .conductor/scripts/update-status.py"
 	@echo ""
@@ -84,7 +84,7 @@ test: ## Run all system tests
 	@echo "✅ Dependencies satisfied"
 	@echo ""
 	@echo "🎯 Testing bootstrap script..."
-	@bash -n .conductor/scripts/bootstrap.sh
+	@bash -n .conductor/scripts/conductor
 	@echo "✅ Bootstrap script syntax valid"
 	@echo ""
 	@if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then \
@@ -126,7 +126,7 @@ quick-start: ## Show quick start instructions
 	@echo "   gh issue create --label 'conductor:task' --title 'Your task'"
 	@echo ""
 	@echo "4. Launch an agent:"
-	@echo "   bash .conductor/scripts/bootstrap.sh dev"
+	@echo "   ./conductor start dev"
 	@echo ""
 	@echo "4. Open workspace in Conductor app (follow bootstrap instructions)"
 	@echo ""
