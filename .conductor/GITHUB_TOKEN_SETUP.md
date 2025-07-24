@@ -1,83 +1,102 @@
-# CONDUCTOR_GITHUB_TOKEN Setup Guide
+# GitHub Token Setup Guide
 
-## Overview
-Code Conductor requires a GitHub Personal Access Token (PAT) with specific permissions to manage issues, pull requests, and labels through GitHub Actions and the GitHub CLI.
+## Token Strategy Overview
 
-## Required Token Permissions
+Code Conductor uses different token strategies depending on the context:
 
-Create a personal access token at https://github.com/settings/tokens with the following scopes:
+### 1. For Projects Using Code Conductor (Most Users)
+When you install Code Conductor in your project:
+- **Default**: Uses GitHub Actions' built-in `${{ github.token }}`
+- **No setup required** - Works out of the box!
+- **Limitations**: Can't trigger other workflows, rate limited
+- **Optional upgrade**: Create a PAT for enhanced features (see below)
 
-### Essential Permissions
-- **repo** (Full control of private repositories)
-  - Needed for: Creating/updating issues, pull requests, labels
-  - Includes: repo:status, repo_deployment, public_repo, repo:invite
+### 2. For Code Conductor Development (Maintainers Only)
+The ryanmac/code-conductor repository itself uses:
+- **Token name**: `CONDUCTOR_GITHUB_TOKEN`
+- **Type**: Personal Access Token with enhanced permissions
+- **Purpose**: Managing Code Conductor's own development
 
-### Optional but Recommended
-- **workflow** 
-  - Needed if: You want to trigger or modify GitHub Actions workflows
-- **write:discussion**
-  - Needed if: Your project uses GitHub Discussions
-- **admin:org** 
-  - Needed if: Managing organization-level resources
+## For Most Users: No Token Setup Required!
 
-## Creating the Token
+When you install Code Conductor in your project using:
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+```
+
+The generated workflows will use GitHub's built-in token, which provides:
+- ✅ Read/write access to issues, pull requests, and code
+- ✅ Ability to create labels and manage project boards
+- ✅ 1,000 API requests per hour per repository
+
+## Optional: Creating a Personal Access Token
+
+You only need a PAT if you want:
+- Higher API rate limits (5,000/hour instead of 1,000/hour)
+- Ability to trigger other workflows
+- Cross-repository access
+- Access to private repositories
+
+### How to Create a PAT
 
 1. Go to https://github.com/settings/tokens
 2. Click "Generate new token (classic)"
 3. Give it a descriptive name like "Code Conductor Bot"
 4. Select the required scopes:
    - ✅ repo (all sub-permissions)
-   - ✅ workflow (if using Actions)
-5. Set an expiration (recommend 90 days with calendar reminder to renew)
-6. Click "Generate token"
-7. Copy the token immediately (you won't see it again!)
+   - ✅ workflow (if triggering other workflows)
+5. Set expiration (90 days recommended)
+6. Click "Generate token" and copy it
 
-## Adding Token to Repository
+### Adding Your PAT to Your Project
 
 1. Go to your repository's Settings → Secrets and variables → Actions
 2. Click "New repository secret"
-3. Name: `CONDUCTOR_GITHUB_TOKEN`
+3. Name: `CONDUCTOR_GITHUB_TOKEN` (or any name you prefer)
 4. Value: Paste your token
 5. Click "Add secret"
 
-## Verifying Token Setup
+### Using Your PAT in Workflows
 
-Run this command to verify your token has the correct permissions:
-```bash
-export GITHUB_TOKEN="your-token-here"
-gh auth status
-gh api user
+Update the workflows in `.github/workflows/` to use your token:
+```yaml
+env:
+  GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 ```
-
-You should see your username and no permission errors.
 
 ## Token Security Best Practices
 
-1. **Never commit tokens** to your repository
-2. **Rotate regularly** - Set calendar reminders to regenerate every 90 days
-3. **Use least privilege** - Only grant permissions you actually need
-4. **Monitor usage** - Check Settings → Personal access tokens for last used dates
-5. **Revoke if compromised** - Immediately revoke and regenerate if exposed
+1. **Use built-in token when possible** - Simpler and more secure
+2. **Never commit tokens** - Always use secrets
+3. **Rotate PATs regularly** - Set calendar reminders
+4. **Use least privilege** - Only grant needed permissions
+5. **Revoke if compromised** - Act immediately
 
 ## Troubleshooting
 
 ### "Bad credentials" or "401 Unauthorized"
-- Token may be expired or revoked
-- Regenerate token and update secret
+- Using built-in token: Check workflow permissions in Settings → Actions
+- Using PAT: Token may be expired, regenerate and update secret
 
 ### "Resource not accessible by integration"  
-- Token missing required permissions
-- Check token has `repo` scope
+- Built-in token has limited permissions
+- Consider creating a PAT with `repo` scope
 
 ### "API rate limit exceeded"
-- Token may not have sufficient rate limits
-- Authenticated requests get 5,000/hour vs 60/hour unauthenticated
+- Built-in token: 1,000 requests/hour limit hit
+- Solution: Create a PAT for 5,000 requests/hour
 
-## Environment Variable Mapping
+## For Code Conductor Maintainers
 
-The conductor scripts automatically handle these token environment variables:
-- `CONDUCTOR_GITHUB_TOKEN` → Preferred, set in GitHub Actions secrets
-- `GITHUB_TOKEN` → Mapped to `GH_TOKEN` for GitHub CLI
-- `GH_TOKEN` → Used directly by GitHub CLI
+If you're contributing to the Code Conductor project itself:
+- This repository uses `CONDUCTOR_GITHUB_TOKEN`
+- It's a PAT with enhanced permissions for managing development
+- Regular users don't need to worry about this!
 
-This ensures compatibility across different environments and tools.
+## Summary
+
+- **Most users**: No token setup needed, built-in token works great
+- **Power users**: Create a PAT for enhanced features
+- **Maintainers**: Use CONDUCTOR_GITHUB_TOKEN for development
+
+The scripts work with any token setup - they use whatever environment they're given!
