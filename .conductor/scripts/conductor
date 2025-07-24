@@ -248,11 +248,30 @@ $TASK_BODY
 ### Working Directory
 $WORKTREE_PATH
 
+### Project Documentation Map
+EOF
+        
+        # Check if documentation map exists and include it
+        if [ -f "$PROJECT_ROOT/.conductor/documentation-map.yaml" ]; then
+            echo "**IMPORTANT**: A documentation map exists with comprehensive project analysis." >> "$WORKTREE_PATH/.conductor-context"
+            echo "Loading first 100 lines for context:" >> "$WORKTREE_PATH/.conductor-context"
+            echo '```yaml' >> "$WORKTREE_PATH/.conductor-context"
+            head -100 "$PROJECT_ROOT/.conductor/documentation-map.yaml" >> "$WORKTREE_PATH/.conductor-context"
+            echo '```' >> "$WORKTREE_PATH/.conductor-context"
+            echo "" >> "$WORKTREE_PATH/.conductor-context"
+            echo "Full map available at: $PROJECT_ROOT/.conductor/documentation-map.yaml" >> "$WORKTREE_PATH/.conductor-context"
+        else
+            echo "No documentation map found. Run the [INIT] task to create one." >> "$WORKTREE_PATH/.conductor-context"
+        fi
+        
+        cat >> "$WORKTREE_PATH/.conductor-context" << EOF
+
 ### Next Steps
 1. Review the task requirements above
-2. Make necessary changes in this worktree
-3. Commit your changes
-4. Run: ./conductor complete
+2. Check the documentation map if available
+3. Make necessary changes in this worktree
+4. Commit your changes
+5. Run: ./conductor complete
 
 ### Available Commands
 - ./conductor status - Check current progress
