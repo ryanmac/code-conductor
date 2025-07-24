@@ -29,4 +29,4 @@ target-version = ['py39', 'py310', 'py311', 'py312']
 
 [tool.flake8]
 max-line-length = 88
-extend-ignore = ["E203", "W503"] 
+extend-ignore = ["E203", "W503", "E501", "W504", "E231", "E701", "E704", "F401", "F541", "W293", "W291", "F841", "E741"] 

@@ -15,7 +15,7 @@
 
 - ⚡ **Focus on architecture, let agents handle implementation** - Spend time on what matters most
 - 🎯 **Zero config for 90% of projects** - Auto-detects your stack and configures optimal roles
-- 🔒 **AI code reviews on every PR** - Built-in CodeRabbit-style reviews catch bugs before merge
+- 🔒 **Smart AI code reviews** - Opt-in reviews when you need them, not spam on every PR
 - 🤖 **Smart agent roles** - Generalist "dev" handles most tasks, specialists for complex work
 - 📊 **Native GitHub integration** - Issues become tasks, Actions monitor health
 - 🔄 **Self-healing coordination** - Automatic cleanup, heartbeat monitoring, stale work recovery
@@ -48,7 +48,7 @@ Code Conductor automatically detects and configures for the most popular technol
 
 ### **Specialized Roles Auto-Configured**
 Based on your stack, we automatically add:
-- 🤖 **code-reviewer** - AI reviews on every PR (always included)
+- 🤖 **code-reviewer** - AI agent role for reviewing pull requests
 - 🎨 **frontend** - UI/UX implementation
 - 📱 **mobile** - Platform-specific features
 - 🔧 **devops** - CI/CD & infrastructure
@@ -207,7 +207,7 @@ This reduces the complexity of managing many agent types while maintaining quali
 ├── scripts/            # Automation scripts
 │   ├── conductor       # Universal AI agent command
 │   ├── task-claim.py   # Atomic task assignment
-│   ├── code-reviewer.py # AI code review engine
+│   ├── create-review-task.py # Creates review tasks from PRs
 │   └── health-check.py # System monitoring
 └── examples/           # Stack-specific task templates
     ├── nextjs-webapp/
@@ -266,29 +266,41 @@ See: docs/auth-spec.md
 - `priority:medium`
 - `skill:backend` (optional, for specialized tasks)
 
-## 🤖 AI Code Review - Built-In Quality Gates
+## 🤖 AI Code Review - Smart, Opt-In Quality Gates
 
-Every pull request automatically gets AI-powered code reviews that:
+Request AI code reviews when you need them - no more review spam for trivial changes:
 
-- 🔒 **Security scanning** - Catches hardcoded secrets, SQL injection risks, unsafe operations
-- 🐛 **Bug detection** - Identifies logic errors, null pointer risks, race conditions
-- 💡 **Improvement suggestions** - Performance optimizations, better patterns, refactoring opportunities
-- 🎨 **Style consistency** - Ensures coding standards across the team
+- 🎯 **Opt-in reviews** - Add `needs-review` label or comment `/conductor review` to request
+- 🔒 **Security scanning** - Agents check for hardcoded secrets, SQL injection risks, unsafe operations
+- 🐛 **Bug detection** - Comprehensive analysis for null references, race conditions, logic errors
+- 💡 **Smart filtering** - Automatically skips docs-only changes, tiny PRs, and bot updates
 - 🧪 **Test coverage** - Suggests missing tests and edge cases
 
 ### How It Works
 
-1. **Automatic trigger** - Reviews start instantly on PR creation/update
-2. **Contextual analysis** - Understands your codebase patterns
-3. **Actionable feedback** - Clear, specific suggestions with examples
-4. **Zero configuration** - Works out of the box with your existing GitHub workflow
+1. **Request a review** - Add `needs-review` label or comment `/conductor review` on your PR
+2. **Smart filtering** - System checks if review is needed (skips trivial changes)
+3. **Task creation** - Review task appears as GitHub Issue (only if needed)
+4. **Agent review** - AI agents claim and complete thorough code review
+5. **PR feedback** - Detailed review posted as PR comment
 
-```yaml
-# .github/workflows/code-review.yml (auto-created)
-name: AI Code Review
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+### Automatic Skip Conditions
+- PRs with less than 10 lines changed
+- Documentation-only changes
+- Dependabot and bot PRs
+- PRs labeled with `skip-review`
+- Draft PRs
+
+### Triggering Reviews
+```bash
+# Option 1: Add label
+gh pr edit 123 --add-label needs-review
+
+# Option 2: Comment on PR
+@conductor review  # or /conductor review
+
+# Option 3: Manual workflow
+gh workflow run pr-review-tasks.yml -f pr_number=123
 ```
 
 ## Agent Workflow
