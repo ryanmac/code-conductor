@@ -1,0 +1,35 @@
+[flake8]
+# Black-compatible configuration
+max-line-length = 88
+# Ignore codes:
+# E203 - whitespace before ':' (black handles this)
+# W503 - line break before binary operator (black prefers this)
+# W504 - line break after binary operator
+# E231 - missing whitespace after ','
+# E701 - multiple statements on one line (colon)
+# E704 - multiple statements on one line (def)
+# E501 - line too long (black handles this)
+# F401 - imported but unused (common in __init__.py)
+# F541 - f-string without placeholders
+# W293 - blank line contains whitespace
+# W291 - trailing whitespace
+# F841 - local variable assigned but never used
+# E741 - ambiguous variable name
+extend-ignore = E203,W503,W504,E231,E701,E704,E501,F401,F541,W293,W291,F841,E741
+exclude = 
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    old,
+    build,
+    dist,
+    .venv,
+    venv,
+    .tox,
+    .eggs,
+    *.egg,
+    .pytest_cache,
+    .mypy_cache
+per-file-ignores =
+    # Imported but unused in __init__.py files
+    __init__.py:F401
