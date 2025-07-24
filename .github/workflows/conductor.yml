@@ -4,14 +4,13 @@ name: 🎼 Conductor Health Check
 
 on:
   schedule:
-    # Run every 30 minutes during work hours (9 AM - 6 PM UTC)
-    - cron: '*/30 9-18 * * 1-5'
+    # Daily summary at 9 AM UTC (will adapt to weekly/monthly based on activity)
+    - cron: '0 9 * * *'
   workflow_dispatch:
   push:
     branches: [ main, master ]
-    paths:
-      - '.conductor/**'
-      - 'examples/**'
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
   issues:
     types: [opened, edited, labeled, unlabeled, assigned, unassigned, closed, reopened]
   issue_comment:
@@ -28,19 +27,101 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check repository activity
+        id: activity_check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const now = new Date();
+            
+            // Get recent activity
+            const [pulls, pushes, issues] = await Promise.all([
+              github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'all',
+                sort: 'updated',
+                direction: 'desc',
+                per_page: 1
+              }),
+              github.rest.repos.listCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 1
+              }),
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'all',
+                sort: 'updated',
+                direction: 'desc',
+                per_page: 1
+              })
+            ]);
+            
+            // Find most recent activity
+            let lastActivity = new Date(0);
+            
+            if (pulls.data.length > 0) {
+              const prDate = new Date(pulls.data[0].updated_at);
+              if (prDate > lastActivity) lastActivity = prDate;
+            }
+            
+            if (pushes.data.length > 0) {
+              const pushDate = new Date(pushes.data[0].commit.committer.date);
+              if (pushDate > lastActivity) lastActivity = pushDate;
+            }
+            
+            if (issues.data.length > 0) {
+              const issueDate = new Date(issues.data[0].updated_at);
+              if (issueDate > lastActivity) lastActivity = issueDate;
+            }
+            
+            const daysSinceActivity = Math.floor((now - lastActivity) / (1000 * 60 * 60 * 24));
+            
+            // Determine if we should run checks
+            let shouldRun = true;
+            let summaryType = 'daily';
+            
+            if (context.eventName === 'schedule') {
+              if (daysSinceActivity > 14) {
+                // Monthly summary if no activity for 2+ weeks
+                const dayOfMonth = now.getDate();
+                shouldRun = dayOfMonth === 1; // Only on 1st of month
+                summaryType = 'monthly';
+              } else if (daysSinceActivity > 3) {
+                // Weekly summary if no activity for 3+ days
+                const dayOfWeek = now.getDay();
+                shouldRun = dayOfWeek === 1; // Only on Mondays
+                summaryType = 'weekly';
+              }
+            }
+            
+            console.log(`Days since last activity: ${daysSinceActivity}`);
+            console.log(`Should run: ${shouldRun}`);
+            console.log(`Summary type: ${summaryType}`);
+            
+            core.setOutput('should_run', shouldRun);
+            core.setOutput('days_inactive', daysSinceActivity);
+            core.setOutput('summary_type', summaryType);
+
       - name: Checkout repository
+        if: steps.activity_check.outputs.should_run == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Python
+        if: steps.activity_check.outputs.should_run == 'true'
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           pip install pyyaml
       
       - name: Setup GitHub CLI
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           echo "$GITHUB_TOKEN" | gh auth login --with-token || true
           gh auth status
@@ -48,6 +129,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Ensure required labels exist
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           # Create labels if they don't exist
           labels=(
@@ -82,47 +164,56 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate configuration
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/validate-config.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check system dependencies
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/dependency-check.py
         env:
           CONDUCTOR_GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
       - name: Run health check
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/health-check.py
+          python .conductor/scripts/health-check.py --summary-type ${{ steps.activity_check.outputs.summary_type }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAYS_INACTIVE: ${{ steps.activity_check.outputs.days_inactive }}
 
       - name: Update system status
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/update-status.py
+          python .conductor/scripts/update-status.py --no-comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate status summary
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/generate-summary.py > $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up stale work
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/cleanup-stale.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Archive completed tasks
+        if: steps.activity_check.outputs.should_run == 'true'
         run: |
           python .conductor/scripts/archive-completed.py --max-age 7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check for critical issues
+        if: steps.activity_check.outputs.should_run == 'true'
         id: critical_check
         run: |
           # Check if there are any critical system issues
@@ -130,7 +221,7 @@ jobs:
 
           # Check for high number of stale agents
           STALE_COUNT=$(GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
-          if [ "$STALE_COUNT" -gt 5 ]; then
+          if [ "$STALE_COUNT" -gt 3 ]; then
             echo "⚠️ High stale agent count: $STALE_COUNT"
             CRITICAL_ISSUES=1
           fi
@@ -145,7 +236,7 @@ jobs:
           echo "critical_issues=$CRITICAL_ISSUES" >> $GITHUB_OUTPUT
 
       - name: Create issue for critical problems
-        if: steps.critical_check.outputs.critical_issues == '1'
+        if: steps.activity_check.outputs.should_run == 'true' && steps.critical_check.outputs.critical_issues == '1'
         uses: actions/github-script@v7
         with:
           script: |
@@ -181,7 +272,11 @@ jobs:
               state: 'open'
             });
 
-            if (existingIssues.data.length === 0) {
+            // Only create if no existing alert and not in stable period
+            const daysInactive = parseInt('${{ steps.activity_check.outputs.days_inactive }}');
+            const shouldAlert = daysInactive < 2; // Stop alerting after 48h of inactivity
+            
+            if (existingIssues.data.length === 0 && shouldAlert) {
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,

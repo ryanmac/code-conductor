@@ -318,13 +318,14 @@ def get_health_emoji(score):
         return "🔴"
 
 
-def update_status_issue(issue_number, report):
+def update_status_issue(issue_number, report, add_comment=True):
     """Update the status issue with the latest report"""
     # Update issue body
     run_gh_command(["issue", "edit", str(issue_number), "--body", report])
 
-    # Add update comment
-    comment = f"""### 📊 Status Updated
+    # Add update comment only if requested
+    if add_comment:
+        comment = f"""### 📊 Status Updated
 
 System status has been refreshed with the latest metrics.
 
@@ -332,7 +333,7 @@ View the updated status in the issue description above.
 
 *Timestamp: {datetime.utcnow().isoformat()}*"""
 
-    run_gh_command(["issue", "comment", str(issue_number), "--body", comment])
+        run_gh_command(["issue", "comment", str(issue_number), "--body", comment])
 
 
 def print_summary(metrics):
@@ -353,31 +354,51 @@ def print_summary(metrics):
 
 
 def main():
-    print("🔄 Updating system status...")
+    parser = argparse.ArgumentParser(description='Update system status')
+    parser.add_argument('--no-comment', action='store_true', 
+                        help='Update issue body without adding a comment')
+    parser.add_argument('--json', action='store_true',
+                        help='Output metrics as JSON')
+    args = parser.parse_args()
+    
+    if not args.json:
+        print("🔄 Updating system status...")
 
     # Check GitHub CLI authentication
     if not run_gh_command(["auth", "status"]):
-        print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
+        if not args.json:
+            print("❌ GitHub CLI not authenticated. Run 'gh auth login' first.")
         sys.exit(1)
 
     # Get or create status issue
     issue_number = get_status_issue()
     if not issue_number:
-        print("❌ Failed to get or create status issue")
+        if not args.json:
+            print("❌ Failed to get or create status issue")
         sys.exit(1)
 
-    print(f"📍 Using status issue #{issue_number}")
+    if not args.json:
+        print(f"📍 Using status issue #{issue_number}")
 
     # Collect metrics
-    print("📊 Collecting system metrics...")
+    if not args.json:
+        print("📊 Collecting system metrics...")
     metrics = collect_metrics()
+
+    # Output JSON if requested
+    if args.json:
+        # Add computed values for the workflow
+        metrics['stale_agents'] = metrics.get('agents', {}).get('stale', 0)
+        metrics['health_score'] = metrics.get('health', {}).get('score', 0)
+        print(json.dumps(metrics))
+        return
 
     # Format report
     report = format_status_report(metrics)
 
     # Update status issue
     print("✏️  Updating status issue...")
-    update_status_issue(issue_number, report)
+    update_status_issue(issue_number, report, add_comment=not args.no_comment)
 
     print("✅ System status updated successfully!")
 
