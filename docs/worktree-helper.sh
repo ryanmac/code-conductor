@@ -89,7 +89,7 @@ gts() {
 gtc() {
     local role="${1:-dev}"
     echo "🎯 Claiming task for role: $role"
-    bash .conductor/scripts/bootstrap.sh "$role"
+    ./conductor start "$role"
 }
 
 # Alias: gtw (git-task-worktrees) - List all worktrees

@@ -68,7 +68,6 @@ python .conductor/scripts/health-check.py
 
 4. **Agent Coordination** (`.conductor/scripts/`)
    - `conductor` - Universal agent command (primary interface)
-   - `bootstrap.sh` - Legacy wrapper (redirects to conductor)
    - `task-claim.py` - Task assignment via GitHub Issue assignment
    - `health-check.py` - Monitor agent heartbeats
    - `cleanup-stale.py` - Remove abandoned work

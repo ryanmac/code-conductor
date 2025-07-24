@@ -30,10 +30,10 @@ The Conductor app provides a streamlined experience with integrated AI sessions 
 #### 1. **Initialize Your Workspace**
 ```bash
 # From your project root
-bash .conductor/scripts/bootstrap.sh dev
+./conductor start dev
 ```
 
-The bootstrap script will:
+The conductor command will:
 - ✅ Check dependencies
 - 🎯 Claim an available task
 - 🌳 Create an isolated git worktree
@@ -86,8 +86,8 @@ For Linux/Windows users or those who prefer manual control. Conductor app is mac
 
 #### 1. **Claim a Task**
 ```bash
-# Terminal 1: Bootstrap
-bash .conductor/scripts/bootstrap.sh dev
+# Terminal 1: Start conductor
+./conductor start dev
 ```
 
 This creates an isolated worktree like:
@@ -179,13 +179,13 @@ You can run multiple agents simultaneously:
 
 ```bash
 # Terminal 1: Dev agent
-bash .conductor/scripts/bootstrap.sh dev
+./conductor start dev
 
 # Terminal 2: DevOps agent
-bash .conductor/scripts/bootstrap.sh devops
+./conductor start devops
 
 # Terminal 3: Security review
-bash .conductor/scripts/bootstrap.sh security
+./conductor start security
 ```
 
 Each gets an isolated worktree:
@@ -296,7 +296,7 @@ git status
 git stash
 
 # Try again
-bash .conductor/scripts/bootstrap.sh dev
+./conductor start dev
 ```
 
 **"Permission denied" on scripts**

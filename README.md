@@ -206,7 +206,6 @@ This reduces the complexity of managing many agent types while maintaining quali
 │   └── data.md         # Data engineer
 ├── scripts/            # Automation scripts
 │   ├── conductor       # Universal AI agent command
-│   ├── bootstrap.sh    # Legacy compatibility wrapper
 │   ├── task-claim.py   # Atomic task assignment
 │   ├── code-reviewer.py # AI code review engine
 │   └── health-check.py # System monitoring
