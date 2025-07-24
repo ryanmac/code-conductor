@@ -182,10 +182,22 @@ class TaskGenerator:
             priority = task.get("priority", "medium")
             labels.append(f"priority:{priority}")
 
-            # Add skill labels
+            # Add skill labels with proper mapping
             role = task.get("assigned_role", "dev")
             if role != "dev":
-                labels.append(f"skill:{role}")
+                # Map role names to actual GitHub labels
+                skill_label_map = {
+                    "ml-engineer": "ml",
+                    "frontend": "frontend",
+                    "backend": "backend",
+                    "devops": "devops",
+                    "security": "security",  # Will need to be created
+                    "mobile": "mobile",  # Will need to be created
+                    "data": "data",  # Will need to be created
+                    "ui-designer": "design",  # Will need to be created
+                }
+                skill_suffix = skill_label_map.get(role, role)
+                labels.append(f"skill:{skill_suffix}")
 
             # Create issue
             try:
@@ -317,7 +329,9 @@ def main():
     if args.auto:
         print("Running in AUTONOMOUS mode (no prompts)")
     else:
-        print("This tool creates GitHub issues from the AI-generated documentation map.")
+        print(
+            "This tool creates GitHub issues from the AI-generated documentation map."
+        )
     print()
 
     generator = TaskGenerator(auto_mode=args.auto)

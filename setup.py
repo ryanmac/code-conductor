@@ -766,6 +766,22 @@ This single command will:
                 "description": "DevOps and infrastructure",
             },
             {"name": "skill:ml", "color": "ff6b6b", "description": "Machine learning"},
+            {
+                "name": "skill:security",
+                "color": "e11d21",
+                "description": "Security tasks",
+            },
+            {
+                "name": "skill:mobile",
+                "color": "4e9a06",
+                "description": "Mobile development",
+            },
+            {
+                "name": "skill:data",
+                "color": "c7def8",
+                "description": "Data engineering",
+            },
+            {"name": "skill:design", "color": "fbca04", "description": "UI/UX design"},
         ]
 
         # Check if gh CLI is available
