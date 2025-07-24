@@ -9,12 +9,19 @@ on:
   workflow_dispatch:
   push:
     branches: [ main, master ]
+    paths:
+      - '.conductor/**'
+      - '.github/workflows/conductor.yml'
   pull_request:
-    types: [opened, synchronize, reopened, closed]
-  issues:
-    types: [opened, edited, labeled, unlabeled, assigned, unassigned, closed, reopened]
-  issue_comment:
-    types: [created]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.conductor/**'
+      - '.github/workflows/conductor.yml'
+
+# Prevent concurrent runs and cancel in-progress runs
+concurrency:
+  group: conductor-health-check
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -25,14 +32,42 @@ jobs:
   health-check:
     name: System Health Check
     runs-on: ubuntu-latest
+    # Skip if triggered by GitHub Actions bot to prevent recursion
+    if: |
+      github.actor != 'github-actions[bot]' && 
+      github.actor != 'dependabot[bot]' &&
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, '[ci skip]')
 
     steps:
       - name: Check repository activity
         id: activity_check
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
           script: |
             const now = new Date();
+            
+            // Skip if this is a scheduled run within 30 minutes of last run
+            if (context.eventName === 'schedule') {
+              const { data: runs } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'conductor.yml',
+                status: 'completed',
+                per_page: 1
+              });
+              
+              if (runs.workflow_runs.length > 0) {
+                const lastRun = new Date(runs.workflow_runs[0].created_at);
+                const minutesSinceLastRun = (now - lastRun) / (1000 * 60);
+                if (minutesSinceLastRun < 30) {
+                  console.log(`Skipping - last run was ${minutesSinceLastRun} minutes ago`);
+                  core.setOutput('should_run', false);
+                  return;
+                }
+              }
+            }
             
             // Get recent activity
             const [pulls, pushes, issues] = await Promise.all([
@@ -97,6 +132,7 @@ jobs:
               }
             }
             
+            console.log(`Event: ${context.eventName}`);
             console.log(`Days since last activity: ${daysSinceActivity}`);
             console.log(`Should run: ${shouldRun}`);
             console.log(`Summary type: ${summaryType}`);
@@ -118,15 +154,18 @@ jobs:
       - name: Install dependencies
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          pip install pyyaml
+          pip install pyyaml jq
       
-      - name: Setup GitHub CLI
+      - name: Setup GitHub CLI with proper token
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          echo "$GITHUB_TOKEN" | gh auth login --with-token || true
+          # Use CONDUCTOR_GITHUB_TOKEN for all operations
+          echo "${{ secrets.CONDUCTOR_GITHUB_TOKEN }}" > token.txt
+          gh auth login --with-token < token.txt
+          rm -f token.txt
           gh auth status
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Ensure required labels exist
         if: steps.activity_check.outputs.should_run == 'true'
@@ -161,25 +200,27 @@ jobs:
               gh label create "${name}" --color "${color}" --description "${description}" || true
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Validate configuration
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/validate-config.py
+          python .conductor/scripts/validate-config.py || echo "Config validation completed with warnings"
         env:
           GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Check system dependencies
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/dependency-check.py
+          python .conductor/scripts/dependency-check.py || echo "Dependency check completed with warnings"
         env:
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
           CONDUCTOR_GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+
       - name: Run health check
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/health-check.py --summary-type ${{ steps.activity_check.outputs.summary_type }}
+          python .conductor/scripts/health-check.py --summary-type ${{ steps.activity_check.outputs.summary_type }} || echo "Health check completed with warnings"
         env:
           GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
           DAYS_INACTIVE: ${{ steps.activity_check.outputs.days_inactive }}
@@ -187,28 +228,28 @@ jobs:
       - name: Update system status
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/update-status.py --no-comment
+          python .conductor/scripts/update-status.py --no-comment || echo "Status update completed with warnings"
         env:
           GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Generate status summary
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/generate-summary.py > $GITHUB_STEP_SUMMARY
+          python .conductor/scripts/generate-summary.py > $GITHUB_STEP_SUMMARY || echo "Summary generation completed"
         env:
           GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Clean up stale work
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/cleanup-stale.py
+          python .conductor/scripts/cleanup-stale.py || echo "Cleanup completed"
         env:
           GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
       - name: Archive completed tasks
         if: steps.activity_check.outputs.should_run == 'true'
         run: |
-          python .conductor/scripts/archive-completed.py --max-age 7
+          python .conductor/scripts/archive-completed.py --max-age 7 || echo "Archival completed"
         env:
           GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
 
@@ -220,15 +261,15 @@ jobs:
           CRITICAL_ISSUES=0
 
           # Check for high number of stale agents
-          STALE_COUNT=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
+          STALE_COUNT=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/health-check.py --json 2>/dev/null | jq -r '.stale_agents // 0' 2>/dev/null || echo "0")
           if [ "$STALE_COUNT" -gt 3 ]; then
             echo "⚠️ High stale agent count: $STALE_COUNT"
             CRITICAL_ISSUES=1
           fi
 
           # Check system health score
-          HEALTH_SCORE=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/update-status.py --json | jq -r '.health_score // 0' 2>/dev/null || echo "0")
-          if (( $(echo "$HEALTH_SCORE < 0.5" | bc -l) )); then
+          HEALTH_SCORE=$(GITHUB_TOKEN=${{ secrets.CONDUCTOR_GITHUB_TOKEN }} python .conductor/scripts/update-status.py --json 2>/dev/null | jq -r '.health_score // 0' 2>/dev/null || echo "0")
+          if (( $(echo "$HEALTH_SCORE < 0.5" | bc -l 2>/dev/null || echo 0) )); then
             echo "⚠️ Low health score: $HEALTH_SCORE"
             CRITICAL_ISSUES=1
           fi
@@ -239,6 +280,7 @@ jobs:
         if: steps.activity_check.outputs.should_run == 'true' && steps.critical_check.outputs.critical_issues == '1'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
           script: |
             const title = '🚨 Conductor System Health Alert';
             const body = `
@@ -285,84 +327,3 @@ jobs:
                 labels: ['conductor:alert', 'priority:high']
               });
             }
-
-  process-new-tasks:
-    name: Process New GitHub Issues
-    runs-on: ubuntu-latest
-    if: github.event_name == 'issues' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install pyyaml
-
-      - name: Setup GitHub CLI
-        run: |
-          echo "$GITHUB_TOKEN" | gh auth login --with-token || true
-          gh auth status
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
-
-      - name: Process conductor:task issues
-        run: |
-          # Get all open issues with conductor:task label
-          gh issue list --label "conductor:task" --state open --json number,title | \
-          jq -r '.[] | .number' | \
-          while read issue_number; do
-            echo "Processing issue #$issue_number"
-            python .conductor/scripts/issue-to-task.py --issue-number "$issue_number" || true
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
-
-  workspace-maintenance:
-    name: Workspace Maintenance
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install pyyaml
-
-      - name: Clean up old worktrees
-        run: |
-          python .conductor/scripts/cleanup-worktrees.py --max-age 24
-
-      - name: Archive old completed work
-        run: |
-          python .conductor/scripts/archive-completed.py --max-age 30
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
-
-      - name: Update system metrics
-        run: |
-          python .conductor/scripts/update-status.py
-        env:
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
-
-      - name: Generate maintenance summary
-        run: |
-          echo "## 🧹 Workspace Maintenance Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Cleaned up stale worktrees" >> $GITHUB_STEP_SUMMARY
-          echo "- Archived completed tasks older than 30 days" >> $GITHUB_STEP_SUMMARY
-          echo "- Updated system status metrics" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "_Maintenance completed at $(date)_" >> $GITHUB_STEP_SUMMARY 

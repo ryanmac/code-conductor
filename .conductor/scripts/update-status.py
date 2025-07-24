@@ -17,6 +17,9 @@ def run_gh_command(args):
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
+        if "--json" in args:
+            # For JSON commands, return empty JSON array/object
+            return "[]" if "list" in args else "{}"
         print(f"❌ GitHub CLI error: {e.stderr}")
         return ""
     except FileNotFoundError:
@@ -26,50 +29,66 @@ def run_gh_command(args):
 
 def get_status_issue():
     """Get or create the status issue"""
-    # Check if status issue exists
-    output = run_gh_command(
-        [
-            "issue",
-            "list",
-            "-l",
-            "conductor:status",
-            "--state",
-            "open",
-            "--limit",
-            "1",
-            "--json",
-            "number,title",
-        ]
-    )
+    max_retries = 3
+    for attempt in range(max_retries):
+        # Check if status issue exists
+        output = run_gh_command(
+            [
+                "issue",
+                "list",
+                "-l",
+                "conductor:status",
+                "--state",
+                "open",
+                "--limit",
+                "10",  # Get more to handle duplicates
+                "--json",
+                "number,title,createdAt",
+            ]
+        )
 
-    if output:
-        try:
-            issues = json.loads(output)
-            if issues:
-                return issues[0]["number"]
-        except json.JSONDecodeError:
-            pass
+        if output:
+            try:
+                issues = json.loads(output)
+                if issues:
+                    # Return the most recent one
+                    issues.sort(key=lambda x: x["createdAt"], reverse=True)
+                    return issues[0]["number"]
+            except json.JSONDecodeError:
+                if attempt < max_retries - 1:
+                    print("⚠️  Failed to parse issues, retrying...")
+                    continue
 
-    # Create new status issue if it doesn't exist
-    print("📝 Creating new status issue...")
-    output = run_gh_command(
-        [
-            "issue",
-            "create",
-            "--title",
-            "🏥 Code-Conductor System Status",
-            "--body",
-            "This issue tracks the system status and health metrics "
-            "for Code-Conductor.",
-            "--label",
-            "conductor:status",
-        ]
-    )
+        # Only create if we're sure there isn't one
+        if attempt == max_retries - 1:
+            print("📝 Creating new status issue...")
+            try:
+                output = run_gh_command(
+                    [
+                        "issue",
+                        "create",
+                        "--title",
+                        "🏥 Code-Conductor System Status",
+                        "--body",
+                        "This issue tracks the system status and health metrics "
+                        "for Code-Conductor.",
+                        "--label",
+                        "conductor:status",
+                    ]
+                )
 
-    # Extract issue number from output
-    if output and "#" in output:
-        issue_number = output.split("#")[1].split()[0]
-        return int(issue_number)
+                # Extract issue number from output
+                if output and "#" in output:
+                    issue_number = output.split("#")[1].split()[0]
+                    return int(issue_number)
+            except Exception as e:
+                print(f"❌ Failed to create issue: {e}")
+
+        # Wait before retry
+        if attempt < max_retries - 1:
+            import time
+
+            time.sleep(2)
 
     return None
 
