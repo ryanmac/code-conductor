@@ -1,3 +1,4 @@
+-i https://pkgs.safetycli.com/repository/updoot/project/code-conductor/pypi/simple/
 # Core dependencies for code-conductor
 pyyaml>=6.0
 requests>=2.32.4

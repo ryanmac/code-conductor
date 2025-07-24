@@ -71,6 +71,8 @@ jobs:
         run: pip install safety
 
       - name: Scan for security vulnerabilities
+        env:
+          SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
         run: |
           if [ -f "requirements.txt" ]; then
             safety scan -r requirements.txt
