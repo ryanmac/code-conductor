@@ -31,8 +31,10 @@ def get_pr_info(pr_number: str, repo: str) -> Dict:
             "--repo",
             repo,
             "--json",
-            ("number,title,body,author,files,additions,deletions,"
-             "labels,headRefName,baseRefName,isDraft,state"),
+            (
+                "number,title,body,author,files,additions,deletions,"
+                "labels,headRefName,baseRefName,isDraft,state"
+            ),
         ]
     )
 
@@ -174,15 +176,21 @@ def create_issue(pr_info: Dict, pr_number: str, repo: str, event_type: str) -> i
     labels.append(f"effort:{effort}")
 
     # Create the issue
-    cmd = ["issue", "create", "--repo", repo, "--title", title, "--body", body]
+    cmd = ["gh", "issue", "create", "--repo", repo, "--title", title, "--body", body]
 
     for label in labels:
         cmd.extend(["--label", label])
 
-    result = run_gh_command(cmd)
-    issue_number = result.get("number")
-
-    print(f"✅ Created review task issue #{issue_number}")
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        # gh issue create returns the issue URL, extract the number
+        issue_url = result.stdout.strip()
+        issue_number = issue_url.split("/")[-1]
+        print(f"✅ Created review task issue #{issue_number}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error creating issue: {e}")
+        print(f"stderr: {e.stderr}")
+        sys.exit(1)
 
     # Add comment to PR linking to review task
     comment = f"""🤖 **Code Review Task Created**
@@ -199,14 +207,12 @@ _This is part of the Code Conductor automated review system._"""
         check=True,
     )
 
-    return issue_number
+    return int(issue_number)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Create code review task from PR")
-    parser.add_argument(
-        "--pr-number", required=True, help="Pull request number"
-    )
+    parser.add_argument("--pr-number", required=True, help="Pull request number")
     parser.add_argument("--repo", required=True, help="Repository (owner/name)")
     parser.add_argument(
         "--event-type",
