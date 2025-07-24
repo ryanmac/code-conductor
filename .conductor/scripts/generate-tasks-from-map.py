@@ -4,14 +4,16 @@
 import yaml
 import subprocess
 import sys
+import argparse
 from pathlib import Path
 from datetime import datetime
 
 
 class TaskGenerator:
-    def __init__(self):
+    def __init__(self, auto_mode=False):
         self.map_file = Path(".conductor/documentation-map.yaml")
         self.generated_count = 0
+        self.auto_mode = auto_mode
 
     def load_documentation_map(self):
         """Load the AI-generated documentation map"""
@@ -130,23 +132,30 @@ class TaskGenerator:
             for issue in validation_issues:
                 print(f"  - {issue}")
 
-            response = input("\nContinue anyway? [y/N]: ").strip().lower()
-            if response != "y":
+            if not self.auto_mode:
+                response = input("\nContinue anyway? [y/N]: ").strip().lower()
+                if response != "y":
+                    print("Cancelled.")
+                    return
+            else:
+                print("\nContinuing in auto mode despite validation issues...")
+
+        # Interactive review (skip in auto mode)
+        if not self.auto_mode:
+            choice = self.interactive_review(doc_map)
+
+            if choice == "3":
+                print(f"\nMap file location: {self.map_file.absolute()}")
+                print("Review the file and run this script again.")
+                return
+            elif choice == "4":
                 print("Cancelled.")
                 return
-
-        # Interactive review
-        choice = self.interactive_review(doc_map)
-
-        if choice == "3":
-            print(f"\nMap file location: {self.map_file.absolute()}")
-            print("Review the file and run this script again.")
-            return
-        elif choice == "4":
-            print("Cancelled.")
-            return
-        elif choice == "2":
-            filter_priority = ["critical", "high"]
+            elif choice == "2":
+                filter_priority = ["critical", "high"]
+        else:
+            print("\n🤖 Running in autonomous mode - creating all tasks...")
+            choice = "1"
 
         # Create issues
         tasks = doc_map.get("proposed_tasks", [])
@@ -173,10 +182,22 @@ class TaskGenerator:
             priority = task.get("priority", "medium")
             labels.append(f"priority:{priority}")
 
-            # Add skill labels
+            # Add skill labels with proper mapping
             role = task.get("assigned_role", "dev")
             if role != "dev":
-                labels.append(f"skill:{role}")
+                # Map role names to actual GitHub labels
+                skill_label_map = {
+                    "ml-engineer": "ml",
+                    "frontend": "frontend",
+                    "backend": "backend",
+                    "devops": "devops",
+                    "security": "security",  # Will need to be created
+                    "mobile": "mobile",  # Will need to be created
+                    "data": "data",  # Will need to be created
+                    "ui-designer": "design",  # Will need to be created
+                }
+                skill_suffix = skill_label_map.get(role, role)
+                labels.append(f"skill:{skill_suffix}")
 
             # Create issue
             try:
@@ -285,13 +306,35 @@ The following documents contain the requirements for this task:
 
 def main():
     """Main entry point"""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Generate GitHub issues from AI-generated documentation map"
+    )
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Run in autonomous mode without prompts (for AI agents)",
+    )
+    parser.add_argument(
+        "--priority",
+        choices=["all", "high"],
+        default="all",
+        help="Filter tasks by priority (default: all)",
+    )
+    args = parser.parse_args()
+
     print("🤖 Code Conductor Task Generator")
     print("================================")
     print()
-    print("This tool creates GitHub issues from the AI-generated documentation map.")
+    if args.auto:
+        print("Running in AUTONOMOUS mode (no prompts)")
+    else:
+        print(
+            "This tool creates GitHub issues from the AI-generated documentation map."
+        )
     print()
 
-    generator = TaskGenerator()
+    generator = TaskGenerator(auto_mode=args.auto)
 
     # Check if map exists
     if not generator.map_file.exists():
@@ -305,7 +348,8 @@ def main():
         sys.exit(1)
 
     # Generate tasks
-    generator.generate_tasks()
+    filter_priority = ["critical", "high"] if args.priority == "high" else None
+    generator.generate_tasks(filter_priority=filter_priority)
 
 
 if __name__ == "__main__":
