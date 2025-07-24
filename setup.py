@@ -2056,13 +2056,11 @@ Before marking complete:
 
 ## Completion
 
-After creating the documentation map, comment on this issue:
-"Documentation discovery complete. Ready to generate tasks."
-
-A human will review and then run:
-```bash
-python .conductor/scripts/generate-tasks-from-map.py
-```
+After creating the documentation map:
+1. Run the task generator: `python .conductor/scripts/generate-tasks-from-map.py --auto`
+2. Verify tasks were created: `gh issue list -l 'conductor:task' --limit 25`
+3. Comment on this issue with a summary of tasks created
+4. Mark this task complete using: `./conductor complete`
 
 ---
 *This is a one-time initialization task. Once complete, all future work will be properly coordinated.*

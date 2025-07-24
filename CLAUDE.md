@@ -183,6 +183,8 @@ cd /path/to/project  # MUST be in project root
 
 ## Autonomous Operation Guidelines
 
+**IMPORTANT**: Code Conductor is designed for FULLY AUTONOMOUS OPERATION. AI agents should complete entire workflows without waiting for human approval.
+
 When working in a project with Code Conductor:
 
 1. **Start work**: Use `./conductor start [role]` from the project root
@@ -192,6 +194,14 @@ When working in a project with Code Conductor:
 5. **Fix issues**: Use `./conductor recover` if you encounter problems
 6. **Work in isolation**: The conductor command creates your worktree automatically
 7. **Validate changes**: Always run the project's test/lint commands before committing
+
+### Full Autonomy Principles
+
+- **No human gates**: Tasks should be completable end-to-end without human intervention
+- **Auto-generate tasks**: When running init tasks, use `python .conductor/scripts/generate-tasks-from-map.py --auto`
+- **Self-validation**: Agents validate their own work before marking tasks complete
+- **Continuous flow**: Complete tasks, create PRs, and move to the next task without pausing
+- **Trust the process**: The system has guardrails; agents should proceed confidently
 
 ## Common Tasks
 
