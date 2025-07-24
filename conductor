@@ -1,0 +1,3 @@
+#!/bin/bash
+# Conductor command wrapper - project-specific
+exec .conductor/scripts/conductor "$@"

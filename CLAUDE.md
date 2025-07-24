@@ -67,7 +67,8 @@ python .conductor/scripts/health-check.py
    - Hybrid model: prefer `dev` role unless task requires specialization
 
 4. **Agent Coordination** (`.conductor/scripts/`)
-   - `bootstrap.sh` - Universal agent initialization
+   - `conductor` - Universal agent command (primary interface)
+   - `bootstrap.sh` - Legacy wrapper (redirects to conductor)
    - `task-claim.py` - Task assignment via GitHub Issue assignment
    - `health-check.py` - Monitor agent heartbeats
    - `cleanup-stale.py` - Remove abandoned work
@@ -135,15 +136,53 @@ When modifying code-conductor itself:
    python setup.py --auto
    ```
 
+<!-- CONDUCTOR:START -->
+## 🤖 AI Agent Quick Start
+
+**IMPORTANT**: Always run from the project root directory where Code Conductor is configured!
+
+```bash
+# Start work as your role (from project root)
+./conductor start [role]
+
+# Check your current task status
+./conductor status
+
+# Complete task and create PR
+./conductor complete
+
+# List available tasks
+./conductor tasks
+```
+
+### Available Roles
+- `dev` - General development (default)
+- `frontend` (aliases: fe, front) - UI/React/Vue work
+- `backend` (aliases: be, back) - API/server work  
+- `devops` (aliases: ops) - Infrastructure/CI
+- `security` (alias: sec) - Security tasks
+- `mobile` - iOS/Android development
+- `ml` (aliases: ai, ml-engineer) - Machine learning
+- `data` - Data engineering/analytics
+
+### Example Session
+```bash
+cd /path/to/project  # MUST be in project root
+./conductor start frontend
+# ... work on task ...
+./conductor complete
+```
+<!-- CONDUCTOR:END -->
+
 ## Autonomous Operation Guidelines
 
 When working in a project with Code Conductor:
 
-1. **Check for tasks**: Run `python .conductor/scripts/generate-summary.py` to see available work
-2. **Claim a task**: Use `python .conductor/scripts/task-claim.py --role [your-role]`
-3. **Work in isolation**: The bootstrap script creates your worktree automatically
-4. **Validate changes**: Always run the project's test/lint commands before committing
-5. **Complete work**: Close the GitHub Issue when done
+1. **Start work**: Use `./conductor start [role]` from the project root
+2. **Check status**: Use `./conductor status` to see your current task
+3. **Complete work**: Use `./conductor complete` to finish and create PR
+4. **Work in isolation**: The conductor command creates your worktree automatically
+5. **Validate changes**: Always run the project's test/lint commands before committing
 
 ## Common Tasks
 

@@ -125,7 +125,7 @@ After setup, Code Conductor creates a `CLAUDE.md` file with AI agent instruction
 
 ```bash
 # The ONLY command AI agents need to know:
-conductor-agent start [role]
+./conductor start [role]
 ```
 
 This single command:
@@ -138,7 +138,7 @@ This single command:
 ### Example AI Agent Session
 
 ```
-> conductor-agent start frontend
+> ./conductor start frontend
 
 🤖 Code Conductor Agent: frontend
 ==================================
@@ -158,9 +158,9 @@ Next: cd worktrees/agent-frontend-42
 
 ### AI Agent Workflow
 
-1. **Start work**: `conductor-agent start dev`
+1. **Start work**: `./conductor start dev`
 2. **Implement**: Work in the created worktree
-3. **Complete**: `conductor-agent complete`
+3. **Complete**: `./conductor complete`
 4. **Repeat**: Automatically moves to next task
 
 ### Smart Task Discovery
@@ -205,7 +205,7 @@ This reduces the complexity of managing many agent types while maintaining quali
 │   ├── ml-engineer.md  # ML/AI specialist
 │   └── data.md         # Data engineer
 ├── scripts/            # Automation scripts
-│   ├── conductor-agent # Universal AI agent command
+│   ├── conductor       # Universal AI agent command
 │   ├── bootstrap.sh    # Legacy compatibility wrapper
 │   ├── task-claim.py   # Atomic task assignment
 │   ├── code-reviewer.py # AI code review engine
@@ -299,13 +299,13 @@ on:
 **Option A: Conductor Desktop App (macOS only)**
 ```bash
 export AGENT_ROLE=dev  # or devops, security, etc.
-conductor-agent start
+./conductor start
 # Follow the printed instructions to open in Conductor app
 ```
 
 **Option B: Multiple Terminals (All Platforms)**
 ```bash
-conductor-agent start dev
+./conductor start dev
 cd worktrees/agent-dev-[task_id]
 # Use tmux or screen for session management on Linux/Windows
 # Start your Claude Code session in the worktree
