@@ -8,6 +8,7 @@ Welcome to the comprehensive Code Conductor documentation. This directory contai
 - [**Installation Guide**](INSTALLATION.md) - All installation methods and options
 - [**Usage Guide**](USAGE.md) - How to use Code Conductor effectively
 - [**Stack Support**](STACK_SUPPORT.md) - Supported technologies and frameworks
+- [**FAQ**](FAQ.md) - Frequently asked questions and clarifications
 
 ### Core Concepts
 - [**Architecture**](ARCHITECTURE.md) - System design and components
