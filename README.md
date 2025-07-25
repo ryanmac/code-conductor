@@ -536,10 +536,13 @@ python .conductor/scripts/validate-config.py
 ## Best Practices
 
 1. **Task Design**: Make tasks self-contained with clear specs
-2. **Role Selection**: Start with dev-only, add specializations as needed
-3. **Regular Cleanup**: Let automation handle stale work
-4. **Monitor Health**: Check status issue regularly
-5. **Incremental Adoption**: Start small, expand as comfortable
+2. **Duplicate Prevention**: Check existing issues before creating new ones - use `./conductor check-dup "title"`
+3. **Role Selection**: Start with dev-only, add specializations as needed
+4. **Regular Cleanup**: Let automation handle stale work
+5. **Monitor Health**: Check status issue regularly
+6. **Incremental Adoption**: Start small, expand as comfortable
+
+See also: [Duplicate Prevention Guide](docs/DUPLICATE_PREVENTION.md) for detailed strategies
 
 ## Development Setup
 
