@@ -16,8 +16,40 @@ Run this in your existing project's root directory to download and install Code 
 bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
 ```
 
+### For Claude Code and Non-Interactive Environments
+
+Use the `--auto` flag for non-interactive installation (perfect for Claude Code):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto
+```
+
+### Installation Options
+
+The installer supports various command-line flags for customization:
+
+```bash
+# Show all available options
+bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh) --help
+
+# Common options:
+--auto                # Non-interactive mode with sensible defaults
+--upgrade             # Force upgrade even if already installed
+--reinstall           # Force fresh installation (removes existing config)
+--force               # Continue even when already at latest version
+--skip-examples       # Skip copying example configurations
+--skip-commit         # Skip auto-committing changes to Git
+--skip-agent-start    # Skip starting a dev agent after installation
+
+# Examples:
+curl -fsSL ... | bash -s -- --auto --upgrade        # Auto-upgrade
+curl -fsSL ... | bash -s -- --auto --skip-commit    # Install without committing
+```
+
+### Installation Notes
+
 - This method avoids cloning the full Code Conductor repo and is ideal for integrating into existing projects without repository pollution.
-- The script will prompt before overwriting any existing installation.
+- The script will prompt before overwriting any existing installation (in interactive mode).
 - **Security best practice:** Review the script at the raw URL before running.
 - **Pyenv users:** If Poetry install fails, switch to the Python version that has Poetry installed (e.g., `pyenv shell 3.10.13`) and re-run.
 

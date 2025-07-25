@@ -1,10 +1,87 @@
 #!/bin/bash
 
 # conductor-init.sh - Universal Installer for Code Conductor
-# Usage: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+# Usage: 
+#   Interactive: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+#   Non-interactive: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto
+#   With options: curl -fsSL ... | bash -s -- --auto --upgrade
 # Installs Code Conductor into the current Git repository without full cloning.
 
 set -e
+
+# Default values for command-line options
+AUTO_MODE=false
+FORCE_UPGRADE=false
+FORCE_REINSTALL=false
+SKIP_EXAMPLES=false
+SKIP_COMMIT=false
+SKIP_AGENT_START=false
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --auto|--non-interactive)
+            AUTO_MODE=true
+            shift
+            ;;
+        --upgrade)
+            FORCE_UPGRADE=true
+            shift
+            ;;
+        --reinstall)
+            FORCE_REINSTALL=true
+            shift
+            ;;
+        --force)
+            # Force continues even when already at latest version
+            AUTO_MODE=true
+            shift
+            ;;
+        --skip-examples)
+            SKIP_EXAMPLES=true
+            shift
+            ;;
+        --skip-commit)
+            SKIP_COMMIT=true
+            shift
+            ;;
+        --skip-agent-start)
+            SKIP_AGENT_START=true
+            shift
+            ;;
+        --help)
+            echo "Code Conductor Universal Installer"
+            echo ""
+            echo "Usage: $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --auto, --non-interactive  Run in non-interactive mode with sensible defaults"
+            echo "  --upgrade                  Force upgrade even if already installed"
+            echo "  --reinstall                Force fresh installation (removes existing config)"
+            echo "  --force                    Continue even when already at latest version"
+            echo "  --skip-examples            Skip copying example configurations"
+            echo "  --skip-commit              Skip auto-committing changes to Git"
+            echo "  --skip-agent-start         Skip starting a dev agent after installation"
+            echo "  --help                     Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  # Interactive installation (default)"
+            echo "  bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)"
+            echo ""
+            echo "  # Non-interactive installation (for Claude Code)"
+            echo "  curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto"
+            echo ""
+            echo "  # Force upgrade in non-interactive mode"
+            echo "  curl -fsSL ... | bash -s -- --auto --upgrade"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Color codes for output
 RED='\033[0;31m'
@@ -14,6 +91,9 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}🚀 Code Conductor Universal Installer${NC}"
 echo "=========================================="
+if [ "$AUTO_MODE" = true ]; then
+    echo -e "${YELLOW}Running in non-interactive mode (--auto)${NC}"
+fi
 echo "This script will install Code Conductor into your current Git repository."
 echo "It will download necessary files and run the setup automatically."
 echo ""
@@ -87,36 +167,51 @@ if [ -d ".conductor" ]; then
         echo -e "${YELLOW}⚠️ Unknown version (no VERSION file found).${NC}"
     fi
     
-    echo ""
-    echo "Would you like to:"
-    echo "  1) Upgrade - Update Code Conductor while preserving your configuration"
-    echo "  2) Reinstall - Complete fresh installation (overwrites everything)"
-    echo "  3) Cancel - Exit without making changes"
-    echo ""
-    read -p "Your choice [1-3]: " -n 1 -r INSTALL_CHOICE
-    echo ""
-    
-    case "$INSTALL_CHOICE" in
-        1)
-            IS_UPGRADE=true
-            echo -e "${GREEN}✅ Proceeding with upgrade...${NC}"
-            ;;
-        2)
-            echo -e "${YELLOW}⚠️ This will delete all existing Code Conductor files and configurations.${NC}"
-            read -p "Are you sure? [y/N]: " -n 1 -r
-            echo ""
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                echo -e "${RED}❌ Installation cancelled.${NC}"
-                exit 0
-            fi
+    # Handle based on mode and flags
+    if [ "$AUTO_MODE" = true ] || [ "$FORCE_UPGRADE" = true ] || [ "$FORCE_REINSTALL" = true ]; then
+        # Non-interactive mode or explicit flags
+        if [ "$FORCE_REINSTALL" = true ]; then
+            echo -e "${YELLOW}🔄 Force reinstall requested. Removing existing installation...${NC}"
             rm -rf .conductor VERSION setup.py requirements.txt pyproject.toml
             IS_UPGRADE=false
-            ;;
-        *)
-            echo -e "${RED}❌ Installation cancelled.${NC}"
-            exit 0
-            ;;
-    esac
+        elif [ "$FORCE_UPGRADE" = true ] || [ "$AUTO_MODE" = true ]; then
+            # Default to upgrade in auto mode
+            IS_UPGRADE=true
+            echo -e "${GREEN}✅ Proceeding with upgrade (preserving configuration)...${NC}"
+        fi
+    else
+        # Interactive mode
+        echo ""
+        echo "Would you like to:"
+        echo "  1) Upgrade - Update Code Conductor while preserving your configuration"
+        echo "  2) Reinstall - Complete fresh installation (overwrites everything)"
+        echo "  3) Cancel - Exit without making changes"
+        echo ""
+        read -p "Your choice [1-3]: " -n 1 -r INSTALL_CHOICE
+        echo ""
+        
+        case "$INSTALL_CHOICE" in
+            1)
+                IS_UPGRADE=true
+                echo -e "${GREEN}✅ Proceeding with upgrade...${NC}"
+                ;;
+            2)
+                echo -e "${YELLOW}⚠️ This will delete all existing Code Conductor files and configurations.${NC}"
+                read -p "Are you sure? [y/N]: " -n 1 -r
+                echo ""
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    echo -e "${RED}❌ Installation cancelled.${NC}"
+                    exit 0
+                fi
+                rm -rf .conductor VERSION setup.py requirements.txt pyproject.toml
+                IS_UPGRADE=false
+                ;;
+            *)
+                echo -e "${RED}❌ Installation cancelled.${NC}"
+                exit 0
+                ;;
+        esac
+    fi
 fi
 
 echo -e "${GREEN}✅ All prerequisites met.${NC}"
@@ -148,11 +243,15 @@ if [ "$IS_UPGRADE" = true ]; then
     echo -e "New version: ${GREEN}$NEW_VERSION${NC}"
     if [ "$CURRENT_VERSION" = "$NEW_VERSION" ]; then
         echo -e "${GREEN}✅ Already at latest version ($NEW_VERSION).${NC}"
-        read -p "Continue anyway? [Y/n]: " -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Yy]$ ]] && [[ -n $REPLY ]]; then
-            rm -rf "$TEMP_DIR"
-            exit 0
+        if [ "$AUTO_MODE" = true ]; then
+            echo -e "${YELLOW}ℹ️  Continuing with refresh of core files...${NC}"
+        else
+            read -p "Continue anyway? [Y/n]: " -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]] && [[ -n $REPLY ]]; then
+                rm -rf "$TEMP_DIR"
+                exit 0
+            fi
         fi
     fi
 fi
@@ -253,13 +352,26 @@ fi
 
 # Optionally copy examples (prompt user) - only for fresh installs
 if [ "$IS_UPGRADE" = false ]; then
-    read -p "Do you want to copy example configurations (recommended for new users)? [Y/n]: " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-        cp -r "$TEMP_DIR/examples" .conductor/ || {
-            echo -e "${YELLOW}⚠️ Failed to copy examples directory (continuing anyway).${NC}"
-        }
-        echo -e "${GREEN}✅ Examples copied to .conductor/examples.${NC}"
+    if [ "$AUTO_MODE" = true ]; then
+        # In auto mode, copy examples by default unless explicitly skipped
+        if [ "$SKIP_EXAMPLES" = false ]; then
+            cp -r "$TEMP_DIR/examples" .conductor/ || {
+                echo -e "${YELLOW}⚠️ Failed to copy examples directory (continuing anyway).${NC}"
+            }
+            echo -e "${GREEN}✅ Examples copied to .conductor/examples.${NC}"
+        else
+            echo -e "${YELLOW}ℹ️  Skipping example configurations (--skip-examples).${NC}"
+        fi
+    else
+        # Interactive mode
+        read -p "Do you want to copy example configurations (recommended for new users)? [Y/n]: " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            cp -r "$TEMP_DIR/examples" .conductor/ || {
+                echo -e "${YELLOW}⚠️ Failed to copy examples directory (continuing anyway).${NC}"
+            }
+            echo -e "${GREEN}✅ Examples copied to .conductor/examples.${NC}"
+        fi
     fi
 fi
 
@@ -479,27 +591,44 @@ git add .conductor .github setup.py requirements.txt pyproject.toml VERSION 2>/d
 if git diff --staged --quiet; then
     echo -e "${GREEN}✅ No changes to commit (files already in Git).${NC}"
 else
-    read -p "Commit these changes automatically? [Y/n]: " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+    if [ "$AUTO_MODE" = true ] && [ "$SKIP_COMMIT" = false ]; then
+        # Auto mode: commit by default
         git commit -m "$COMMIT_MESSAGE" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
-        echo -e "${GREEN}✅ Changes committed.${NC}"
+        echo -e "${GREEN}✅ Changes committed automatically.${NC}"
+    elif [ "$SKIP_COMMIT" = true ]; then
+        echo -e "${YELLOW}ℹ️  Skipping commit (--skip-commit). Remember to commit manually.${NC}"
     else
-        echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
+        # Interactive mode
+        read -p "Commit these changes automatically? [Y/n]: " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            git commit -m "$COMMIT_MESSAGE" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
+            echo -e "${GREEN}✅ Changes committed.${NC}"
+        else
+            echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
+        fi
     fi
 fi
 
 # Step 8: Development Environment Selection - skip for upgrades
 if [ "$IS_UPGRADE" = false ]; then
-    echo ""
-    echo -e "${YELLOW}🖥️  Select your primary development environment:${NC}"
-    echo ""
-    echo "  1) Conductor (https://conductor.build - macOS only)"
-    echo "  2) Terminal (Warp, iTerm2, Windows Terminal, etc.)"
-    echo "  3) IDE (Cursor, Cline, Windsurf, VSCode, etc.)"
-    echo ""
-    read -p "Enter your choice [1-3]: " -n 1 -r ENV_CHOICE
-    echo ""
+    if [ "$AUTO_MODE" = true ]; then
+        # Auto mode: default to terminal/IDE workflow
+        ENV_CHOICE="2"
+        echo ""
+        echo -e "${YELLOW}🖥️  Auto mode: Using terminal/IDE workflow${NC}"
+    else
+        # Interactive mode
+        echo ""
+        echo -e "${YELLOW}🖥️  Select your primary development environment:${NC}"
+        echo ""
+        echo "  1) Conductor (https://conductor.build - macOS only)"
+        echo "  2) Terminal (Warp, iTerm2, Windows Terminal, etc.)"
+        echo "  3) IDE (Cursor, Cline, Windsurf, VSCode, etc.)"
+        echo ""
+        read -p "Enter your choice [1-3]: " -n 1 -r ENV_CHOICE
+        echo ""
+    fi
 else
     # Skip environment selection for upgrades
     ENV_CHOICE="skip"
@@ -549,27 +678,53 @@ case "$ENV_CHOICE" in
         echo "=========================================="
         echo ""
         
-        read -p "Would you like to start a dev agent now? [Y/n]: " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        if [ "$AUTO_MODE" = true ]; then
+            # Auto mode: skip agent start by default unless explicitly requested
+            if [ "$SKIP_AGENT_START" = false ]; then
+                echo -e "${YELLOW}ℹ️  Auto mode: Skipping dev agent start. Run './conductor start dev' when ready.${NC}"
+            fi
+            START_AGENT=false
+        else
+            # Interactive mode
+            read -p "Would you like to start a dev agent now? [Y/n]: " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+                START_AGENT=true
+            else
+                START_AGENT=false
+            fi
+        fi
+        
+        if [ "$START_AGENT" = true ]; then
             echo -e "${YELLOW}🤖 Starting dev agent...${NC}"
             
             # Check for uncommitted changes
             if ! git diff-index --quiet HEAD -- 2>/dev/null; then
                 echo -e "${YELLOW}⚠️ Uncommitted changes detected.${NC}"
-                read -p "Stash them automatically before starting agent? [Y/n]: " -n 1 -r
-                echo ""
-                if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+                if [ "$AUTO_MODE" = true ]; then
+                    # Auto mode: stash changes automatically
                     git stash push -m "Auto-stash before Conductor agent startup" || {
                         echo -e "${RED}❌ Failed to stash changes.${NC}"
                         echo "Please commit or stash changes manually, then run: ./conductor start dev"
                         exit 1
                     }
-                    echo -e "${GREEN}✅ Changes stashed. You can restore them later with: git stash pop${NC}"
+                    echo -e "${GREEN}✅ Changes stashed automatically. You can restore them later with: git stash pop${NC}"
                 else
-                    echo -e "${YELLOW}⚠️ Skipping agent startup. Please handle uncommitted changes first.${NC}"
-                    echo "Then run: ./conductor start dev"
-                    exit 0
+                    # Interactive mode
+                    read -p "Stash them automatically before starting agent? [Y/n]: " -n 1 -r
+                    echo ""
+                    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+                        git stash push -m "Auto-stash before Conductor agent startup" || {
+                            echo -e "${RED}❌ Failed to stash changes.${NC}"
+                            echo "Please commit or stash changes manually, then run: ./conductor start dev"
+                            exit 1
+                        }
+                        echo -e "${GREEN}✅ Changes stashed. You can restore them later with: git stash pop${NC}"
+                    else
+                        echo -e "${YELLOW}⚠️ Skipping agent startup. Please handle uncommitted changes first.${NC}"
+                        echo "Then run: ./conductor start dev"
+                        exit 0
+                    fi
                 fi
             fi
             
@@ -580,7 +735,9 @@ case "$ENV_CHOICE" in
                     echo "To restore your stashed changes: git stash pop"
                 fi
             }
-        else
+        fi
+        
+        if [ "$START_AGENT" = false ]; then
             echo ""
             echo "📋 To start an agent later:"
             echo -e "   ${GREEN}./conductor start dev${NC}"
@@ -600,7 +757,17 @@ esac
 # Note: No cleanup of setup.py, requirements.txt, etc. - leaving them in place for user reference and future use.
 
 # Step 9: Next Steps (contextual based on installation type and environment choice)
-if [ "$IS_UPGRADE" = true ]; then
+if [ "$AUTO_MODE" = true ] && [ "$IS_UPGRADE" = false ]; then
+    # Auto mode fresh install - simplified message
+    echo ""
+    echo -e "${GREEN}✅ Code Conductor installed successfully!${NC}"
+    echo ""
+    echo "To get started:"
+    echo -e "  ${GREEN}./conductor start dev${NC} - Start a development agent"
+    echo -e "  ${GREEN}./conductor tasks${NC} - View available tasks"
+    echo -e "  ${GREEN}./conductor help${NC} - Show all commands"
+    echo ""
+elif [ "$IS_UPGRADE" = true ]; then
     # Upgrade complete
     echo ""
     echo -e "${GREEN}🎉 Upgrade Complete!${NC}"
