@@ -260,5 +260,6 @@ After creating the documentation map:
 4. Mark this task complete using: `./conductor complete`
 
 ---
-*This is a one-time initialization task. Once complete, all future work will be properly coordinated.*
+*This is a one-time initialization task. Once complete, all future work will be 
+properly coordinated.*
 """
