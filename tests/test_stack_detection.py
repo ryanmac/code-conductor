@@ -237,7 +237,9 @@ class TestAutoConfiguration:
         # Run auto-configuration
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup._auto_configure()
+            # Run the full setup process which includes auto configuration
+            setup._detect_project_info()
+            setup._gather_configuration()
         
         # Verify code-reviewer is included
         specialized_roles = setup.config["roles"]["specialized"]
@@ -252,7 +254,9 @@ class TestAutoConfiguration:
         # Run auto-configuration
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup._auto_configure()
+            # Run the full setup process which includes auto configuration
+            setup._detect_project_info()
+            setup._gather_configuration()
         
         # Verify devops role is included
         specialized_roles = setup.config["roles"]["specialized"]
@@ -266,7 +270,9 @@ class TestAutoConfiguration:
         # Run auto-configuration
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup._auto_configure()
+            # Run the full setup process which includes auto configuration
+            setup._detect_project_info()
+            setup._gather_configuration()
         
         # Verify GitHub Issues is selected
         assert setup.config["task_management"] == "github-issues"
@@ -295,7 +301,7 @@ def test_role_template_creation():
             }
             
             # Create role definitions
-            setup.create_role_definitions()
+            setup._create_role_definitions()
             
             # Verify all role files exist
             roles_dir = setup.conductor_dir / "roles"
