@@ -648,6 +648,78 @@ Create GitHub Actions workflow for automated testing and deployment.
     fi
 fi
 
+# Step 6.5: Create documentation map task for upgrades if missing
+if [ "$IS_UPGRADE" = true ]; then
+    echo ""
+    echo -e "${YELLOW}📝 Checking for critical documentation map task...${NC}"
+    
+    # Check if GitHub CLI is available
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+        # Check if documentation map task already exists
+        DOC_MAP_EXISTS=$(gh issue list -l 'conductor:task' --search "[INIT] Build documentation" --json number 2>/dev/null | jq length 2>/dev/null || echo "0")
+        
+        # Also check if documentation map file already exists
+        DOC_MAP_FILE_EXISTS=false
+        if [ -f ".conductor/documentation-map.yaml" ]; then
+            DOC_MAP_FILE_EXISTS=true
+        fi
+        
+        if [ "$DOC_MAP_EXISTS" = "0" ] && [ "$DOC_MAP_FILE_EXISTS" = false ]; then
+            echo "Creating critical documentation map task..."
+            
+            # Create critical documentation map task
+            gh issue create \
+                --title "[INIT] Build documentation map and analyze codebase" \
+                --body "## Description
+This is the initial discovery task that analyzes the entire codebase to create a comprehensive documentation map. This map is essential for Code Conductor to understand the project structure and generate appropriate tasks.
+
+## Objective
+Create .conductor/documentation-map.yaml with:
+- Complete project analysis and structure mapping
+- Technology stack detection and validation
+- List of existing vs. missing documentation
+- Feature implementation status
+- Critical paths and dependencies
+- Proposed tasks based on project needs
+
+## Success Criteria
+- Documentation map created at .conductor/documentation-map.yaml
+- Project structure fully analyzed and documented
+- Technology stack properly identified
+- Missing documentation identified
+- Generate initial task proposals based on project state
+- Run generate-tasks-from-map.py to create follow-up tasks
+
+## Process
+1. Analyze entire codebase structure
+2. Detect all technologies, frameworks, and tools
+3. Identify existing documentation
+4. Map feature implementation status
+5. Create comprehensive YAML documentation map
+6. Generate missing documentation where possible
+7. Propose initial tasks based on findings
+
+## Priority
+This task has the highest priority as all other tasks depend on the documentation map for context.
+
+## Files to Create/Modify
+- .conductor/documentation-map.yaml (create)
+- .conductor/README.md (update if needed)
+- Project documentation files (as identified)" \
+                --label "conductor:task" \
+                --label "effort:large" \
+                --label "priority:high" \
+                2>/dev/null && echo "  ✅ Created critical task: [INIT] Build documentation map"
+        elif [ "$DOC_MAP_FILE_EXISTS" = true ]; then
+            echo -e "${GREEN}✅ Documentation map already exists at .conductor/documentation-map.yaml${NC}"
+        else
+            echo -e "${GREEN}✅ Documentation map task already exists${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️ GitHub CLI not available - cannot check for documentation map task${NC}"
+    fi
+fi
+
 # Step 7: Auto-commit all generated files (with user consent)
 echo ""
 if [ "$IS_UPGRADE" = true ]; then
