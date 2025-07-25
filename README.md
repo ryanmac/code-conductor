@@ -34,11 +34,16 @@ The installer auto-detects your stack (React, Python, Go, etc.) and configures e
 - ✅ AI code reviews work automatically on all PRs
 - ✅ Language-agnostic setup (no Python CI/CD added to non-Python projects)
 
-**Or let Claude Code install it for you:**
+**For Claude Code (non-interactive):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto
+```
+
+**Or paste this prompt into Claude Code:**
 ```
 I need to move faster. Install Code Conductor into this project so we can run multiple Claude Code agents at once.
 
-Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+Execute: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto
 ```
 
 ## See It In Action
