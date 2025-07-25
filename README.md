@@ -191,6 +191,22 @@ This single command:
 - ✅ Creates an isolated git worktree
 - ✅ Provides all context needed to start
 
+### The Perfect Kickoff Prompt
+
+Start any Claude Code session with this value-focused prompt:
+
+```
+Ultrathink: What task will create the most value? Find it, claim it, complete it.
+```
+
+This prompt:
+- Triggers deep analysis with "ultrathink"
+- Focuses on value creation over busy work
+- Provides clear action steps: find → claim → complete
+- Works with any role or project type
+
+**Pro tip**: Add this to your text expander (e.g., `;ustart`) for instant agent activation.
+
 ### Example AI Agent Session
 
 ```

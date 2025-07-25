@@ -151,6 +151,18 @@ When modifying code-conductor itself:
 
 **IMPORTANT**: Always run from the project root directory where Code Conductor is configured!
 
+### 🚀 The Universal Kickoff Prompt
+
+Start every Code Conductor session with:
+
+```
+Ultrathink: What task will create the most value? Find it, claim it, complete it.
+```
+
+This prompt triggers deep analysis, focuses on value, and guides you through the complete workflow.
+
+### Essential Commands
+
 ```bash
 # Start work as your role (from project root)
 ./conductor start [role]

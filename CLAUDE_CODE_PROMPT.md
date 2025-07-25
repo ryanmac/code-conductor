@@ -134,16 +134,16 @@ Show me the exact errors so we can get back to parallel development immediately.
 ## ⚡ Instant Productivity Mode
 
 ```
-Put me to work. I'm ready to claim tasks and ship code using Code Conductor.
+Ultrathink: What task will create the most value? Find it, claim it, complete it.
 
-Quick commands for maximum velocity:
-- ./conductor tasks - Show me what needs building
-- ./conductor start dev - Claim the highest priority task
-- ./conductor progress - I'll update you on my progress
-- ./conductor complete - Ship it and move to the next task
-- ./conductor status - Check my current assignment
+I'm ready to work autonomously with Code Conductor. I'll:
+- Use ./conductor tasks to see what needs building
+- Claim the highest-value task with ./conductor start [role]
+- Update progress regularly with ./conductor progress
+- Ship completed work with ./conductor complete
+- Check for duplicates before creating any new issues
 
-I'll work autonomously, check for duplicates before creating issues, and maintain high code quality. Let's build something amazing.
+Let me find and deliver the most impactful work for this project.
 ```
 
 ## 🎯 The Bottom Line

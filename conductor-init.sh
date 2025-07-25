@@ -581,7 +581,7 @@ case "$ENV_CHOICE" in
         echo ""
         echo "3. Start working with this prompt:"
         echo ""
-        echo -e "   ${YELLOW}\"Check available tasks and start working on the highest priority one.\"${NC}"
+        echo -e "   ${YELLOW}\"Ultrathink: What task will create the most value? Find it, claim it, complete it.\"${NC}"
         echo ""
         echo "💡 Pro Tips:"
         echo "   • Conductor will handle task claiming and worktree setup automatically"
