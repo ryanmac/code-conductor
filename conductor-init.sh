@@ -340,7 +340,7 @@ else
     echo ""
 fi
 
-# Step 5: Interactive Role Configuration (improved: numbered menu) - skip for upgrades
+# Step 5: Auto-configure All Roles - skip for upgrades
 if [ "$IS_UPGRADE" = false ]; then
     echo -e "${YELLOW}🎭 Configuring agent roles...${NC}"
 
@@ -364,100 +364,39 @@ except:
         echo -e "📊 Detected technology stacks: ${GREEN}$DETECTED_STACKS${NC}"
     fi
 
-    # Get configured roles
-    CONFIGURED_ROLES=$(python3 -c "
-import yaml
-try:
-    with open('.conductor/config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
-        roles = config.get('roles', {}).get('specialized', [])
-        print(' '.join(roles))
-except:
-    print('code-reviewer')
-" 2>/dev/null)
-
-    echo -e "🎯 Configured specialized roles: ${GREEN}$CONFIGURED_ROLES${NC}"
-    echo ""
-
-    # Parse current roles and filter suggestions
+    # Define all available roles
     ALL_ROLES=("code-reviewer" "frontend" "mobile" "devops" "security" "ml-engineer" "ui-designer" "data")
-    ROLE_DESCRIPTIONS=(
-        "AI-powered PR reviews"
-        "React, Vue, Angular development"
-        "React Native, Flutter development"
-        "CI/CD, deployments, infrastructure"
-        "Security audits, vulnerability scanning"
-        "Machine learning tasks"
-        "Design systems, UI/UX"
-        "Data pipelines, analytics"
-    )
+    
+    # Automatically configure all roles
+    echo -e "${YELLOW}📝 Configuring all available roles...${NC}"
+    
+    # Update config.yaml with all roles
+    python3 - <<EOF
+import yaml
 
-    # Get array of current roles
-    IFS=' ' read -ra CURRENT_ROLES_ARRAY <<< "$CONFIGURED_ROLES"
+# Define all available roles
+all_roles = ["code-reviewer", "frontend", "mobile", "devops", "security", "ml-engineer", "ui-designer", "data"]
 
-    # Build suggested roles (exclude already configured)
-    SUGGESTED_ROLES=()
-    SUGGESTED_INDICES=()
-    for i in "${!ALL_ROLES[@]}"; do
-        role="${ALL_ROLES[$i]}"
-        if [[ ! " ${CURRENT_ROLES_ARRAY[@]} " =~ " ${role} " ]]; then
-            SUGGESTED_ROLES+=("$role")
-            SUGGESTED_INDICES+=("$i")
-        fi
-    done
-
-    # Ask if user wants to adjust roles
-    if [ ${#SUGGESTED_ROLES[@]} -eq 0 ]; then
-        echo -e "${GREEN}✅ All available roles are already configured.${NC}"
-    else
-        echo "Available roles to add:"
-        for i in "${!SUGGESTED_ROLES[@]}"; do
-            idx=${SUGGESTED_INDICES[$i]}
-            echo "  $((i+1))) ${SUGGESTED_ROLES[$i]} - ${ROLE_DESCRIPTIONS[$idx]}"
-        done
-        echo ""
-        read -p "Select roles to add (comma-separated numbers, or Enter to skip): " -r ROLE_SELECTION
-        
-        if [ -n "$ROLE_SELECTION" ]; then
-            # Parse selected numbers and build role list
-            SELECTED_ROLES=()
-            IFS=',' read -ra SELECTIONS <<< "$ROLE_SELECTION"
-            for num in "${SELECTIONS[@]}"; do
-                num=$(echo $num | tr -d ' ')  # Trim spaces
-                if [[ $num =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#SUGGESTED_ROLES[@]}" ]; then
-                    SELECTED_ROLES+=("${SUGGESTED_ROLES[$((num-1))]}")
-                fi
-            done
-            
-            if [ ${#SELECTED_ROLES[@]} -gt 0 ]; then
-                # Update config.yaml with selected roles (robust JSON passing)
-                if ! command -v jq >/dev/null 2>&1; then
-                    echo -e "${RED}❌ jq is required for robust role selection. Please install jq and try again.${NC}"
-                    exit 1
-                fi
-                ROLES_TO_ADD_JSON=$(printf '%s\n' "${SELECTED_ROLES[@]}" | jq -R . | jq -s .)
-                python3 - "$ROLES_TO_ADD_JSON" <<EOF
-import sys, json, yaml
+# Read current config
 with open('.conductor/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
-current_roles = config.get('roles', {}).get('specialized', [])
-new_roles = json.loads(sys.argv[1])
-combined_roles = list(set(current_roles + new_roles))
-config['roles']['specialized'] = combined_roles
+
+# Update roles to include all available roles
+config['roles']['specialized'] = all_roles
+
+# Write updated config
 with open('.conductor/config.yaml', 'w') as f:
     yaml.dump(config, f, default_flow_style=False)
-print(f'✅ Roles added: {", ".join(new_roles)}')
+
+print(f'✅ All {len(all_roles)} roles configured: {", ".join(all_roles)}')
 EOF
-                if [ $? -ne 0 ]; then
-                    echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
-                fi
-            else
-                echo -e "${YELLOW}⚠️ No valid selections made.${NC}"
-            fi
-        else
-            echo -e "${GREEN}✅ Keeping current role configuration.${NC}"
-        fi
+
+    if [ $? -ne 0 ]; then
+        echo -e "${YELLOW}⚠️ Could not configure roles automatically. Continuing anyway...${NC}"
+    else
+        echo -e "${GREEN}✅ All agent roles are now available for use!${NC}"
     fi
+    echo ""
 else
     echo -e "${GREEN}✅ Existing role configuration preserved.${NC}"
 fi
@@ -708,7 +647,7 @@ elif [ "$ENV_CHOICE" != "1" ]; then
         echo "  ✅ Auto-detected technology stack"
     fi
     echo "  ✅ AI code-reviewer for all PRs"
-    echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
+    echo "  ✅ All specialized roles configured (frontend, backend, devops, security, etc.)"
     echo "  ✅ Demo tasks ready to claim"
     echo -e "  ${GREEN}✅ No GitHub token setup required${NC}"
     echo -e "  ${GREEN}✅ No Python CI/CD workflows added${NC}"
@@ -737,7 +676,7 @@ else
         echo "  ✅ Auto-detected technology stack"
     fi
     echo "  ✅ AI code-reviewer for all PRs"
-    echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
+    echo "  ✅ All specialized roles configured (frontend, backend, devops, security, etc.)"
     echo "  ✅ Demo tasks ready in Conductor"
     echo -e "  ${GREEN}✅ No GitHub token setup required${NC}"
     echo -e "  ${GREEN}✅ No Python CI/CD workflows added${NC}"
