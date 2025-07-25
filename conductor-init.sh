@@ -68,22 +68,62 @@ if command -v pyenv >/dev/null 2>&1; then
 fi
 
 # Check for existing installation
+IS_UPGRADE=false
+CURRENT_VERSION=""
 if [ -d ".conductor" ]; then
-    echo -e "${YELLOW}⚠️ Existing .conductor directory found.${NC}"
-    read -p "Do you want to overwrite and reinstall? [y/N]: " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${RED}❌ Installation cancelled.${NC}"
-        exit 0
+    echo -e "${YELLOW}⚠️ Existing Code Conductor installation detected.${NC}"
+    
+    # Check if VERSION file exists to determine version
+    if [ -f "VERSION" ]; then
+        CURRENT_VERSION=$(cat VERSION 2>/dev/null || echo "unknown")
+        echo -e "Current version: ${GREEN}$CURRENT_VERSION${NC}"
+        IS_UPGRADE=true
+    else
+        echo -e "${YELLOW}⚠️ Unknown version (no VERSION file found).${NC}"
     fi
-    rm -rf .conductor
+    
+    echo ""
+    echo "Would you like to:"
+    echo "  1) Upgrade - Update Code Conductor while preserving your configuration"
+    echo "  2) Reinstall - Complete fresh installation (overwrites everything)"
+    echo "  3) Cancel - Exit without making changes"
+    echo ""
+    read -p "Your choice [1-3]: " -n 1 -r INSTALL_CHOICE
+    echo ""
+    
+    case "$INSTALL_CHOICE" in
+        1)
+            IS_UPGRADE=true
+            echo -e "${GREEN}✅ Proceeding with upgrade...${NC}"
+            ;;
+        2)
+            echo -e "${YELLOW}⚠️ This will delete all existing Code Conductor files and configurations.${NC}"
+            read -p "Are you sure? [y/N]: " -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${RED}❌ Installation cancelled.${NC}"
+                exit 0
+            fi
+            rm -rf .conductor VERSION setup.py requirements.txt pyproject.toml
+            IS_UPGRADE=false
+            ;;
+        *)
+            echo -e "${RED}❌ Installation cancelled.${NC}"
+            exit 0
+            ;;
+    esac
 fi
 
 echo -e "${GREEN}✅ All prerequisites met.${NC}"
 echo ""
 
 # Step 2: Download and Extract Essential Files from Tarball
-echo -e "${YELLOW}📥 Downloading and extracting from GitHub tarball...${NC}"
+if [ "$IS_UPGRADE" = true ]; then
+    echo -e "${YELLOW}📥 Downloading latest version for upgrade...${NC}"
+else
+    echo -e "${YELLOW}📥 Downloading and extracting from GitHub tarball...${NC}"
+fi
+
 REPO_TARBALL_URL="https://github.com/ryanmac/code-conductor/archive/refs/heads/main.tar.gz"
 TEMP_DIR="/tmp/code-conductor-init"
 
@@ -97,47 +137,139 @@ curl -fsSL "$REPO_TARBALL_URL" | tar -xz -C "$TEMP_DIR" --strip-components=1 || 
     exit 1
 }
 
-# Copy essential files and directories
-cp -r "$TEMP_DIR/.conductor" . || {
-    echo -e "${RED}❌ Failed to copy .conductor directory.${NC}"
-    rm -rf "$TEMP_DIR"
-    exit 1
-}
-cp "$TEMP_DIR/setup.py" . || {
-    echo -e "${RED}❌ Failed to copy setup.py.${NC}"
-    rm -rf "$TEMP_DIR"
-    exit 1
-}
-cp "$TEMP_DIR/requirements.txt" . || {
-    echo -e "${RED}❌ Failed to copy requirements.txt.${NC}"
-    rm -rf "$TEMP_DIR"
-    exit 1
-}
-cp "$TEMP_DIR/pyproject.toml" . || {
-    echo -e "${RED}❌ Failed to copy pyproject.toml.${NC}"
-    rm -rf "$TEMP_DIR"
-    exit 1
-}
-cp "$TEMP_DIR/VERSION" . || {
-    echo -e "${RED}❌ Failed to copy VERSION.${NC}"
-    rm -rf "$TEMP_DIR"
-    exit 1
-}
+# Check new version
+NEW_VERSION=$(cat "$TEMP_DIR/VERSION" 2>/dev/null || echo "unknown")
+if [ "$IS_UPGRADE" = true ]; then
+    echo -e "New version: ${GREEN}$NEW_VERSION${NC}"
+    if [ "$CURRENT_VERSION" = "$NEW_VERSION" ]; then
+        echo -e "${GREEN}✅ Already at latest version ($NEW_VERSION).${NC}"
+        read -p "Continue anyway? [Y/n]: " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]] && [[ -n $REPLY ]]; then
+            rm -rf "$TEMP_DIR"
+            exit 0
+        fi
+    fi
+fi
 
-# Optionally copy examples (prompt user)
-read -p "Do you want to copy example configurations (recommended for new users)? [Y/n]: " -n 1 -r
-echo ""
-if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-    cp -r "$TEMP_DIR/examples" .conductor/ || {
-        echo -e "${YELLOW}⚠️ Failed to copy examples directory (continuing anyway).${NC}"
+# Handle file copying based on installation type
+if [ "$IS_UPGRADE" = true ]; then
+    # Backup user configurations
+    echo -e "${YELLOW}📁 Backing up user configurations...${NC}"
+    BACKUP_DIR="/tmp/conductor-backup-$$"
+    mkdir -p "$BACKUP_DIR"
+    
+    # Backup files that should be preserved
+    [ -f ".conductor/config.yaml" ] && cp ".conductor/config.yaml" "$BACKUP_DIR/"
+    [ -f ".conductor/CLAUDE.md" ] && cp ".conductor/CLAUDE.md" "$BACKUP_DIR/"
+    [ -f "CLAUDE.md" ] && cp "CLAUDE.md" "$BACKUP_DIR/CLAUDE_ROOT.md"
+    
+    # Update core scripts only
+    echo -e "${YELLOW}📥 Updating core scripts...${NC}"
+    
+    # Update scripts directory
+    cp -r "$TEMP_DIR/.conductor/scripts" ".conductor/" || {
+        echo -e "${RED}❌ Failed to update scripts.${NC}"
+        rm -rf "$TEMP_DIR" "$BACKUP_DIR"
+        exit 1
     }
-    echo -e "${GREEN}✅ Examples copied to .conductor/examples.${NC}"
+    
+    # Update roles directory
+    cp -r "$TEMP_DIR/.conductor/roles" ".conductor/" || {
+        echo -e "${RED}❌ Failed to update roles.${NC}"
+        rm -rf "$TEMP_DIR" "$BACKUP_DIR"
+        exit 1
+    }
+    
+    # Update workflow files
+    mkdir -p .github/workflows
+    cp -r "$TEMP_DIR/.github/workflows" ".github/" || {
+        echo -e "${RED}❌ Failed to update workflows.${NC}"
+        rm -rf "$TEMP_DIR" "$BACKUP_DIR"
+        exit 1
+    }
+    
+    # Update root files
+    cp "$TEMP_DIR/setup.py" . || {
+        echo -e "${RED}❌ Failed to update setup.py.${NC}"
+        rm -rf "$TEMP_DIR" "$BACKUP_DIR"
+        exit 1
+    }
+    cp "$TEMP_DIR/requirements.txt" . || {
+        echo -e "${RED}❌ Failed to update requirements.txt.${NC}"
+        rm -rf "$TEMP_DIR" "$BACKUP_DIR"
+        exit 1
+    }
+    cp "$TEMP_DIR/pyproject.toml" . || {
+        echo -e "${RED}❌ Failed to update pyproject.toml.${NC}"
+        rm -rf "$TEMP_DIR" "$BACKUP_DIR"
+        exit 1
+    }
+    cp "$TEMP_DIR/VERSION" . || {
+        echo -e "${RED}❌ Failed to update VERSION.${NC}"
+        rm -rf "$TEMP_DIR" "$BACKUP_DIR"
+        exit 1
+    }
+    
+    # Restore user configurations
+    echo -e "${YELLOW}📁 Restoring user configurations...${NC}"
+    [ -f "$BACKUP_DIR/config.yaml" ] && cp "$BACKUP_DIR/config.yaml" ".conductor/"
+    [ -f "$BACKUP_DIR/CLAUDE.md" ] && cp "$BACKUP_DIR/CLAUDE.md" ".conductor/"
+    [ -f "$BACKUP_DIR/CLAUDE_ROOT.md" ] && cp "$BACKUP_DIR/CLAUDE_ROOT.md" "CLAUDE.md"
+    
+    # Cleanup backup
+    rm -rf "$BACKUP_DIR"
+    
+    echo -e "${GREEN}✅ Core files updated while preserving configurations.${NC}"
+else
+    # Fresh installation - copy everything
+    cp -r "$TEMP_DIR/.conductor" . || {
+        echo -e "${RED}❌ Failed to copy .conductor directory.${NC}"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+    cp "$TEMP_DIR/setup.py" . || {
+        echo -e "${RED}❌ Failed to copy setup.py.${NC}"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+    cp "$TEMP_DIR/requirements.txt" . || {
+        echo -e "${RED}❌ Failed to copy requirements.txt.${NC}"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+    cp "$TEMP_DIR/pyproject.toml" . || {
+        echo -e "${RED}❌ Failed to copy pyproject.toml.${NC}"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+    cp "$TEMP_DIR/VERSION" . || {
+        echo -e "${RED}❌ Failed to copy VERSION.${NC}"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    }
+fi
+
+# Optionally copy examples (prompt user) - only for fresh installs
+if [ "$IS_UPGRADE" = false ]; then
+    read -p "Do you want to copy example configurations (recommended for new users)? [Y/n]: " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        cp -r "$TEMP_DIR/examples" .conductor/ || {
+            echo -e "${YELLOW}⚠️ Failed to copy examples directory (continuing anyway).${NC}"
+        }
+        echo -e "${GREEN}✅ Examples copied to .conductor/examples.${NC}"
+    fi
 fi
 
 # Clean up temp dir
 rm -rf "$TEMP_DIR"
 
-echo -e "${GREEN}✅ Files extracted: .conductor/, setup.py, requirements.txt, pyproject.toml, VERSION${NC}"
+if [ "$IS_UPGRADE" = true ]; then
+    echo -e "${GREEN}✅ Upgrade complete: Updated from $CURRENT_VERSION to $NEW_VERSION${NC}"
+else
+    echo -e "${GREEN}✅ Files extracted: .conductor/, setup.py, requirements.txt, pyproject.toml, VERSION${NC}"
+fi
 echo ""
 
 # Step 3: Install Dependencies (improved: suppress verbosity)
@@ -176,32 +308,38 @@ fi
 echo -e "${GREEN}✅ Dependencies installed.${NC}"
 echo ""
 
-# Step 4: Run Setup
-echo -e "${YELLOW}🔧 Running automatic setup...${NC}"
+# Step 4: Run Setup (only for fresh installs)
+if [ "$IS_UPGRADE" = false ]; then
+    echo -e "${YELLOW}🔧 Running automatic setup...${NC}"
 
-# Run setup.py with --auto flag
-if $POETRY_AVAILABLE; then
-    poetry run python setup.py --auto || {
-        echo -e "${RED}❌ Setup failed.${NC}"
-        exit 1
-    }
+    # Run setup.py with --auto flag
+    if $POETRY_AVAILABLE; then
+        poetry run python setup.py --auto || {
+            echo -e "${RED}❌ Setup failed.${NC}"
+            exit 1
+        }
+    else
+        python setup.py --auto || {
+            echo -e "${RED}❌ Setup failed.${NC}"
+            exit 1
+        }
+    fi
+
+    echo -e "${GREEN}✅ Setup complete.${NC}"
+    echo ""
 else
-    python setup.py --auto || {
-        echo -e "${RED}❌ Setup failed.${NC}"
-        exit 1
-    }
+    echo -e "${GREEN}✅ Skipping setup - existing configuration preserved.${NC}"
+    echo ""
 fi
 
-echo -e "${GREEN}✅ Setup complete.${NC}"
-echo ""
+# Step 5: Interactive Role Configuration (improved: numbered menu) - skip for upgrades
+if [ "$IS_UPGRADE" = false ]; then
+    echo -e "${YELLOW}🎭 Configuring agent roles...${NC}"
 
-# Step 5: Interactive Role Configuration (improved: numbered menu)
-echo -e "${YELLOW}🎭 Configuring agent roles...${NC}"
-
-# Read detected stacks from config
-DETECTED_STACKS=""
-if command -v python3 >/dev/null 2>&1; then
-    DETECTED_STACKS=$(python3 -c "
+    # Read detected stacks from config
+    DETECTED_STACKS=""
+    if command -v python3 >/dev/null 2>&1; then
+        DETECTED_STACKS=$(python3 -c "
 import yaml
 try:
     with open('.conductor/config.yaml', 'r') as f:
@@ -212,14 +350,14 @@ try:
 except:
     pass
 " 2>/dev/null)
-fi
+    fi
 
-if [ -n "$DETECTED_STACKS" ]; then
-    echo -e "📊 Detected technology stacks: ${GREEN}$DETECTED_STACKS${NC}"
-fi
+    if [ -n "$DETECTED_STACKS" ]; then
+        echo -e "📊 Detected technology stacks: ${GREEN}$DETECTED_STACKS${NC}"
+    fi
 
-# Get configured roles
-CONFIGURED_ROLES=$(python3 -c "
+    # Get configured roles
+    CONFIGURED_ROLES=$(python3 -c "
 import yaml
 try:
     with open('.conductor/config.yaml', 'r') as f:
@@ -230,67 +368,67 @@ except:
     print('code-reviewer')
 " 2>/dev/null)
 
-echo -e "🎯 Configured specialized roles: ${GREEN}$CONFIGURED_ROLES${NC}"
-echo ""
-
-# Parse current roles and filter suggestions
-ALL_ROLES=("code-reviewer" "frontend" "mobile" "devops" "security" "ml-engineer" "ui-designer" "data")
-ROLE_DESCRIPTIONS=(
-    "AI-powered PR reviews"
-    "React, Vue, Angular development"
-    "React Native, Flutter development"
-    "CI/CD, deployments, infrastructure"
-    "Security audits, vulnerability scanning"
-    "Machine learning tasks"
-    "Design systems, UI/UX"
-    "Data pipelines, analytics"
-)
-
-# Get array of current roles
-IFS=' ' read -ra CURRENT_ROLES_ARRAY <<< "$CONFIGURED_ROLES"
-
-# Build suggested roles (exclude already configured)
-SUGGESTED_ROLES=()
-SUGGESTED_INDICES=()
-for i in "${!ALL_ROLES[@]}"; do
-    role="${ALL_ROLES[$i]}"
-    if [[ ! " ${CURRENT_ROLES_ARRAY[@]} " =~ " ${role} " ]]; then
-        SUGGESTED_ROLES+=("$role")
-        SUGGESTED_INDICES+=("$i")
-    fi
-done
-
-# Ask if user wants to adjust roles
-if [ ${#SUGGESTED_ROLES[@]} -eq 0 ]; then
-    echo -e "${GREEN}✅ All available roles are already configured.${NC}"
-else
-    echo "Available roles to add:"
-    for i in "${!SUGGESTED_ROLES[@]}"; do
-        idx=${SUGGESTED_INDICES[$i]}
-        echo "  $((i+1))) ${SUGGESTED_ROLES[$i]} - ${ROLE_DESCRIPTIONS[$idx]}"
-    done
+    echo -e "🎯 Configured specialized roles: ${GREEN}$CONFIGURED_ROLES${NC}"
     echo ""
-    read -p "Select roles to add (comma-separated numbers, or Enter to skip): " -r ROLE_SELECTION
-    
-    if [ -n "$ROLE_SELECTION" ]; then
-        # Parse selected numbers and build role list
-        SELECTED_ROLES=()
-        IFS=',' read -ra SELECTIONS <<< "$ROLE_SELECTION"
-        for num in "${SELECTIONS[@]}"; do
-            num=$(echo $num | tr -d ' ')  # Trim spaces
-            if [[ $num =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#SUGGESTED_ROLES[@]}" ]; then
-                SELECTED_ROLES+=("${SUGGESTED_ROLES[$((num-1))]}")
-            fi
+
+    # Parse current roles and filter suggestions
+    ALL_ROLES=("code-reviewer" "frontend" "mobile" "devops" "security" "ml-engineer" "ui-designer" "data")
+    ROLE_DESCRIPTIONS=(
+        "AI-powered PR reviews"
+        "React, Vue, Angular development"
+        "React Native, Flutter development"
+        "CI/CD, deployments, infrastructure"
+        "Security audits, vulnerability scanning"
+        "Machine learning tasks"
+        "Design systems, UI/UX"
+        "Data pipelines, analytics"
+    )
+
+    # Get array of current roles
+    IFS=' ' read -ra CURRENT_ROLES_ARRAY <<< "$CONFIGURED_ROLES"
+
+    # Build suggested roles (exclude already configured)
+    SUGGESTED_ROLES=()
+    SUGGESTED_INDICES=()
+    for i in "${!ALL_ROLES[@]}"; do
+        role="${ALL_ROLES[$i]}"
+        if [[ ! " ${CURRENT_ROLES_ARRAY[@]} " =~ " ${role} " ]]; then
+            SUGGESTED_ROLES+=("$role")
+            SUGGESTED_INDICES+=("$i")
+        fi
+    done
+
+    # Ask if user wants to adjust roles
+    if [ ${#SUGGESTED_ROLES[@]} -eq 0 ]; then
+        echo -e "${GREEN}✅ All available roles are already configured.${NC}"
+    else
+        echo "Available roles to add:"
+        for i in "${!SUGGESTED_ROLES[@]}"; do
+            idx=${SUGGESTED_INDICES[$i]}
+            echo "  $((i+1))) ${SUGGESTED_ROLES[$i]} - ${ROLE_DESCRIPTIONS[$idx]}"
         done
+        echo ""
+        read -p "Select roles to add (comma-separated numbers, or Enter to skip): " -r ROLE_SELECTION
         
-        if [ ${#SELECTED_ROLES[@]} -gt 0 ]; then
-            # Update config.yaml with selected roles (robust JSON passing)
-            if ! command -v jq >/dev/null 2>&1; then
-                echo -e "${RED}❌ jq is required for robust role selection. Please install jq and try again.${NC}"
-                exit 1
-            fi
-            ROLES_TO_ADD_JSON=$(printf '%s\n' "${SELECTED_ROLES[@]}" | jq -R . | jq -s .)
-            python3 - "$ROLES_TO_ADD_JSON" <<EOF
+        if [ -n "$ROLE_SELECTION" ]; then
+            # Parse selected numbers and build role list
+            SELECTED_ROLES=()
+            IFS=',' read -ra SELECTIONS <<< "$ROLE_SELECTION"
+            for num in "${SELECTIONS[@]}"; do
+                num=$(echo $num | tr -d ' ')  # Trim spaces
+                if [[ $num =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#SUGGESTED_ROLES[@]}" ]; then
+                    SELECTED_ROLES+=("${SUGGESTED_ROLES[$((num-1))]}")
+                fi
+            done
+            
+            if [ ${#SELECTED_ROLES[@]} -gt 0 ]; then
+                # Update config.yaml with selected roles (robust JSON passing)
+                if ! command -v jq >/dev/null 2>&1; then
+                    echo -e "${RED}❌ jq is required for robust role selection. Please install jq and try again.${NC}"
+                    exit 1
+                fi
+                ROLES_TO_ADD_JSON=$(printf '%s\n' "${SELECTED_ROLES[@]}" | jq -R . | jq -s .)
+                python3 - "$ROLES_TO_ADD_JSON" <<EOF
 import sys, json, yaml
 with open('.conductor/config.yaml', 'r') as f:
     config = yaml.safe_load(f)
@@ -302,33 +440,37 @@ with open('.conductor/config.yaml', 'w') as f:
     yaml.dump(config, f, default_flow_style=False)
 print(f'✅ Roles added: {", ".join(new_roles)}')
 EOF
-            if [ $? -ne 0 ]; then
-                echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+                if [ $? -ne 0 ]; then
+                    echo -e "${YELLOW}⚠️ Could not update roles automatically.${NC}"
+                fi
+            else
+                echo -e "${YELLOW}⚠️ No valid selections made.${NC}"
             fi
         else
-            echo -e "${YELLOW}⚠️ No valid selections made.${NC}"
+            echo -e "${GREEN}✅ Keeping current role configuration.${NC}"
         fi
-    else
-        echo -e "${GREEN}✅ Keeping current role configuration.${NC}"
     fi
+else
+    echo -e "${GREEN}✅ Existing role configuration preserved.${NC}"
 fi
 
-# Step 6: Seed Demo Tasks
-echo ""
-echo -e "${YELLOW}📝 Creating demo tasks...${NC}"
+# Step 6: Seed Demo Tasks - skip for upgrades
+if [ "$IS_UPGRADE" = false ]; then
+    echo ""
+    echo -e "${YELLOW}📝 Creating demo tasks...${NC}"
 
-# Check if GitHub CLI is available
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    # Check if demo tasks already exist
-    EXISTING_TASKS=$(gh issue list -l 'conductor:task' --limit 10 --json number 2>/dev/null | jq length 2>/dev/null || echo "0")
-    
-    if [ "$EXISTING_TASKS" = "0" ]; then
-        echo "Creating demo GitHub Issues..."
+    # Check if GitHub CLI is available
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+        # Check if demo tasks already exist
+        EXISTING_TASKS=$(gh issue list -l 'conductor:task' --limit 10 --json number 2>/dev/null | jq length 2>/dev/null || echo "0")
         
-        # Create first demo task
-        gh issue create \
-            --title "Add README documentation" \
-            --body "## Description
+        if [ "$EXISTING_TASKS" = "0" ]; then
+            echo "Creating demo GitHub Issues..."
+            
+            # Create first demo task
+            gh issue create \
+                --title "Add README documentation" \
+                --body "## Description
 Create or update README.md with project overview, installation instructions, and usage examples.
 
 ## Success Criteria
@@ -339,15 +481,15 @@ Create or update README.md with project overview, installation instructions, and
 
 ## Files to Modify
 - README.md" \
-            --label "conductor:task" \
-            --label "effort:small" \
-            --label "priority:medium" \
-            2>/dev/null && echo "  ✅ Created demo task: Add README documentation"
-        
-        # Create second demo task
-        gh issue create \
-            --title "Set up CI/CD pipeline" \
-            --body "## Description
+                --label "conductor:task" \
+                --label "effort:small" \
+                --label "priority:medium" \
+                2>/dev/null && echo "  ✅ Created demo task: Add README documentation"
+            
+            # Create second demo task
+            gh issue create \
+                --title "Set up CI/CD pipeline" \
+                --body "## Description
 Create GitHub Actions workflow for automated testing and deployment.
 
 ## Success Criteria
@@ -358,26 +500,34 @@ Create GitHub Actions workflow for automated testing and deployment.
 
 ## Files to Modify
 - .github/workflows/ci.yml" \
-            --label "conductor:task" \
-            --label "effort:medium" \
-            --label "priority:high" \
-            --label "skill:devops" \
-            2>/dev/null && echo "  ✅ Created demo task: Set up CI/CD pipeline"
-        
-        echo -e "${GREEN}✅ Demo tasks created as GitHub Issues${NC}"
+                --label "conductor:task" \
+                --label "effort:medium" \
+                --label "priority:high" \
+                --label "skill:devops" \
+                2>/dev/null && echo "  ✅ Created demo task: Set up CI/CD pipeline"
+            
+            echo -e "${GREEN}✅ Demo tasks created as GitHub Issues${NC}"
+        else
+            echo -e "${GREEN}✅ Tasks already exist (found $EXISTING_TASKS tasks)${NC}"
+        fi
     else
-        echo -e "${GREEN}✅ Tasks already exist (found $EXISTING_TASKS tasks)${NC}"
+        echo -e "${YELLOW}⚠️ GitHub CLI not available or not authenticated.${NC}"
+        echo "To create demo tasks later, run:"
+        echo "  gh auth login"
+        echo "  gh issue create --label 'conductor:task'"
     fi
-else
-    echo -e "${YELLOW}⚠️ GitHub CLI not available or not authenticated.${NC}"
-    echo "To create demo tasks later, run:"
-    echo "  gh auth login"
-    echo "  gh issue create --label 'conductor:task'"
 fi
 
 # Step 7: Auto-commit all generated files (with user consent)
 echo ""
-echo -e "${YELLOW}📝 Committing all generated files to Git...${NC}"
+if [ "$IS_UPGRADE" = true ]; then
+    echo -e "${YELLOW}📝 Committing upgraded files to Git...${NC}"
+    COMMIT_MESSAGE="Upgrade Code Conductor from $CURRENT_VERSION to $NEW_VERSION"
+else
+    echo -e "${YELLOW}📝 Committing all generated files to Git...${NC}"
+    COMMIT_MESSAGE="Initialize Code Conductor setup with configuration"
+fi
+
 git add .conductor .github setup.py requirements.txt pyproject.toml VERSION 2>/dev/null
 if git diff --staged --quiet; then
     echo -e "${GREEN}✅ No changes to commit (files already in Git).${NC}"
@@ -385,23 +535,28 @@ else
     read -p "Commit these changes automatically? [Y/n]: " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-        git commit -m "Initialize Code Conductor setup with configuration" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
+        git commit -m "$COMMIT_MESSAGE" || echo -e "${YELLOW}⚠️ Commit failed.${NC}"
         echo -e "${GREEN}✅ Changes committed.${NC}"
     else
         echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
     fi
 fi
 
-# Step 8: Development Environment Selection
-echo ""
-echo -e "${YELLOW}🖥️  Select your primary development environment:${NC}"
-echo ""
-echo "  1) Conductor (https://conductor.build - macOS only)"
-echo "  2) Terminal (Warp, iTerm2, Windows Terminal, etc.)"
-echo "  3) IDE (Cursor, Cline, Windsurf, VSCode, etc.)"
-echo ""
-read -p "Enter your choice [1-3]: " -n 1 -r ENV_CHOICE
-echo ""
+# Step 8: Development Environment Selection - skip for upgrades
+if [ "$IS_UPGRADE" = false ]; then
+    echo ""
+    echo -e "${YELLOW}🖥️  Select your primary development environment:${NC}"
+    echo ""
+    echo "  1) Conductor (https://conductor.build - macOS only)"
+    echo "  2) Terminal (Warp, iTerm2, Windows Terminal, etc.)"
+    echo "  3) IDE (Cursor, Cline, Windsurf, VSCode, etc.)"
+    echo ""
+    read -p "Enter your choice [1-3]: " -n 1 -r ENV_CHOICE
+    echo ""
+else
+    # Skip environment selection for upgrades
+    ENV_CHOICE="skip"
+fi
 
 case "$ENV_CHOICE" in
     1)
@@ -426,7 +581,7 @@ case "$ENV_CHOICE" in
         echo ""
         echo "3. Start working with this prompt:"
         echo ""
-        echo -e "   ${YELLOW}\"Check available tasks and start working on the highest priority one.\"${NC}"
+        echo -e "   ${YELLOW}\"Ultrathink: What task will create the most value? Find it, claim it, complete it.\"${NC}"
         echo ""
         echo "💡 Pro Tips:"
         echo "   • Conductor will handle task claiming and worktree setup automatically"
@@ -484,6 +639,10 @@ case "$ENV_CHOICE" in
         fi
         ;;
         
+    skip)
+        # Skip environment selection for upgrades
+        ;;
+        
     *)
         echo -e "${RED}❌ Invalid choice. Please run the installer again.${NC}"
         exit 1
@@ -492,9 +651,43 @@ esac
 
 # Note: No cleanup of setup.py, requirements.txt, etc. - leaving them in place for user reference and future use.
 
-# Step 9: Next Steps (contextual based on environment choice)
-if [ "$ENV_CHOICE" != "1" ]; then
-    # Terminal/IDE users get the full command list
+# Step 9: Next Steps (contextual based on installation type and environment choice)
+if [ "$IS_UPGRADE" = true ]; then
+    # Upgrade complete
+    echo ""
+    echo -e "${GREEN}🎉 Upgrade Complete!${NC}"
+    echo "=========================================="
+    echo -e "Updated Code Conductor from ${YELLOW}$CURRENT_VERSION${NC} to ${GREEN}$NEW_VERSION${NC}"
+    echo ""
+    echo "✅ What was updated:"
+    echo "  • Core scripts (.conductor/scripts/)"
+    echo "  • Role definitions (.conductor/roles/)"
+    echo "  • GitHub workflows (.github/workflows/)"
+    echo "  • Setup and configuration tools"
+    echo ""
+    echo "✅ What was preserved:"
+    echo "  • Your project configuration (.conductor/config.yaml)"
+    echo "  • Your CLAUDE.md customizations"
+    echo "  • All existing tasks and work"
+    echo ""
+    echo -e "${YELLOW}What's New:${NC}"
+    echo "  • Enhanced task listing with rich formatting"
+    echo "  • Better status command with health checks"
+    echo "  • Improved error handling and recovery"
+    echo "  • See full changelog: https://github.com/ryanmac/code-conductor/releases"
+    echo ""
+    echo -e "${YELLOW}Quick Commands:${NC}"
+    echo -e "  📋 View tasks:     ${GREEN}./conductor tasks${NC}"
+    echo -e "  📊 Check status:   ${GREEN}./conductor status${NC}"
+    echo -e "  🤖 Start work:     ${GREEN}./conductor start [role]${NC}"
+    echo -e "  🔧 Diagnose:       ${GREEN}./conductor diagnose${NC}"
+    echo ""
+    echo "📚 Documentation: https://github.com/ryanmac/code-conductor"
+    echo "🐛 Report issues: https://github.com/ryanmac/code-conductor/issues"
+    echo ""
+    echo -e "${GREEN}Happy orchestrating! 🎼${NC}"
+elif [ "$ENV_CHOICE" != "1" ]; then
+    # Fresh install - Terminal/IDE users get the full command list
     echo ""
     echo -e "${GREEN}🎉 Installation Successful!${NC}"
     echo "=========================================="
@@ -509,8 +702,8 @@ if [ "$ENV_CHOICE" != "1" ]; then
     echo "  ✅ Demo tasks ready to claim"
     echo ""
     echo -e "${YELLOW}Quick Start Commands:${NC}"
-    echo -e "  📋 View tasks:     ${GREEN}gh issue list -l 'conductor:task' --assignee '!*'${NC}"
-    echo -e "  🤖 Start agent:    ${GREEN}bash .conductor/scripts/bootstrap.sh dev${NC}"
+    echo -e "  📋 View tasks:     ${GREEN}./conductor tasks${NC}"
+    echo -e "  🤖 Start agent:    ${GREEN}./conductor start [role]${NC}"
     echo -e "  📝 Create task:    ${GREEN}gh issue create -l 'conductor:task'${NC}"
     echo -e "  🔧 Adjust config:  ${GREEN}$EDITOR .conductor/config.yaml${NC}"
     echo ""
@@ -521,7 +714,7 @@ if [ "$ENV_CHOICE" != "1" ]; then
     echo ""
     echo -e "${GREEN}Happy orchestrating! 🎼${NC}"
 else
-    # Conductor app users get a simplified message (already shown above)
+    # Fresh install - Conductor app users get a simplified message (already shown above)
     echo ""
     echo -e "${GREEN}🎉 Setup Complete!${NC}"
     echo "=========================================="

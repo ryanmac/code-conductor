@@ -151,6 +151,18 @@ When modifying code-conductor itself:
 
 **IMPORTANT**: Always run from the project root directory where Code Conductor is configured!
 
+### 🚀 The Universal Kickoff Prompt
+
+Start every Code Conductor session with:
+
+```
+Ultrathink: What task will create the most value? Find it, claim it, complete it.
+```
+
+This prompt triggers deep analysis, focuses on value, and guides you through the complete workflow.
+
+### Essential Commands
+
 ```bash
 # Start work as your role (from project root)
 ./conductor start [role]
@@ -209,10 +221,75 @@ When working in a project with Code Conductor:
 ### Full Autonomy Principles
 
 - **No human gates**: Tasks should be completable end-to-end without human intervention
-- **Auto-generate tasks**: When running init tasks, use `python .conductor/scripts/generate-tasks-from-map.py --auto`
+- **Auto-generate tasks**: When running init tasks, use `python .conductor/scripts/generate-tasks-from-map.py --auto` (if available)
 - **Self-validation**: Agents validate their own work before marking tasks complete
 - **Continuous flow**: Complete tasks, create PRs, and move to the next task without pausing
 - **Trust the process**: The system has guardrails; agents should proceed confidently
+
+### Creating New Tasks - IMPORTANT Duplicate Prevention
+
+**CRITICAL**: Before creating any new GitHub issue, you MUST check for duplicates:
+
+1. **Search existing issues thoroughly**:
+   ```bash
+   # Check all open conductor tasks
+   gh issue list --label "conductor:task" --state open --limit 100
+   
+   # Search by keywords
+   gh issue list --search "your keywords here" --state all
+   
+   # Check closed issues too
+   gh issue list --label "conductor:task" --state closed --limit 50
+   ```
+
+2. **Analyze similarity**:
+   - Compare titles for semantic similarity
+   - Check issue body content for overlapping requirements
+   - Look for issues that might encompass your proposed task
+
+3. **Only create if truly unique**:
+   - No existing issue covers the same functionality
+   - Not a subset of an existing larger task
+   - Adds distinct value to the project
+
+4. **If similar issue exists**:
+   - Add a comment to the existing issue with additional details
+   - Consider if the existing issue should be expanded
+   - Do NOT create a duplicate
+
+Example duplicate check:
+```bash
+# Before creating "Add user authentication"
+gh issue list --search "auth OR authentication OR login" --state all
+
+# Before creating "Improve error handling"  
+gh issue list --search "error OR exception OR handling" --state all
+
+# Review the results carefully before proceeding
+```
+
+### Managing Your Todo List - Prevent Internal Duplicates
+
+**IMPORTANT**: Also maintain a clean internal todo list:
+
+1. **Before adding todos**: Check if similar tasks already exist in your list
+2. **Consolidate related items**: Instead of multiple similar todos, create one comprehensive task
+3. **Clean up completed work**: Mark todos as completed immediately after finishing
+4. **Remove obsolete items**: If an external issue is closed or no longer relevant, remove related todos
+
+Example todo management:
+```
+BAD:
+- Add login functionality
+- Implement user authentication  
+- Create auth system
+- Add password reset
+
+GOOD:
+- Implement complete authentication system (login, logout, password reset)
+```
+
+This prevents both external (GitHub issues) and internal (todo list) duplication.
 
 ## GitHub Authentication Setup
 

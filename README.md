@@ -22,6 +22,18 @@
 
 *"From weekend side project to shipping product in weeks, not months."*
 
+## 🚀 **NEW: Let Claude Code Do Everything For You**
+
+**Skip the manual setup.** Paste this into Claude Code and watch the magic happen:
+
+```
+I need to move faster. Install Code Conductor into this project so we can run multiple Claude Code agents at once.
+
+Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+```
+
+Claude Code will handle everything—installation, configuration, even creating your first task roadmap. **[See more power prompts →](CLAUDE_CODE_PROMPT.md)**
+
 ## 🎯 **90% Stack Coverage - Your Tech is Supported**
 
 Code Conductor automatically detects and configures for the most popular technology stacks:
@@ -117,6 +129,50 @@ python setup.py
 
 **That's it.** Now create a GitHub Issue with `conductor:task` label, launch an agent via [Conductor.build](https://conductor.build) (macOS only as of 2024-07-22) or terminal workflow (all platforms), and watch it work.
 
+## 🔄 **Upgrading Code Conductor**
+
+**Keep your Code Conductor installation up-to-date with the latest features!**
+
+### **Automatic Upgrade Detection**
+
+Simply run the same installation command in your project:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+```
+
+The installer will:
+- ✅ Detect your existing installation and version
+- ✅ Prompt to upgrade, reinstall, or cancel
+- ✅ Preserve your configurations and customizations
+- ✅ Update only core scripts and workflows
+- ✅ Show what's new after upgrading
+
+### **What Gets Updated**
+- `.conductor/scripts/` - Core conductor commands
+- `.conductor/roles/` - Latest role definitions
+- `.github/workflows/` - Updated GitHub Actions
+- `setup.py`, `requirements.txt` - Dependency updates
+
+### **What Gets Preserved**
+- `.conductor/config.yaml` - Your project configuration
+- `CLAUDE.md` - Your custom AI instructions
+- All existing tasks and work in progress
+- Git worktrees and agent states
+
+### **Using Claude Code for Upgrades**
+
+Want to upgrade in seconds? Copy this power prompt into Claude Code:
+
+```
+We need the latest Code Conductor features. Upgrade our installation to unlock enhanced task management and duplicate prevention.
+
+Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+Choose option 1 (Upgrade) and verify with ./conductor status
+```
+
+**🚀 See [CLAUDE_CODE_PROMPT.md](CLAUDE_CODE_PROMPT.md) for game-changing automation prompts** that transform your project into an agentic development powerhouse.
+
 ## 🤖 **AI Agent Quick Start**
 
 **NEW: AI-first experience with automatic onboarding!**
@@ -134,6 +190,22 @@ This single command:
 - ✅ Claims the best matching task automatically
 - ✅ Creates an isolated git worktree
 - ✅ Provides all context needed to start
+
+### The Perfect Kickoff Prompt
+
+Start any Claude Code session with this value-focused prompt:
+
+```
+Ultrathink: What task will create the most value? Find it, claim it, complete it.
+```
+
+This prompt:
+- Triggers deep analysis with "ultrathink"
+- Focuses on value creation over busy work
+- Provides clear action steps: find → claim → complete
+- Works with any role or project type
+
+**Pro tip**: Add this to your text expander (e.g., `;ustart`) for instant agent activation.
 
 ### Example AI Agent Session
 
@@ -490,10 +562,13 @@ python .conductor/scripts/validate-config.py
 ## Best Practices
 
 1. **Task Design**: Make tasks self-contained with clear specs
-2. **Role Selection**: Start with dev-only, add specializations as needed
-3. **Regular Cleanup**: Let automation handle stale work
-4. **Monitor Health**: Check status issue regularly
-5. **Incremental Adoption**: Start small, expand as comfortable
+2. **Duplicate Prevention**: Check existing issues before creating new ones - use `./conductor check-dup "title"`
+3. **Role Selection**: Start with dev-only, add specializations as needed
+4. **Regular Cleanup**: Let automation handle stale work
+5. **Monitor Health**: Check status issue regularly
+6. **Incremental Adoption**: Start small, expand as comfortable
+
+See also: [Duplicate Prevention Guide](docs/DUPLICATE_PREVENTION.md) for detailed strategies
 
 ## Development Setup
 
