@@ -1,112 +1,155 @@
-# Claude Code Setup Prompt for Code Conductor
+# 🚀 Upgrade Your Project to Agentic Development
 
-Copy and paste the following prompt into Claude Code to automatically set up or upgrade Code Conductor in your project:
+**Transform your development workflow in 60 seconds.** Paste these prompts into Claude Code to enable multiple AI agents working on your codebase simultaneously—like having an entire dev team at your command.
 
 ---
 
-## For New Installation:
+## 🎯 For New Projects: Ship 10x Faster
 
 ```
-I need you to set up Code Conductor in this project to help coordinate multiple AI agents working on the codebase. 
+I need to move faster. Install Code Conductor into this project so we can run multiple Claude Code agents at once.
 
-Please:
-1. Run the installation command: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
-2. When prompted, choose the appropriate options based on the project
-3. After installation completes, run the initial discovery task: ./conductor start dev
-4. When you claim the [INIT] task, thoroughly explore the project documentation and create a comprehensive documentation map
-5. After completing the [INIT] task, use ./conductor complete to submit your work
+This will transform our development workflow from single-threaded to massively parallel. Instead of one AI doing tasks sequentially, we'll have specialized agents working simultaneously—frontend, backend, testing, DevOps—all coordinated through GitHub Issues.
 
-This will set up automated task management, AI code reviews, and agent coordination for the project.
+Please install Code Conductor now:
+1. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+2. When prompted, select options that match our tech stack
+3. After installation, run: ./conductor start dev
+4. Complete the [INIT] task to map our entire codebase
+5. Submit with: ./conductor complete
+
+Within minutes, we'll have automated task management, AI code reviews on every PR, and the ability to parallelize development across multiple agents. This is how modern teams ship faster.
 ```
 
-## For Upgrading Existing Installation:
+## 🔄 For Existing Projects: Upgrade to Latest Features
 
 ```
-I need you to upgrade Code Conductor to the latest version in this project.
+We need the latest Code Conductor features. Upgrade our installation to unlock enhanced task management and duplicate prevention.
 
-Please:
-1. Run the upgrade command: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
-2. When prompted about the existing installation, choose option 1 (Upgrade)
-3. Review the upgrade summary to see what's new
-4. After upgrade completes, run: ./conductor status to verify everything is working
-5. If there are any issues, run: ./conductor diagnose
+Our current setup is good, but the latest version includes:
+- Rich task visualization with priority indicators
+- Smart duplicate detection before creating issues  
+- Seamless upgrade process that preserves all our work
+- Better error recovery and diagnostics
 
-This will update all core scripts while preserving your configurations and existing work.
+Upgrade now:
+1. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+2. Choose option 1 (Upgrade) when prompted
+3. Review what's new in the upgrade summary
+4. Verify with: ./conductor status
+5. If any issues: ./conductor diagnose
+
+Zero downtime. Zero configuration loss. Just enhanced capabilities.
 ```
 
-## For Complete Automation (New Projects):
+## 🚀 The Full Automation Experience
 
 ```
-I want you to fully set up Code Conductor in this project and complete the initial documentation discovery task automatically.
+Time to revolutionize how we build. Set up Code Conductor and create a complete development roadmap—all automatically.
 
-Execute these commands in sequence:
+I want you to:
+1. Install the agentic development framework
+2. Analyze our entire codebase 
+3. Generate a comprehensive task list
+4. Prepare everything for parallel agent execution
+
+Execute this transformation:
 
 # Install Code Conductor
 bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
 
-# For all prompts during installation:
-- If asked about existing installation: Choose option 2 (Reinstall) if needed
-- For copying examples: Press Enter (Yes)
-- For agent roles: Type numbers for roles relevant to this project, then 0
-- For demo tasks: Press n (No - we'll create real tasks)
-- For auto-commit: Press Enter (Yes)
-- For environment: Choose 3 (IDE)
-- For starting dev agent: Press Enter (Yes)
+# Installation choices:
+- Existing installation? Choose 2 (Reinstall)
+- Copy examples? Press Enter (Yes)
+- Agent roles? Select all that apply to our stack, then 0
+- Demo tasks? Type n (No - we'll generate real ones)
+- Auto-commit? Press Enter (Yes)
+- Environment? Choose 3 (IDE)
+- Start agent? Press Enter (Yes)
 
-After installation completes and the dev agent starts:
-1. You should automatically claim the [INIT] discovery task
-2. Thoroughly explore all documentation, README files, docs folders, wikis
-3. Create a comprehensive .conductor/documentation-map.yaml with your findings
-4. Include proposed development tasks based on the project's needs
-5. Run ./conductor complete to submit the documentation map
+After installation:
+1. Claim the [INIT] discovery task automatically
+2. Deep-dive into all docs, READMEs, architecture
+3. Generate .conductor/documentation-map.yaml
+4. Create actionable development tasks
+5. Submit with: ./conductor complete
 
-This will fully set up the project with Code Conductor and create an actionable task list for development.
+In under 5 minutes, we'll have a fully mapped codebase with prioritized tasks ready for parallel execution. This is the future of development.
 ```
 
-## For Specific Environments:
+## 💻 Environment-Specific Power-Ups
 
-### VSCode/Cursor/Windsurf Users:
+### For VSCode/Cursor/Windsurf Warriors:
 ```
-Set up Code Conductor for IDE-based development. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh) and select option 3 (IDE) when prompted for environment. After setup, use ./conductor start [role] to begin work on tasks.
-```
+Level up our IDE workflow with agentic development. Install Code Conductor to enable parallel AI agents in our familiar environment.
 
-### Terminal/Warp Users:
-```
-Set up Code Conductor for terminal-based development. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh) and select option 2 (Terminal) when prompted for environment. After setup, use ./conductor start [role] to begin work on tasks.
-```
+Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+Choose: Option 3 (IDE) for seamless integration
+Launch: ./conductor start [role] to unleash specialized agents
 
-### macOS Conductor App Users:
-```
-Set up Code Conductor for the Conductor app. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh) and select option 1 (Conductor) when prompted for environment. After setup, open the Conductor app and add this project as a workspace.
+Transform your IDE into a multi-agent powerhouse.
 ```
 
-## Troubleshooting Prompt:
-
+### For Terminal Velocity (Warp/iTerm2/Terminal):
 ```
-Code Conductor seems to have issues. Please diagnose and fix:
+Command-line mastery meets agentic development. Set up Code Conductor for terminal-based parallel execution.
 
-1. Run: ./conductor diagnose
-2. Fix any reported issues:
-   - If GitHub CLI not authenticated: Run gh auth login
-   - If not in git repo: Ensure you're in the project root
-   - If missing config: Re-run the installer
-3. Run: ./conductor recover if there are worktree or task state issues
-4. Check recent changes: git log .conductor/ --oneline -10
-5. If all else fails, run the installer again and choose "Upgrade" to refresh the installation
+Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)  
+Choose: Option 2 (Terminal) for CLI excellence
+Launch: ./conductor start [role] to deploy your agent army
 
-Report the specific error messages you see so I can help resolve them.
+Because the best interface is no interface—just results.
 ```
 
-## Quick Task Management:
+### For macOS Conductor App Elite:
+```
+Experience the future of development with the native Conductor app. One-click agent orchestration.
+
+Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+Choose: Option 1 (Conductor) for the premium experience  
+Launch: Open Conductor.app and add this project as a workspace
+
+Visual agent management. Real-time progress. Pure productivity.
+```
+
+## 🔧 Recovery Mode: When Things Go Sideways
 
 ```
-Help me work on Code Conductor tasks:
+Something's not right. Get Code Conductor back on track—fast.
 
-1. Show available tasks: ./conductor tasks
-2. Start work on highest priority: ./conductor start dev
-3. Update progress: ./conductor progress (then describe what you've done)
-4. Complete current task: ./conductor complete
-5. Check status anytime: ./conductor status
+I need you to diagnose and fix our Code Conductor installation. This framework is critical for our multi-agent workflow, so let's resolve this quickly:
 
-Focus on tasks that match your capabilities and complete them autonomously.
+1. Diagnose: ./conductor diagnose
+2. Apply fixes based on the output:
+   - Auth issues? Run: gh auth login
+   - Wrong directory? Navigate to project root
+   - Missing config? Re-run the installer
+3. Reset if needed: ./conductor recover
+4. Check history: git log .conductor/ --oneline -10
+5. Nuclear option: Re-run installer, choose "Upgrade"
+
+Show me the exact errors so we can get back to parallel development immediately.
 ```
+
+## ⚡ Instant Productivity Mode
+
+```
+Put me to work. I'm ready to claim tasks and ship code using Code Conductor.
+
+Quick commands for maximum velocity:
+- ./conductor tasks - Show me what needs building
+- ./conductor start dev - Claim the highest priority task
+- ./conductor progress - I'll update you on my progress
+- ./conductor complete - Ship it and move to the next task
+- ./conductor status - Check my current assignment
+
+I'll work autonomously, check for duplicates before creating issues, and maintain high code quality. Let's build something amazing.
+```
+
+## 🎯 The Bottom Line
+
+**Code Conductor = Parallel Development = Ship Faster**
+
+Stop waiting for sequential task completion. Start orchestrating multiple AI agents. Transform your development velocity today.
+
+*From side project to production in days, not months.*

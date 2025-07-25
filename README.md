@@ -22,6 +22,18 @@
 
 *"From weekend side project to shipping product in weeks, not months."*
 
+## 🚀 **NEW: Let Claude Code Do Everything For You**
+
+**Skip the manual setup.** Paste this into Claude Code and watch the magic happen:
+
+```
+I need to move faster. Install Code Conductor into this project so we can run multiple Claude Code agents at once.
+
+Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+```
+
+Claude Code will handle everything—installation, configuration, even creating your first task roadmap. **[See more power prompts →](CLAUDE_CODE_PROMPT.md)**
+
 ## 🎯 **90% Stack Coverage - Your Tech is Supported**
 
 Code Conductor automatically detects and configures for the most popular technology stacks:
@@ -150,18 +162,16 @@ The installer will:
 
 ### **Using Claude Code for Upgrades**
 
-Copy this prompt into Claude Code:
+Want to upgrade in seconds? Copy this power prompt into Claude Code:
 
 ```
-I need you to upgrade Code Conductor to the latest version in this project.
+We need the latest Code Conductor features. Upgrade our installation to unlock enhanced task management and duplicate prevention.
 
-Please:
-1. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
-2. When prompted about existing installation, choose option 1 (Upgrade)
-3. After upgrade completes, run: ./conductor status to verify everything is working
+Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+Choose option 1 (Upgrade) and verify with ./conductor status
 ```
 
-See [CLAUDE_CODE_PROMPT.md](CLAUDE_CODE_PROMPT.md) for more automation prompts.
+**🚀 See [CLAUDE_CODE_PROMPT.md](CLAUDE_CODE_PROMPT.md) for game-changing automation prompts** that transform your project into an agentic development powerhouse.
 
 ## 🤖 **AI Agent Quick Start**
 
