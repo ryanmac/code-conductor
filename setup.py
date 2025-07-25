@@ -10,18 +10,35 @@ import logging
 from pathlib import Path
 
 # Ensure the .conductor/setup package is in the Python path
-sys.path.insert(0, str(Path(__file__).parent / ".conductor"))
-
-# noqa: E402 - imports after sys.path modification are necessary
-from setup.detector import TechnologyDetector  # noqa: E402
-from setup.config_manager import ConfigurationManager  # noqa: E402
-from setup.file_generators.config_files import ConfigFileGenerator  # noqa: E402
-from setup.file_generators.role_files import RoleFileGenerator  # noqa: E402
-from setup.file_generators.workflow_files import WorkflowFileGenerator  # noqa: E402
-from setup.file_generators.script_files import ScriptFileGenerator  # noqa: E402
-from setup.github_integration import GitHubIntegration  # noqa: E402
-from setup.discovery_task import DiscoveryTaskCreator  # noqa: E402
-from setup.validator import SetupValidator  # noqa: E402
+conductor_path = Path(__file__).parent / ".conductor"
+if conductor_path.exists():
+    sys.path.insert(0, str(conductor_path))
+    try:
+        # Import from the conductor setup package
+        from conductor_setup.detector import TechnologyDetector  # noqa: E402
+        from conductor_setup.config_manager import ConfigurationManager  # noqa: E402
+        from conductor_setup.file_generators.config_files import ConfigFileGenerator  # noqa: E402
+        from conductor_setup.file_generators.role_files import RoleFileGenerator  # noqa: E402
+        from conductor_setup.file_generators.workflow_files import WorkflowFileGenerator  # noqa: E402
+        from conductor_setup.file_generators.script_files import ScriptFileGenerator  # noqa: E402
+        from conductor_setup.github_integration import GitHubIntegration  # noqa: E402
+        from conductor_setup.discovery_task import DiscoveryTaskCreator  # noqa: E402
+        from conductor_setup.validator import SetupValidator  # noqa: E402
+    except ImportError as e:
+        # This might happen in test environments
+        if __name__ == "__main__":
+            print(f"Error: Could not import setup modules: {e}")
+            print("Please ensure the .conductor/setup package is properly configured.")
+            sys.exit(1)
+        else:
+            # Re-raise for tests to handle
+            raise
+else:
+    # For testing or when .conductor doesn't exist yet
+    if __name__ == "__main__":
+        print("Error: .conductor/setup package not found")
+        print("This script requires the Code Conductor setup modules.")
+        sys.exit(1)
 
 
 class ConductorSetup:
