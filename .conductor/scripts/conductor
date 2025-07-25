@@ -370,33 +370,87 @@ Closes #$TASK_ID" \
             TASK_ID=$(cat .conductor/.current-task)
             WORKTREE=$(cat .conductor/.current-worktree 2>/dev/null || echo "unknown")
             
-            TASK_INFO=$(gh issue view "$TASK_ID" --json title,state,labels)
-            TASK_TITLE=$(echo "$TASK_INFO" | jq -r '.title')
-            TASK_STATE=$(echo "$TASK_INFO" | jq -r '.state')
-            
-            echo "Current Task:"
-            echo "  📌 #$TASK_ID: $TASK_TITLE"
-            echo "  📁 Worktree: $WORKTREE"
-            echo "  🏷️  State: $TASK_STATE"
-            echo ""
-            echo "Commands:"
-            echo "  ./conductor complete - Finish this task"
-            echo "  cd $WORKTREE - Go to work directory"
-        else
-            echo "No active task."
-            echo ""
-            echo "Available tasks:"
-            if AVAILABLE=$(gh issue list \
-                --label "conductor:task" \
-                --state open \
-                --json number,title,assignees \
-                --jq '.[] | select(.assignees | length == 0) | "  #\(.number): \(.title)"' 2>&1); then
-                echo "$AVAILABLE" | head -5
+            TASK_INFO=$(gh issue view "$TASK_ID" --json title,state,labels,body 2>/dev/null)
+            if [ $? -eq 0 ] && [ -n "$TASK_INFO" ]; then
+                TASK_TITLE=$(echo "$TASK_INFO" | jq -r '.title')
+                TASK_STATE=$(echo "$TASK_INFO" | jq -r '.state')
+                TASK_LABELS=$(echo "$TASK_INFO" | jq -r '.labels | map(.name) | join(", ")')
+                
+                echo "🎯 Current Task:"
+                echo "  📌 #$TASK_ID: $TASK_TITLE"
+                echo "  📁 Worktree: $WORKTREE"
+                echo "  🏷️  Labels: $TASK_LABELS"
+                echo "  📊 State: $TASK_STATE"
+                echo ""
+                echo "📝 Commands:"
+                echo "  ./conductor progress  - Update task progress"
+                echo "  ./conductor complete  - Finish this task"
+                echo "  cd $WORKTREE        - Go to work directory"
             else
-                echo "  (Unable to fetch tasks)"
+                echo "⚠️  Current task #$TASK_ID (unable to fetch details)"
+                echo "  📁 Worktree: $WORKTREE"
+            fi
+        else
+            echo "🚀 No active task"
+            echo ""
+            
+            # Run health check
+            echo "🏥 Health Check:"
+            if python .conductor/scripts/health-check.py 2>/dev/null; then
+                echo "  ✅ All agents healthy"
+            else
+                echo "  ⚠️  Health check unavailable"
             fi
             echo ""
-            echo "Start with: ./conductor start $ROLE"
+            
+            echo "📋 Available Tasks:"
+            echo "-------------------"
+            
+            # Fetch tasks with better error handling
+            TASKS=$(gh issue list \
+                --label "conductor:task" \
+                --state open \
+                --json number,title,labels,assignees \
+                --limit 10 2>/dev/null)
+            
+            if [ $? -eq 0 ] && [ -n "$TASKS" ] && [ "$TASKS" != "[]" ]; then
+                UNASSIGNED=$(echo "$TASKS" | jq -c '.[] | select(.assignees | length == 0)')
+                
+                if [ -n "$UNASSIGNED" ]; then
+                    COUNT=0
+                    echo "$UNASSIGNED" | while IFS= read -r task && [ $COUNT -lt 5 ]; do
+                        NUMBER=$(echo "$task" | jq -r '.number')
+                        TITLE=$(echo "$task" | jq -r '.title')
+                        LABELS=$(echo "$task" | jq -r '.labels | map(.name)')
+                        
+                        # Priority indicator
+                        if echo "$LABELS" | grep -q "priority:critical"; then
+                            PRIORITY="🔴"
+                        elif echo "$LABELS" | grep -q "priority:high"; then
+                            PRIORITY="🟠"
+                        elif echo "$LABELS" | grep -q "priority:medium"; then
+                            PRIORITY="🟡"
+                        else
+                            PRIORITY="🟢"
+                        fi
+                        
+                        echo "  $PRIORITY #$NUMBER: $TITLE"
+                        COUNT=$((COUNT + 1))
+                    done
+                    
+                    TOTAL_UNASSIGNED=$(echo "$UNASSIGNED" | grep -c '^{')
+                    if [ "$TOTAL_UNASSIGNED" -gt 5 ]; then
+                        echo "  ... and $((TOTAL_UNASSIGNED - 5)) more"
+                    fi
+                else
+                    echo "  No unassigned tasks available"
+                fi
+            else
+                echo "  Unable to fetch tasks"
+                echo "  Run './conductor tasks' for detailed view"
+            fi
+            echo ""
+            echo "🚀 Start with: ./conductor start $ROLE"
         fi
         ;;
         
@@ -418,42 +472,103 @@ Closes #$TASK_ID" \
         
         echo ""
         
-        # Debug: Show raw output first (commented out for production)
-        # echo "Debug: Raw GitHub CLI output:"
-        # gh issue list -l 'conductor:task' --state open
-        # echo ""
-        
-        # Use a simpler approach that works more reliably
-        echo "Unassigned tasks:"
-        echo ""
-        
-        # Get all open conductor:task issues and filter unassigned ones
-        TASKS=$(gh issue list \
+        # Get all open conductor:task issues
+        echo "🔍 Fetching tasks from GitHub..."
+        if ! TASKS=$(gh issue list \
             --label "conductor:task" \
             --state open \
             --json number,title,labels,assignees,createdAt \
-            --limit 50)
+            --limit 100 2>/dev/null); then
+            echo "❌ Error fetching tasks from GitHub"
+            echo "   Make sure you're authenticated: gh auth status"
+            exit 1
+        fi
         
-        if [ -z "$TASKS" ]; then
-            echo "No tasks found."
+        if [ -z "$TASKS" ] || [ "$TASKS" = "[]" ]; then
+            echo ""
+            echo "📭 No tasks found."
             echo ""
             echo "💡 Create a new task with: gh issue create -l 'conductor:task'"
         else
-            # Parse tasks and show unassigned ones
-            UNASSIGNED=$(echo "$TASKS" | jq -r '.[] | select(.assignees | length == 0) | "[#\(.number)] \(.title)\n    Labels: \(.labels | map(.name) | join(", "))\n    Created: \(.createdAt[:10])\n"')
+            # Count tasks
+            TOTAL_COUNT=$(echo "$TASKS" | jq 'length')
+            UNASSIGNED_COUNT=$(echo "$TASKS" | jq '[.[] | select(.assignees | length == 0)] | length')
+            ASSIGNED_COUNT=$(echo "$TASKS" | jq '[.[] | select(.assignees | length > 0)] | length')
             
-            if [ -z "$UNASSIGNED" ]; then
-                echo "No unassigned tasks available."
-                echo ""
-                echo "All tasks assigned:"
-                echo "$TASKS" | jq -r '.[] | select(.assignees | length > 0) | "  [#\(.number)] \(.title) (assigned to: \(.assignees | map(.login) | join(", ")))"'
+            echo ""
+            echo "📊 Task Summary: $TOTAL_COUNT total ($UNASSIGNED_COUNT unassigned, $ASSIGNED_COUNT assigned)"
+            echo ""
+            
+            # Show unassigned tasks with rich formatting
+            echo "🆓 Unassigned Tasks:"
+            echo "-------------------"
+            
+            UNASSIGNED_TASKS=$(echo "$TASKS" | jq -c '.[] | select(.assignees | length == 0)')
+            
+            if [ -z "$UNASSIGNED_TASKS" ]; then
+                echo "   None available - all tasks are assigned!"
             else
-                echo "$UNASSIGNED"
+                echo "$UNASSIGNED_TASKS" | while IFS= read -r task; do
+                    NUMBER=$(echo "$task" | jq -r '.number')
+                    TITLE=$(echo "$task" | jq -r '.title')
+                    LABELS=$(echo "$task" | jq -r '.labels | map(.name) | join(", ")')
+                    CREATED=$(echo "$task" | jq -r '.createdAt[:10]')
+                    
+                    # Color code priority
+                    if echo "$LABELS" | grep -q "priority:critical"; then
+                        PRIORITY_ICON="🔴"
+                    elif echo "$LABELS" | grep -q "priority:high"; then
+                        PRIORITY_ICON="🟠"
+                    elif echo "$LABELS" | grep -q "priority:medium"; then
+                        PRIORITY_ICON="🟡"
+                    else
+                        PRIORITY_ICON="🟢"
+                    fi
+                    
+                    # Effort indicator
+                    if echo "$LABELS" | grep -q "effort:large"; then
+                        EFFORT_ICON="📏 L"
+                    elif echo "$LABELS" | grep -q "effort:medium"; then
+                        EFFORT_ICON="📐 M"
+                    else
+                        EFFORT_ICON="📌 S"
+                    fi
+                    
+                    echo ""
+                    echo "   $PRIORITY_ICON #$NUMBER: $TITLE"
+                    echo "      📅 Created: $CREATED | $EFFORT_ICON"
+                    echo "      🏷️  $LABELS"
+                done
+            fi
+            
+            echo ""
+            echo "👥 Assigned Tasks:"
+            echo "-----------------"
+            
+            ASSIGNED_TASKS=$(echo "$TASKS" | jq -c '.[] | select(.assignees | length > 0)')
+            
+            if [ -z "$ASSIGNED_TASKS" ]; then
+                echo "   None"
+            else
+                echo "$ASSIGNED_TASKS" | while IFS= read -r task; do
+                    NUMBER=$(echo "$task" | jq -r '.number')
+                    TITLE=$(echo "$task" | jq -r '.title')
+                    ASSIGNEES=$(echo "$task" | jq -r '.assignees | map(.login) | join(", ")')
+                    
+                    echo "   #$NUMBER: $TITLE (👤 $ASSIGNEES)"
+                done | head -5
+                
+                if [ "$ASSIGNED_COUNT" -gt 5 ]; then
+                    echo "   ... and $((ASSIGNED_COUNT - 5)) more"
+                fi
             fi
         fi
         
         echo ""
-        echo "💡 View all tasks: gh issue list -l 'conductor:task'"
+        echo "💡 Commands:"
+        echo "   ./conductor start [role]  - Claim and start a task"
+        echo "   gh issue list -l 'conductor:task' - View all in GitHub"
+        echo "   gh issue create -l 'conductor:task' - Create new task"
         ;;
         
     progress|p)
