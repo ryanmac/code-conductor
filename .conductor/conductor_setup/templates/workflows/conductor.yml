@@ -1,0 +1,73 @@
+name: Conductor Orchestration
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes for health checks
+  workflow_dispatch:
+  issues:
+    types: [opened, labeled, closed]
+  issue_comment:
+    types: [created]
+
+jobs:
+  format-task-issue:
+    if: github.event_name == 'issues' && github.event.action == 'opened' && !contains(github.event.issue.labels.*.name, 'conductor:task')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Check if issue should be a task
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Auto-detect potential tasks based on keywords
+          if echo "${{ github.event.issue.title }}" | grep -iE "implement|add|fix|update|create|refactor"; then
+            gh issue edit ${{ github.event.issue.number }} --add-label "conductor:task"
+            python .conductor/scripts/issue-to-task.py ${{ github.event.issue.number }}
+          fi
+
+  health-check:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+
+      - name: Run health check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .conductor/scripts/health-check.py
+
+      - name: Generate status summary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .conductor/scripts/generate-summary.py >> $GITHUB_STEP_SUMMARY
+
+  cleanup-stale:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Clean up stale work
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .conductor/scripts/cleanup-stale.py
