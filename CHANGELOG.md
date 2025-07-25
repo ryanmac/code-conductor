@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial placeholder for future changes
 
+## [0.1.3] - 2025-01-25
+
+### Fixed
+- 🧹 **Code quality improvements**: Comprehensive cleanup for consistent standards
+  - Applied black formatting to all Python files for consistent code style
+  - Removed trailing whitespace from all source files
+  - Ensured all Python files end with proper newlines
+  - Fixed import order violations (E402) in test files
+  - Added noqa comments for unavoidable import order issues
+  - All tests pass (17/17) with zero linting violations
+
 ## [0.1.2] - 2025-01-25
 
 ### Fixed
