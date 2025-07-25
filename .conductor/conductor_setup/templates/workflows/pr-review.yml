@@ -1,0 +1,55 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created, edited]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  ai-review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    # Skip if PR is from a bot or if skip-review label is present
+    if: |
+      github.event.pull_request && 
+      github.event.pull_request.user.type != 'Bot' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-review')
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml requests
+      
+      - name: Run AI Code Review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Simple AI review trigger
+          echo "🔍 AI Code Review triggered for PR #$PR_NUMBER"
+          
+          # Check if code-reviewer role exists
+          if [ -f ".conductor/roles/code-reviewer.md" ]; then
+            echo "✅ Code reviewer role found"
+            # The actual review would be done by the code-reviewer agent
+            # This workflow just ensures the infrastructure is in place
+          else
+            echo "⚠️ Code reviewer role not configured"
+          fi

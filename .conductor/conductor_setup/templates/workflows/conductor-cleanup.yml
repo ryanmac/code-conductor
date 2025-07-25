@@ -1,0 +1,35 @@
+name: Conductor Cleanup
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  cleanup-stale-work:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+
+      - name: Clean up abandoned worktrees
+        run: |
+          python .conductor/scripts/cleanup-worktrees.py
+
+      - name: Archive completed tasks
+        run: |
+          python .conductor/scripts/archive-completed.py
+
+      - name: Commit cleanup changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: '🧹 Cleanup stale work and archive completed tasks'
+          file_pattern: '.conductor/*.json'
