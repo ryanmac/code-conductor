@@ -40,7 +40,7 @@ class ConfigurationManager:
 
         # Fallback to interactive or auto mode
         if self.auto_mode:
-            self._auto_configure(detected_stack)
+            self._auto_configure(detected_stack, enhanced_stack)
         else:
             interactive = InteractiveConfigurator(self.project_root, self.debug)
             self.config = interactive.configure(detected_stack)
@@ -128,7 +128,11 @@ class ConfigurationManager:
 
         return "docs"  # Default
 
-    def _auto_configure(self, detected_stack: List[Dict[str, Any]]):
+    def _auto_configure(
+        self,
+        detected_stack: List[Dict[str, Any]],
+        enhanced_stack: Optional[Dict[str, Any]] = None,
+    ):
         """Auto-configure based on detected stack"""
         print("\n🤖 Auto-configuring based on detected technology stack...")
 
@@ -147,19 +151,91 @@ class ConfigurationManager:
             else:
                 stack_flat.append(item)
 
-        # Add specialized roles
+        # Add specialized roles based on detected technologies
         stack_str = str(stack_flat).lower()
-        if any(tech in stack_str for tech in ["react", "vue", "angular", "svelte"]):
-            roles.append("frontend")
-        if any(
-            tech in stack_str
-            for tech in ["django", "flask", "fastapi", "express", "rails"]
-        ):
-            roles.append("backend")
-        if any(tech in stack_str for tech in ["ios", "android", "react-native"]):
-            roles.append("mobile")
-        if any(tech in stack_str for tech in ["tensorflow", "pytorch", "scikit-learn"]):
-            roles.append("ml-engineer")
+
+        # Use enhanced_stack if available for better detection
+        if enhanced_stack:
+            # Check frameworks
+            frameworks = enhanced_stack.get("frameworks", [])
+            ui_libraries = enhanced_stack.get("ui_libraries", [])
+
+            # Frontend roles
+            if any(
+                lib in ui_libraries for lib in ["react", "vue", "angular", "svelte"]
+            ) or any(
+                tech in stack_str for tech in ["react", "vue", "angular", "svelte"]
+            ):
+                roles.append("frontend")
+
+            # Backend roles
+            if any(
+                fw in frameworks
+                for fw in [
+                    "django",
+                    "flask",
+                    "fastapi",
+                    "express",
+                    "rails",
+                    "gin",
+                    "fiber",
+                ]
+            ) or any(
+                tech in stack_str
+                for tech in ["django", "flask", "fastapi", "express", "rails"]
+            ):
+                roles.append("backend")
+
+            # Mobile roles
+            if any(
+                tech in stack_str
+                for tech in ["ios", "android", "react-native", "flutter", "dart"]
+            ):
+                roles.append("mobile")
+
+            # ML roles
+            if any(
+                fw in frameworks
+                for fw in ["tensorflow", "pytorch", "scikit-learn", "pandas", "jupyter"]
+            ) or any(
+                tech in stack_str for tech in ["tensorflow", "pytorch", "scikit-learn"]
+            ):
+                roles.append("ml-engineer")
+                roles.append("data")
+
+            # DevOps roles based on special patterns
+            special_patterns = enhanced_stack.get("special_patterns", {})
+            if (
+                special_patterns.get("has_docker")
+                or special_patterns.get("has_docker_compose")
+                or special_patterns.get("has_kubernetes")
+                or special_patterns.get("iac")
+            ):
+                roles.append("devops")
+
+            # Security roles for certain frameworks
+            if "django" in frameworks or "rails" in frameworks:
+                roles.append("security")
+
+            # Go projects often need devops and security
+            if "go" in enhanced_stack.get("languages", []):
+                roles.append("devops")
+                roles.append("security")
+        else:
+            # Fallback to simple detection
+            if any(tech in stack_str for tech in ["react", "vue", "angular", "svelte"]):
+                roles.append("frontend")
+            if any(
+                tech in stack_str
+                for tech in ["django", "flask", "fastapi", "express", "rails"]
+            ):
+                roles.append("backend")
+            if any(tech in stack_str for tech in ["ios", "android", "react-native"]):
+                roles.append("mobile")
+            if any(
+                tech in stack_str for tech in ["tensorflow", "pytorch", "scikit-learn"]
+            ):
+                roles.append("ml-engineer")
 
         # Remove duplicates while preserving order
         seen = set()
