@@ -32,7 +32,7 @@ I need to move faster. Install Code Conductor into this project so we can run mu
 Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
 ```
 
-Claude Code will handle everything—installation, configuration, even creating your first task roadmap. **[See more power prompts →](CLAUDE_CODE_PROMPT.md)**
+Claude Code will handle everything—installation, configuration, even creating your first task roadmap. **No GitHub token setup required!** The system uses GitHub's built-in authentication automatically. **[See more power prompts →](CLAUDE_CODE_PROMPT.md)**
 
 ## 🎯 **90% Stack Coverage - Your Tech is Supported**
 
@@ -127,7 +127,7 @@ python setup.py
 ./install.sh --auto
 ```
 
-**That's it.** Now create a GitHub Issue with `conductor:task` label, launch an agent via [Conductor.build](https://conductor.build) (macOS only as of 2024-07-22) or terminal workflow (all platforms), and watch it work.
+**That's it.** No GitHub token setup required—the system uses GitHub Actions' built-in authentication. Now create a GitHub Issue with `conductor:task` label, launch an agent via [Conductor.build](https://conductor.build) (macOS only as of 2024-07-22) or terminal workflow (all platforms), and watch it work.
 
 ## 🔄 **Upgrading Code Conductor**
 
@@ -528,6 +528,7 @@ matrix_builds: [ubuntu, macos, windows]
 - Run `python .conductor/scripts/dependency-check.py`
 - Ensure GitHub CLI is authenticated: `gh auth status`
 - Check git repository is clean: `git status`
+- Note: No GitHub token setup required—workflows use built-in authentication
 
 **File conflicts**
 - System prevents these automatically

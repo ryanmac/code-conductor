@@ -32,7 +32,7 @@ jobs:
         id: check
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          github-token: ${{ secrets.CONDUCTOR_GITHUB_TOKEN || github.token }}
           script: |
             let shouldReview = false;
             let prNumber = null;
@@ -141,7 +141,7 @@ jobs:
 
       - name: Setup GitHub CLI
         run: |
-          echo "${{ secrets.CONDUCTOR_GITHUB_TOKEN }}" > token.txt
+          echo "${{ secrets.CONDUCTOR_GITHUB_TOKEN || github.token }}" > token.txt
           gh auth login --with-token < token.txt
           rm -f token.txt
 
@@ -157,7 +157,7 @@ jobs:
               gh label create "${name}" --color "${color}" --description "${desc}" || true
           done
         env:
-          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN || github.token }}
 
       - name: Create review task issue
         run: |
@@ -166,8 +166,8 @@ jobs:
             --repo "${{ github.repository }}" \
             --event-type "${{ github.event_name }}"
         env:
-          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN || github.token }}
 
       - name: Add acknowledgment comment
         if: github.event_name == 'issue_comment'
@@ -175,7 +175,7 @@ jobs:
           gh pr comment ${{ github.event.issue.number }} \
             --body "✅ Review task created! An AI agent will claim and complete the code review."
         env:
-          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN || github.token }}
 
       - name: Remove needs-review label
         if: github.event_name == 'pull_request'
@@ -184,4 +184,4 @@ jobs:
           gh pr edit ${{ needs.check-review-needed.outputs.pr_number }} \
             --remove-label "needs-review" || true
         env:
-          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONDUCTOR_GITHUB_TOKEN || github.token }}
