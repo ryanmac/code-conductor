@@ -146,6 +146,40 @@ When generating tasks from documentation mapping:
    - If your task list includes items that exist, note them
    - Mark them as "Already exists: #123"
 
+### AI Agent Todo List Management
+
+**CRITICAL**: Maintain clean internal todo lists to prevent duplicate work:
+
+1. **Todo List Hygiene**:
+   - Before adding a new todo, scan your existing list for similar items
+   - Consolidate related todos into single comprehensive tasks
+   - Mark todos as completed immediately upon finishing work
+   - Remove todos that reference closed or obsolete GitHub issues
+
+2. **Example of Good Todo Management**:
+   ```
+   ❌ BAD (Duplicate todos):
+   - Add user login page
+   - Implement authentication
+   - Create login functionality  
+   - Add JWT tokens
+   - Build password reset
+   
+   ✅ GOOD (Consolidated):
+   - Implement complete auth system (login, JWT, password reset)
+   ```
+
+3. **Sync with GitHub Issues**:
+   - Each todo should correspond to a unique GitHub issue
+   - If you find duplicate todos, check if duplicate issues exist
+   - Clean up both internal todos and external issues
+
+4. **Regular Cleanup**:
+   - At the start of each session, review and clean your todo list
+   - Remove completed items
+   - Consolidate similar tasks
+   - Ensure alignment with current GitHub issues
+
 ## Common Anti-Patterns to Avoid
 
 ### ❌ Don't Do This:

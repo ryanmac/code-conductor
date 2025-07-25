@@ -256,6 +256,29 @@ gh issue list --search "error OR exception OR handling" --state all
 # Review the results carefully before proceeding
 ```
 
+### Managing Your Todo List - Prevent Internal Duplicates
+
+**IMPORTANT**: Also maintain a clean internal todo list:
+
+1. **Before adding todos**: Check if similar tasks already exist in your list
+2. **Consolidate related items**: Instead of multiple similar todos, create one comprehensive task
+3. **Clean up completed work**: Mark todos as completed immediately after finishing
+4. **Remove obsolete items**: If an external issue is closed or no longer relevant, remove related todos
+
+Example todo management:
+```
+BAD:
+- Add login functionality
+- Implement user authentication  
+- Create auth system
+- Add password reset
+
+GOOD:
+- Implement complete authentication system (login, logout, password reset)
+```
+
+This prevents both external (GitHub issues) and internal (todo list) duplication.
+
 ## GitHub Authentication Setup
 
 Code Conductor requires a GitHub token with appropriate permissions for managing issues, pull requests, and labels. 
