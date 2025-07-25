@@ -26,7 +26,13 @@ One command. 60 seconds. Done.
 bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
 ```
 
-The installer auto-detects your stack (React, Python, Go, etc.) and configures everything. No GitHub tokens. No complex setup.
+The installer auto-detects your stack (React, Python, Go, etc.) and configures everything. **No GitHub tokens needed. No complex setup.**
+
+✨ **What you get:**
+- ✅ GitHub Actions workflows that use built-in authentication
+- ✅ No manual token creation or repository secrets required
+- ✅ AI code reviews work automatically on all PRs
+- ✅ Language-agnostic setup (no Python CI/CD added to non-Python projects)
 
 **Or let Claude Code install it for you:**
 ```
@@ -65,6 +71,7 @@ gh issue create --label "conductor:task" --title "Add dark mode toggle"
 - [Stack Support](docs/STACK_SUPPORT.md) - Works with React, Vue, Python, Go, and more
 - [Architecture](docs/ARCHITECTURE.md) - How it all works under the hood
 - [AI Code Review](docs/AI_CODE_REVIEW.md) - Smart, opt-in PR reviews
+- [FAQ](docs/FAQ.md) - Common questions about tokens, Python, and workflows
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 
 🚀 **[Power User Prompts](CLAUDE_CODE_PROMPT.md)** - Game-changing automation with Claude Code

@@ -17,6 +17,9 @@ echo "=========================================="
 echo "This script will install Code Conductor into your current Git repository."
 echo "It will download necessary files and run the setup automatically."
 echo ""
+echo -e "${GREEN}✨ No GitHub Token Setup Required!${NC}"
+echo "Code Conductor uses GitHub's built-in authentication - no manual token needed."
+echo ""
 
 # Step 1: Prerequisite Checks
 echo -e "${YELLOW}🔍 Checking prerequisites...${NC}"
@@ -36,6 +39,8 @@ fi
 # Check for Python 3.9-3.12
 if ! command -v python3 >/dev/null 2>&1 || ! python3 -c "import sys; exit(0 if sys.version_info >= (3,9) and sys.version_info < (3,13) else 1)"; then
     echo -e "${RED}❌ Error: Python 3.9-3.12 is required. Please install Python 3.9, 3.10, 3.11, or 3.12.${NC}"
+    echo -e "${YELLOW}Note: Python is only needed for conductor scripts, NOT for your project's CI/CD.${NC}"
+    echo -e "${YELLOW}Code Conductor does NOT add Python-specific workflows to non-Python projects.${NC}"
     exit 1
 fi
 
@@ -323,6 +328,13 @@ if [ "$IS_UPGRADE" = false ]; then
 
     echo -e "${GREEN}✅ Setup complete.${NC}"
     echo ""
+    
+    # Emphasize no token requirement
+    echo -e "${GREEN}🔐 GitHub Integration Status:${NC}"
+    echo "  ✅ Workflows configured to use GitHub's built-in token"
+    echo "  ✅ No CONDUCTOR_GITHUB_TOKEN setup required"
+    echo "  ✅ AI code reviews will work automatically on PRs"
+    echo ""
 else
     echo -e "${GREEN}✅ Skipping setup - existing configuration preserved.${NC}"
     echo ""
@@ -583,7 +595,7 @@ case "$ENV_CHOICE" in
         echo "   • Conductor will handle task claiming and worktree setup automatically"
         echo "   • Use the built-in terminal for git operations"
         echo "   • AI code reviews happen automatically on PRs"
-        echo "   • No GitHub token setup needed—uses built-in authentication"
+        echo -e "   • ${GREEN}No GitHub token setup needed—uses built-in authentication${NC}"
         echo ""
         echo "📚 Learn more: https://conductor.build"
         ;;
@@ -661,7 +673,7 @@ if [ "$IS_UPGRADE" = true ]; then
     echo "  • Role definitions (.conductor/roles/)"
     echo "  • GitHub workflows (.github/workflows/)"
     echo "  • Setup and configuration tools"
-    echo "  • Token configuration (no manual setup needed)"
+    echo -e "  • ${GREEN}Token configuration (uses GitHub's built-in auth)${NC}"
     echo ""
     echo "✅ What was preserved:"
     echo "  • Your project configuration (.conductor/config.yaml)"
@@ -698,6 +710,8 @@ elif [ "$ENV_CHOICE" != "1" ]; then
     echo "  ✅ AI code-reviewer for all PRs"
     echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
     echo "  ✅ Demo tasks ready to claim"
+    echo -e "  ${GREEN}✅ No GitHub token setup required${NC}"
+    echo -e "  ${GREEN}✅ No Python CI/CD workflows added${NC}"
     echo ""
     echo -e "${YELLOW}Quick Start Commands:${NC}"
     echo -e "  📋 View tasks:     ${GREEN}./conductor tasks${NC}"
@@ -725,7 +739,8 @@ else
     echo "  ✅ AI code-reviewer for all PRs"
     echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
     echo "  ✅ Demo tasks ready in Conductor"
-    echo "  ✅ No GitHub token setup required"
+    echo -e "  ${GREEN}✅ No GitHub token setup required${NC}"
+    echo -e "  ${GREEN}✅ No Python CI/CD workflows added${NC}"
     echo ""
     echo "📚 Documentation: https://github.com/ryanmac/code-conductor"
     echo "🐛 Report issues: https://github.com/ryanmac/code-conductor/issues"
