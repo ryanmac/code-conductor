@@ -16,6 +16,9 @@ FORCE_REINSTALL=false
 SKIP_EXAMPLES=false
 SKIP_COMMIT=false
 SKIP_AGENT_START=false
+CREATE_PR=false
+AUTO_MERGE_PR=false
+PR_BRANCH=""
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -49,6 +52,24 @@ while [[ $# -gt 0 ]]; do
             SKIP_AGENT_START=true
             shift
             ;;
+        --create-pr)
+            CREATE_PR=true
+            shift
+            ;;
+        --auto-merge)
+            AUTO_MERGE_PR=true
+            CREATE_PR=true  # Auto-merge implies creating a PR
+            shift
+            ;;
+        --pr-branch)
+            if [[ -n "$2" && ! "$2" =~ ^-- ]]; then
+                PR_BRANCH="$2"
+                shift 2
+            else
+                echo "Error: --pr-branch requires a branch name"
+                exit 1
+            fi
+            ;;
         --help)
             echo "Code Conductor Universal Installer"
             echo ""
@@ -62,6 +83,9 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-examples            Skip copying example configurations"
             echo "  --skip-commit              Skip auto-committing changes to Git"
             echo "  --skip-agent-start         Skip starting a dev agent after installation"
+            echo "  --create-pr                Create a pull request after installation"
+            echo "  --auto-merge               Enable auto-merge on the created PR (implies --create-pr)"
+            echo "  --pr-branch <name>         Specify branch name for PR (default: auto-generated)"
             echo "  --help                     Show this help message"
             echo ""
             echo "Examples:"
@@ -73,6 +97,9 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "  # Force upgrade in non-interactive mode"
             echo "  curl -fsSL ... | bash -s -- --auto --upgrade"
+            echo ""
+            echo "  # Create PR with auto-merge after installation"
+            echo "  curl -fsSL ... | bash -s -- --auto --create-pr --auto-merge"
             exit 0
             ;;
         *)
@@ -606,6 +633,147 @@ else
             echo -e "${GREEN}✅ Changes committed.${NC}"
         else
             echo -e "${YELLOW}⚠️ Skipping commit. Remember to commit manually.${NC}"
+        fi
+    fi
+fi
+
+# Step 7.5: Create Pull Request if requested
+if [ "$CREATE_PR" = true ] && [ "$SKIP_COMMIT" = false ]; then
+    echo ""
+    echo -e "${YELLOW}🔄 Creating pull request...${NC}"
+    
+    # Check if GitHub CLI is available and authenticated
+    if ! command -v gh >/dev/null 2>&1; then
+        echo -e "${RED}❌ GitHub CLI (gh) not found. Cannot create PR.${NC}"
+        echo "Install GitHub CLI and run 'gh auth login' to enable PR creation."
+        CREATE_PR=false
+    elif ! gh auth status >/dev/null 2>&1; then
+        echo -e "${RED}❌ GitHub CLI not authenticated. Cannot create PR.${NC}"
+        echo "Run 'gh auth login' to authenticate, then try again."
+        CREATE_PR=false
+    else
+        # Check if we have changes committed
+        CURRENT_BRANCH=$(git branch --show-current)
+        DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+        
+        # Generate PR branch name if not provided
+        if [ -z "$PR_BRANCH" ]; then
+            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+            if [ "$IS_UPGRADE" = true ]; then
+                PR_BRANCH="conductor-upgrade-$NEW_VERSION-$TIMESTAMP"
+            else
+                PR_BRANCH="conductor-setup-$TIMESTAMP"
+            fi
+        fi
+        
+        # Check if we're on the default branch
+        if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo -e "${YELLOW}📝 Creating new branch for PR: $PR_BRANCH${NC}"
+            git checkout -b "$PR_BRANCH" || {
+                echo -e "${RED}❌ Failed to create branch.${NC}"
+                CREATE_PR=false
+            }
+        else
+            # Already on a feature branch, use it
+            PR_BRANCH="$CURRENT_BRANCH"
+            echo -e "${YELLOW}📝 Using current branch for PR: $PR_BRANCH${NC}"
+        fi
+        
+        if [ "$CREATE_PR" = true ]; then
+            # Push the branch
+            echo -e "${YELLOW}📤 Pushing branch to origin...${NC}"
+            git push -u origin "$PR_BRANCH" || {
+                echo -e "${RED}❌ Failed to push branch.${NC}"
+                CREATE_PR=false
+            }
+            
+            if [ "$CREATE_PR" = true ]; then
+                # Create the PR
+                if [ "$IS_UPGRADE" = true ]; then
+                    PR_TITLE="🔧 Upgrade Code Conductor from $CURRENT_VERSION to $NEW_VERSION"
+                    PR_BODY="## Summary
+This PR upgrades Code Conductor to version $NEW_VERSION.
+
+### Changes
+- Updated core scripts and utilities
+- Updated role definitions
+- Updated GitHub workflows
+- Preserved existing configuration
+
+### Testing
+- [ ] Installation/upgrade completed successfully
+- [ ] Conductor commands work as expected
+- [ ] GitHub integration functional
+
+### Auto-generated
+This PR was automatically created by the Code Conductor installer."
+                else
+                    PR_TITLE="🚀 Initialize Code Conductor for AI agent orchestration"
+                    PR_BODY="## Summary
+This PR sets up Code Conductor to enable multiple AI agents to work on this codebase simultaneously.
+
+### What is Code Conductor?
+Code Conductor is an AI agent coordination system that:
+- Enables multiple AI coding agents (Claude Code, Conductor, Warp) to work in parallel
+- Uses GitHub Issues as a task queue with automatic conflict prevention
+- Provides isolated git worktrees for each agent
+- Includes AI-powered code reviews on all PRs
+
+### Changes
+- Added \`.conductor\` directory with scripts and configuration
+- Added GitHub workflows for automation
+- Configured agent roles based on detected technology stack
+- Created initial tasks for agents to claim
+
+### Next Steps
+1. Merge this PR to enable Code Conductor
+2. AI agents can start claiming and working on tasks
+3. Monitor progress via GitHub Issues labeled \`conductor:task\`
+
+### Auto-generated
+This PR was automatically created by the Code Conductor installer."
+                fi
+                
+                echo -e "${YELLOW}📝 Creating pull request...${NC}"
+                PR_URL=$(gh pr create \
+                    --title "$PR_TITLE" \
+                    --body "$PR_BODY" \
+                    --base "$DEFAULT_BRANCH" \
+                    --head "$PR_BRANCH" 2>&1) || {
+                    echo -e "${RED}❌ Failed to create PR: $PR_URL${NC}"
+                    CREATE_PR=false
+                }
+                
+                if [ "$CREATE_PR" = true ]; then
+                    echo -e "${GREEN}✅ Pull request created successfully!${NC}"
+                    echo -e "${GREEN}📎 PR URL: $PR_URL${NC}"
+                    
+                    # Enable auto-merge if requested
+                    if [ "$AUTO_MERGE_PR" = true ]; then
+                        echo -e "${YELLOW}🤖 Enabling auto-merge...${NC}"
+                        gh pr merge --auto --merge "$PR_URL" || {
+                            echo -e "${YELLOW}⚠️ Could not enable auto-merge. You may need to:${NC}"
+                            echo "  1. Ensure branch protection rules allow auto-merge"
+                            echo "  2. Wait for required checks to be configured"
+                            echo "  3. Enable auto-merge manually with: gh pr merge --auto $PR_URL"
+                        }
+                    fi
+                    
+                    # Add labels
+                    gh pr edit "$PR_URL" --add-label "conductor:setup,automation" 2>/dev/null || true
+                    
+                    echo ""
+                    echo -e "${GREEN}🎉 Next steps:${NC}"
+                    echo "  1. Review the PR: $PR_URL"
+                    if [ "$AUTO_MERGE_PR" = false ]; then
+                        echo "  2. Merge the PR to activate Code Conductor"
+                        echo "  3. Other agents can then see and use the system"
+                    else
+                        echo "  2. PR will auto-merge once checks pass"
+                        echo "  3. Other agents will then see and use the system"
+                    fi
+                fi
+            fi
         fi
     fi
 fi
