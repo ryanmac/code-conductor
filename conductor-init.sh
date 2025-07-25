@@ -583,6 +583,7 @@ case "$ENV_CHOICE" in
         echo "   • Conductor will handle task claiming and worktree setup automatically"
         echo "   • Use the built-in terminal for git operations"
         echo "   • AI code reviews happen automatically on PRs"
+        echo "   • No GitHub token setup needed—uses built-in authentication"
         echo ""
         echo "📚 Learn more: https://conductor.build"
         ;;
@@ -660,6 +661,7 @@ if [ "$IS_UPGRADE" = true ]; then
     echo "  • Role definitions (.conductor/roles/)"
     echo "  • GitHub workflows (.github/workflows/)"
     echo "  • Setup and configuration tools"
+    echo "  • Token configuration (no manual setup needed)"
     echo ""
     echo "✅ What was preserved:"
     echo "  • Your project configuration (.conductor/config.yaml)"
@@ -723,6 +725,7 @@ else
     echo "  ✅ AI code-reviewer for all PRs"
     echo "  ✅ Specialized roles: ${CONFIGURED_ROLES}"
     echo "  ✅ Demo tasks ready in Conductor"
+    echo "  ✅ No GitHub token setup required"
     echo ""
     echo "📚 Documentation: https://github.com/ryanmac/code-conductor"
     echo "🐛 Report issues: https://github.com/ryanmac/code-conductor/issues"
