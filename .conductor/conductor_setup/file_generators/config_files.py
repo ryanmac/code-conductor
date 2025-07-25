@@ -220,9 +220,7 @@ This single command will:
                     "id": "success_criteria",
                     "attributes": {
                         "label": "Success Criteria",
-                        "description": (
-                            "How will we know when this task is complete?"
-                        ),
+                        "description": ("How will we know when this task is complete?"),
                         "placeholder": (
                             "- All tests pass\n"
                             "- Code follows project conventions\n"

@@ -7,6 +7,117 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+from .cache_manager import get_cache
+from .ui_manager import UIManager
+
+
+# Express configurations for common project types
+EXPRESS_CONFIGS = {
+    "react-typescript": {
+        "patterns": ["react", "typescript", "tsx", "jsx"],
+        "roles": {"default": "dev", "specialized": ["frontend", "code-reviewer"]},
+        "github_integration": {"issue_to_task": True, "pr_reviews": True},
+        "build_validation": ["npm test", "npm run build"],
+        "suggested_tasks": [
+            {
+                "title": "Set up component testing with React Testing Library",
+                "labels": ["conductor:task", "testing", "frontend"],
+            },
+            {
+                "title": "Add Storybook for component development",
+                "labels": ["conductor:task", "enhancement", "frontend"],
+            },
+            {
+                "title": "Configure ESLint and Prettier",
+                "labels": ["conductor:task", "code-quality", "dev-experience"],
+            },
+        ],
+    },
+    "python-fastapi": {
+        "patterns": ["fastapi", "python", "uvicorn", "pydantic"],
+        "roles": {"default": "dev", "specialized": ["backend", "code-reviewer"]},
+        "github_integration": {"issue_to_task": True, "pr_reviews": True},
+        "build_validation": ["pytest", "black --check ."],
+        "suggested_tasks": [
+            {
+                "title": "Add API documentation with OpenAPI",
+                "labels": ["conductor:task", "documentation", "backend"],
+            },
+            {
+                "title": "Set up database migrations with Alembic",
+                "labels": ["conductor:task", "database", "backend"],
+            },
+            {
+                "title": "Add integration tests for endpoints",
+                "labels": ["conductor:task", "testing", "backend"],
+            },
+        ],
+    },
+    "nextjs-fullstack": {
+        "patterns": ["next", "react", "vercel"],
+        "roles": {
+            "default": "dev",
+            "specialized": ["frontend", "backend", "code-reviewer"],
+        },
+        "github_integration": {"issue_to_task": True, "pr_reviews": True},
+        "build_validation": ["npm test", "npm run build", "npm run lint"],
+        "suggested_tasks": [
+            {
+                "title": "Set up authentication with NextAuth.js",
+                "labels": ["conductor:task", "auth", "fullstack"],
+            },
+            {
+                "title": "Configure Prisma for database access",
+                "labels": ["conductor:task", "database", "backend"],
+            },
+            {
+                "title": "Add E2E tests with Playwright",
+                "labels": ["conductor:task", "testing", "e2e"],
+            },
+        ],
+    },
+    "vue-javascript": {
+        "patterns": ["vue", "nuxt", "vite"],
+        "roles": {"default": "dev", "specialized": ["frontend", "code-reviewer"]},
+        "github_integration": {"issue_to_task": True, "pr_reviews": True},
+        "build_validation": ["npm test", "npm run build"],
+        "suggested_tasks": [
+            {
+                "title": "Set up Pinia for state management",
+                "labels": ["conductor:task", "state-management", "frontend"],
+            },
+            {
+                "title": "Add component testing with Vitest",
+                "labels": ["conductor:task", "testing", "frontend"],
+            },
+            {
+                "title": "Configure Vue Router for navigation",
+                "labels": ["conductor:task", "routing", "frontend"],
+            },
+        ],
+    },
+    "python-django": {
+        "patterns": ["django", "python", "wsgi"],
+        "roles": {"default": "dev", "specialized": ["backend", "code-reviewer"]},
+        "github_integration": {"issue_to_task": True, "pr_reviews": True},
+        "build_validation": ["python manage.py test", "black --check ."],
+        "suggested_tasks": [
+            {
+                "title": "Set up Django REST framework",
+                "labels": ["conductor:task", "api", "backend"],
+            },
+            {
+                "title": "Configure Celery for async tasks",
+                "labels": ["conductor:task", "async", "backend"],
+            },
+            {
+                "title": "Add Django Debug Toolbar",
+                "labels": ["conductor:task", "dev-experience", "backend"],
+            },
+        ],
+    },
+}
+
 
 class ConfigurationManager:
     """Manages project configuration through interactive or automatic setup"""
@@ -18,16 +129,140 @@ class ConfigurationManager:
         self.auto_mode = auto_mode
         self.debug = debug
         self.config = {}
+        self.cache = get_cache()
 
     def gather_configuration(
-        self, detected_stack: List[Dict[str, Any]]
+        self,
+        detected_stack: List[Dict[str, Any]],
+        enhanced_stack: Optional[Dict[str, Any]] = None,
+        ui: Optional[UIManager] = None,
     ) -> Dict[str, Any]:
-        """Gather configuration through interactive prompts or auto-configuration"""
+        """Gather configuration with express-by-default approach"""
+        # Try express config first if we have enhanced stack info
+        if enhanced_stack and ui:
+            express_config = self.get_express_config(enhanced_stack)
+            if express_config:
+                return self.apply_express_config(express_config, enhanced_stack, ui)
+
+        # Fall back to legacy modes
         if self.auto_mode:
             self._auto_configure(detected_stack)
         else:
             self._interactive_configure(detected_stack)
         return self.config
+
+    def get_express_config(
+        self, stack_info: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """Match detected stack to express config"""
+        # Use the primary stack from summary if available
+        if stack_info.get("summary", {}).get("primary_stack"):
+            stack_name = stack_info["summary"]["primary_stack"]
+            if stack_name in EXPRESS_CONFIGS:
+                return EXPRESS_CONFIGS[stack_name]
+
+        # Otherwise try pattern matching
+        detected_items = set()
+        detected_items.update(stack_info.get("frameworks", []))
+        detected_items.update(stack_info.get("summary", {}).get("languages", []))
+        detected_items.update(stack_info.get("summary", {}).get("tools", []))
+
+        # Add items from modern tools
+        modern = stack_info.get("modern_tools", {})
+        if modern.get("framework"):
+            detected_items.add(modern["framework"])
+        if modern.get("build_tool"):
+            detected_items.add(modern["build_tool"])
+
+        # Find best match
+        best_match = None
+        best_score = 0
+
+        for stack_name, config in EXPRESS_CONFIGS.items():
+            score = len(detected_items.intersection(config["patterns"]))
+            if score > best_score:
+                best_match = stack_name
+                best_score = score
+
+        return (
+            EXPRESS_CONFIGS.get(best_match) if best_match and best_score > 0 else None
+        )
+
+    def apply_express_config(
+        self, express_config: Dict[str, Any], stack_info: Dict[str, Any], ui: UIManager
+    ) -> Dict[str, Any]:
+        """Apply express configuration without prompts"""
+        primary_stack = stack_info.get("summary", {}).get("primary_stack", "project")
+        ui.console.print(
+            f"\nDetected {primary_stack} - applying optimal configuration..."
+        )
+
+        with ui.create_progress() as progress:
+            task = progress.add_task("Configuring", total=4)
+
+            progress.update(task, advance=1, description="Setting project defaults...")
+            self.config["project_name"] = self._infer_project_name()
+            self.config["docs_directory"] = self._infer_docs_directory()
+
+            progress.update(task, advance=1, description="Configuring agent roles...")
+            self.config["roles"] = express_config["roles"]
+
+            progress.update(task, advance=1, description="Enabling integrations...")
+            self.config["github_integration"] = express_config["github_integration"]
+            self.config["task_management"] = "github-issues"
+            self.config["max_concurrent_agents"] = 5
+
+            progress.update(task, advance=1, description="Preparing starter tasks...")
+            self.config["suggested_tasks"] = express_config["suggested_tasks"]
+            self.config["build_validation"] = express_config.get("build_validation", [])
+
+        # Add metadata
+        self.config["setup_mode"] = "express"
+        self.config["stack_info"] = stack_info
+        self.config["stack_summary"] = stack_info.get("summary", {}).get(
+            "primary_stack", "Unknown"
+        )
+        self.config["task_count"] = len(express_config["suggested_tasks"])
+
+        return self.config
+
+    def _infer_project_name(self) -> str:
+        """Infer project name from directory or package files"""
+        # Try package.json first
+        if (self.project_root / "package.json").exists():
+            try:
+                import json
+
+                package = json.loads((self.project_root / "package.json").read_text())
+                if package.get("name"):
+                    return package["name"]
+            except Exception:
+                pass
+
+        # Try pyproject.toml
+        if (self.project_root / "pyproject.toml").exists():
+            try:
+                content = (self.project_root / "pyproject.toml").read_text()
+                for line in content.split("\n"):
+                    if line.strip().startswith("name"):
+                        name = line.split("=")[1].strip().strip("\"'")
+                        if name:
+                            return name
+            except Exception:
+                pass
+
+        # Default to directory name
+        return self.project_root.name
+
+    def _infer_docs_directory(self) -> str:
+        """Infer documentation directory"""
+        if (self.project_root / "docs").exists():
+            return "docs"
+        elif (self.project_root / "documentation").exists():
+            return "documentation"
+        elif (self.project_root / "doc").exists():
+            return "doc"
+        return "docs"
 
     def _safe_input(self, prompt: str, default: Optional[str] = None) -> str:
         """Safe input with error handling"""

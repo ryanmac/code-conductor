@@ -17,6 +17,7 @@ if conductor_path.exists():
         # Import from the conductor setup package
         from conductor_setup.detector import TechnologyDetector  # noqa: E402
         from conductor_setup.config_manager import ConfigurationManager  # noqa: E402
+        from conductor_setup.ui_manager import UIManager  # noqa: E402
         from conductor_setup.file_generators.config_files import (
             ConfigFileGenerator,
         )  # noqa: E402
@@ -57,6 +58,7 @@ class ConductorSetup:
         self.conductor_dir = self.project_root / ".conductor"
         self.config = {}
         self.detected_stack = []
+        self.enhanced_stack = {}
         self.auto_mode = auto_mode
         self.debug = debug
 
@@ -64,6 +66,9 @@ class ConductorSetup:
         log_level = logging.DEBUG if debug else logging.INFO
         logging.basicConfig(level=log_level, format="%(message)s")
         self.logger = logging.getLogger(__name__)
+
+        # Initialize UI Manager
+        self.ui = UIManager()
 
     def run(self):
         """Main setup workflow"""
@@ -89,10 +94,7 @@ class ConductorSetup:
 
     def print_header(self):
         """Display setup header"""
-        print("🚀 Code Conductor Setup")
-        print("=" * 50)
-        print("This will configure agent coordination for your project")
-        print()
+        self.ui.show_welcome()
 
     def check_existing_config(self):
         """Check if already configured"""
@@ -114,14 +116,29 @@ class ConductorSetup:
     def _detect_project_info(self):
         """Use TechnologyDetector to detect project characteristics"""
         detector = TechnologyDetector(self.project_root, self.debug)
+
+        # Run enhanced detection with UI progress
+        self.enhanced_stack = detector.detect_technology_stack(self.ui)
+
+        # Also run legacy detection for compatibility
         detection_result = detector.detect_project_info()
         self.detected_stack = detection_result["detected_stack"]
         self.config.update(detection_result["config"])
 
+        # Show detection results
+        if self.enhanced_stack.get("summary"):
+            self.ui.show_detection_results(self.enhanced_stack)
+
     def _gather_configuration(self):
         """Use ConfigurationManager to gather configuration"""
         config_mgr = ConfigurationManager(self.project_root, self.auto_mode, self.debug)
-        self.config.update(config_mgr.gather_configuration(self.detected_stack))
+
+        # Pass enhanced stack info and UI for express setup
+        self.config.update(
+            config_mgr.gather_configuration(
+                self.detected_stack, enhanced_stack=self.enhanced_stack, ui=self.ui
+            )
+        )
 
     def _create_configuration_files(self):
         """Use ConfigFileGenerator to create configuration files"""
@@ -159,9 +176,14 @@ class ConductorSetup:
         return creator.create_discovery_task_if_needed()
 
     def _display_completion_message(self, discovery_task_number=None):
-        """Use SetupValidator to display completion message"""
-        validator = SetupValidator(self.project_root)
-        validator.display_completion_message(discovery_task_number)
+        """Display completion message with UI manager"""
+        # Use new UI manager for express setup success
+        if self.config.get("setup_mode") == "express":
+            self.ui.show_success(self.config)
+        else:
+            # Fall back to validator for legacy mode
+            validator = SetupValidator(self.project_root)
+            validator.display_completion_message(discovery_task_number)
 
 
 def main():

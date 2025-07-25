@@ -2,4 +2,5 @@
 # Core dependencies for code-conductor
 pyyaml>=6.0
 requests>=2.32.4
+rich>=13.7.0  # Beautiful terminal UI for progress bars and formatting
 # Note: fcntl is Unix-only and part of Python standard library 
