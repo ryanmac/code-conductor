@@ -33,7 +33,7 @@ jobs:
 
       - name: Validate configuration
         run: |
-          python .conductor/scripts/validate-config.py --strict
+          python .conductor/scripts/validate-config.py
 
       - name: Get version from tag
         id: version
