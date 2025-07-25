@@ -25,7 +25,7 @@ Transform setup into a predictable, fast experience with clear progress indicato
 
 **Implementation**:
 ```python
-# In setup.py
+# In .conductor/conductor_setup/ui_manager.py
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
 from rich.panel import Panel
@@ -75,7 +75,7 @@ Expand detection accuracy from 90% to 95%+.
 - **Monorepo Tools**: Nx, Lerna, Rush, pnpm workspaces
 - **Databases**: PostgreSQL, MongoDB, Redis (via docker-compose.yml)
 
-**Implementation** in detector.py:
+**Implementation** in .conductor/conductor_setup/detector.py:
 ```python
 def detect_modern_frameworks(self) -> Dict[str, Any]:
     """Detect cutting-edge frameworks and tools."""
@@ -127,7 +127,7 @@ Auto-configure for detected stacks - no questions asked.
 
 **Implementation**:
 ```python
-# In setup.py
+# In .conductor/conductor_setup/config_manager.py
 if detected_stack in COMMON_STACKS:
     # Express is the default - configure immediately
     config = EXPRESS_CONFIGS[detected_stack]
@@ -259,7 +259,7 @@ Cache everything to achieve sub-60-second setup times.
 
 **Cache Strategy**:
 ```python
-# In conductor_setup/cache_manager.py
+# In .conductor/conductor_setup/cache_manager.py
 class SetupCache:
     """Cache detection results and API calls for speed."""
     

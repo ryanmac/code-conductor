@@ -9,18 +9,16 @@
 rich>=13.7.0  # Beautiful terminal UI
 ```
 
-**2. Update setup.py imports**:
+**2. Update imports in setup.py**:
 ```python
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-from rich.panel import Panel
-from rich.tree import Tree
-from rich.table import Table
-from rich.syntax import Syntax
-from rich import box
+# These modules are now imported from the modular structure
+from conductor_setup.ui_manager import UIManager
+from conductor_setup.detector import TechnologyDetector
+from conductor_setup.config_manager import ConfigurationManager
+# Rich imports are handled within ui_manager.py
 ```
 
-**3. Create UIManager class in conductor_setup/ui_manager.py**:
+**3. Create UIManager class in .conductor/conductor_setup/ui_manager.py**:
 ```python
 from rich.console import Console
 from rich.theme import Theme
@@ -76,7 +74,7 @@ class UIManager:
         self.console.print("Next: Run 'conductor tasks' to see available work.")
 ```
 
-**4. Update detector.py with determinate progress**:
+**4. Update .conductor/conductor_setup/detector.py with determinate progress**:
 ```python
 def detect_technology_stack(self, ui: Optional[UIManager] = None) -> Dict[str, Any]:
     """Detect technology stack with fast, cached results."""
@@ -129,7 +127,7 @@ def detect_technology_stack(self, ui: Optional[UIManager] = None) -> Dict[str, A
 
 ### New Detections to Add
 
-**1. Modern Framework Detection in detector.py**:
+**1. Modern Framework Detection in .conductor/conductor_setup/detector.py**:
 ```python
 def _detect_modern_frameworks(self) -> Dict[str, Any]:
     """Detect modern web frameworks and tools."""
@@ -254,7 +252,7 @@ def _detect_test_frameworks(self) -> List[str]:
 
 ## Priority 3: Express Setup by Default
 
-### Implementation in config_manager.py
+### Implementation in .conductor/conductor_setup/config_manager.py
 
 ```python
 # Define express configurations with stack patterns
@@ -367,7 +365,7 @@ def gather_configuration(self, stack_info: Dict, ui: UIManager) -> Dict[str, Any
 
 ## Priority 4: Interactive Preview
 
-### Implementation in validator.py
+### Implementation in .conductor/conductor_setup/validator.py
 
 ```python
 def show_setup_preview(self, config: Dict[str, Any], ui: UIManager) -> None:
@@ -451,7 +449,7 @@ def _get_role_icon(self, role: str) -> str:
 
 ## Priority 5: Smart Error Recovery
 
-### Create conductor_setup/error_handler.py
+### Create .conductor/conductor_setup/error_handler.py
 
 ```python
 from typing import Dict, Optional, Callable
@@ -524,7 +522,7 @@ class SmartErrorHandler:
 
 ## Priority 6: Aggressive Caching System
 
-### Create conductor_setup/cache_manager.py
+### Create .conductor/conductor_setup/cache_manager.py
 
 ```python
 import json
@@ -605,7 +603,7 @@ def get_cache() -> SetupCache:
 ### Cache Integration Points
 
 ```python
-# In detector.py
+# In .conductor/conductor_setup/detector.py
 def __init__(self, project_root: Path):
     self.project_root = project_root
     self.cache = get_cache()
@@ -622,7 +620,7 @@ def _get_project_hash(self) -> str:
     
     return hasher.hexdigest()[:12]
 
-# In github_integration.py
+# In .conductor/conductor_setup/github_integration.py
 def check_github_labels(self, repo: str) -> Dict[str, bool]:
     """Check GitHub labels with caching."""
     return self.cache.get_or_compute(
@@ -631,7 +629,7 @@ def check_github_labels(self, repo: str) -> Dict[str, bool]:
         ttl=3600  # 1 hour cache
     )
 
-# In config_manager.py
+# In .conductor/conductor_setup/config_manager.py
 def detect_common_patterns(self) -> Dict[str, Any]:
     """Detect common project patterns with caching."""
     return self.cache.get_or_compute(
