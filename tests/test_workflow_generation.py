@@ -38,7 +38,7 @@ def test_generated_workflows_use_github_token():
         try:
             os.chdir(project_path)
             setup = ConductorSetup()
-            setup.create_github_workflows()
+            setup._create_github_workflows()
         finally:
             os.chdir(original_cwd)
 
