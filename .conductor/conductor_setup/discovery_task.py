@@ -17,21 +17,22 @@ class DiscoveryTaskCreator:
     def create_discovery_task_if_needed(self) -> Optional[str]:
         """Create initialization task for AI agents to discover project structure"""
 
-        # Check if project has substantial existing content
-        if not self._should_create_discovery_task():
-            print("\n📋 New project detected - skipping discovery task")
-            return None
-
         # Check GitHub CLI availability
         if not self._check_github_cli_ready():
             return None
 
-        print("\n📚 Existing project detected. Creating discovery task...")
+        # Determine project type
+        is_existing_project = self._should_create_discovery_task()
 
-        discovery_task_body = self._get_discovery_task_body()
+        if is_existing_project:
+            print("\n📚 Existing project detected. Creating discovery task...")
+            discovery_task_body = self._get_discovery_task_body()
+        else:
+            print("\n🚀 New project detected. Creating initial planning task...")
+            discovery_task_body = self._get_new_project_task_body()
 
         # Create the discovery task
-        return self._create_github_issue(discovery_task_body)
+        return self._create_github_issue(discovery_task_body, is_existing_project)
 
     def _should_create_discovery_task(self) -> bool:
         """Determine if a discovery task should be created"""
@@ -67,8 +68,16 @@ class DiscoveryTaskCreator:
 
         return True
 
-    def _create_github_issue(self, body: str) -> Optional[str]:
+    def _create_github_issue(
+        self, body: str, is_existing_project: bool = True
+    ) -> Optional[str]:
         """Create GitHub issue and return issue number"""
+        title = (
+            "🔍 [INIT] Discover project documentation and create task map"
+            if is_existing_project
+            else "🚀 [INIT] Plan project structure and create initial tasks"
+        )
+
         try:
             result = subprocess.run(
                 [
@@ -76,7 +85,7 @@ class DiscoveryTaskCreator:
                     "issue",
                     "create",
                     "--title",
-                    "🔍 [INIT] Discover project documentation and create task map",
+                    title,
                     "--body",
                     body,
                     "--label",
@@ -262,4 +271,176 @@ After creating the documentation map:
 ---
 *This is a one-time initialization task. Once complete, all future work will be
 properly coordinated.*
+"""
+
+    def _get_new_project_task_body(self) -> str:
+        """Get the initial task body for new projects"""
+        return """## 🚀 Project Planning and Initial Task Creation
+
+**This is the first task for your new project. Your mission is to understand the
+project goals and create a comprehensive task list.**
+
+## Your Mission
+
+For this new project, you need to:
+1. Understand what the project should become
+2. Create a project roadmap
+3. Generate initial development tasks
+4. Set up the documentation structure
+
+## Step-by-Step Instructions
+
+### 1. Analyze Project Intent
+```bash
+# Look for any initial documentation
+cat README.md 2>/dev/null || echo "No README yet"
+cat requirements.txt requirements*.txt 2>/dev/null || echo "No requirements files"
+cat package.json 2>/dev/null | jq '.name, .description' || echo "No package.json"
+
+# Check for any initial code
+find . -name "*.py" -o -name "*.js" -o -name "*.ts" | grep -v node_modules | head -10
+
+# Look for any specification files
+find . -name "*.md" -o -name "*.txt" | grep -E "(spec|requirement|design)" | head -10
+```
+
+### 2. Create Initial Documentation Map
+
+Create `.conductor/documentation-map.yaml` with your project plan:
+
+```yaml
+# Project definition - REQUIRED
+project:
+  name: "[project name from context or ask user]"
+  description: "[what this project will do]"
+  type: "[planned type: web-app|api|library|cli|mobile|desktop]"
+  primary_language: "[planned: python|javascript|typescript|go|rust|etc]"
+  framework: "[planned: react|django|express|etc]"
+  status: "planning"
+  estimated_completion: "0%"
+
+# Initial project structure plan
+planned_structure:
+  core_components:
+    - name: "[component name]"
+      purpose: "[what it will do]"
+      technology: "[how it will be built]"
+
+  key_features:
+    - name: "[feature name]"
+      description: "[what users can do]"
+      priority: "[must-have|nice-to-have]"
+
+# Documentation to create
+documentation_plan:
+  - type: "README"
+    purpose: "Project overview and setup instructions"
+    status: "to_create"
+
+  - type: "ARCHITECTURE"
+    purpose: "Technical design and decisions"
+    status: "to_create"
+
+  - type: "API"
+    purpose: "API specifications"
+    status: "to_create"
+
+# Initial development tasks - CREATE 15-25 TASKS
+proposed_tasks:
+  # Setup and infrastructure tasks
+  - title: "Set up project structure and initial configuration"
+    description: "Create basic project structure with folders for source, tests, docs"
+    type: "setup"
+    priority: "critical"
+    estimated_effort: "small"
+    assigned_role: "dev"
+    success_criteria:
+      - "Project structure created"
+      - "Configuration files initialized"
+      - "Development environment documented"
+
+  - title: "Create comprehensive README with setup instructions"
+    description: "Write README with project overview, setup, and contribution guide"
+    type: "documentation"
+    priority: "high"
+    estimated_effort: "small"
+    assigned_role: "dev"
+    success_criteria:
+      - "README includes project description"
+      - "Setup instructions are clear"
+      - "Contribution guidelines included"
+
+  # Add 13-23 more specific tasks based on the project type...
+  # Include tasks for:
+  # - Core functionality implementation
+  # - Testing setup and initial tests
+  # - CI/CD configuration
+  # - Security considerations
+  # - Performance requirements
+  # - User interface (if applicable)
+  # - API design (if applicable)
+  # - Database design (if applicable)
+
+# Summary
+summary:
+  total_tasks: [number]
+  phases:
+    - name: "Setup Phase"
+      tasks: [number]
+      duration: "[estimated days]"
+    - name: "Core Development"
+      tasks: [number]
+      duration: "[estimated days]"
+    - name: "Testing & Polish"
+      tasks: [number]
+      duration: "[estimated days]"
+```
+
+### 3. Generate Comprehensive Task List
+
+Think about the full project lifecycle:
+- **Setup**: Project structure, tooling, environments
+- **Core Features**: Main functionality broken into small tasks
+- **Testing**: Unit tests, integration tests, E2E tests
+- **Documentation**: User docs, API docs, developer guides
+- **DevOps**: CI/CD, deployment, monitoring
+- **Polish**: Performance, security, accessibility
+
+### 4. Validate and Create Tasks
+
+1. Validate the YAML:
+   ```bash
+   python -c "import yaml; yaml.safe_load(open('.conductor/documentation-map.yaml'))"
+   ```
+
+2. Generate GitHub issues from your map:
+   ```bash
+   python .conductor/scripts/generate-tasks-from-map.py --auto
+   ```
+
+3. Verify tasks were created:
+   ```bash
+   gh issue list -l 'conductor:task' --limit 25
+   ```
+
+## Success Criteria
+
+- [ ] Created `.conductor/documentation-map.yaml` with project plan
+- [ ] Defined clear project goals and structure
+- [ ] Created 15-25 specific, actionable tasks
+- [ ] Tasks cover entire project lifecycle
+- [ ] Each task has clear success criteria
+- [ ] Tasks are properly prioritized
+
+## Completion
+
+After creating the task map:
+1. Run: `python .conductor/scripts/generate-tasks-from-map.py --auto`
+2. Verify tasks in GitHub: `gh issue list -l 'conductor:task'`
+3. Comment summary on this issue
+4. Mark complete: `./conductor complete`
+
+---
+*This initial planning task sets up all future work. Take time to think through
+the project comprehensively.*
 """
