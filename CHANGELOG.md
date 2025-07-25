@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial placeholder for future changes
 
+## [0.1.1] - 2025-01-25
+
+### Fixed
+- 🔧 **Release workflow**: Fixed CI pipeline dependency and action compatibility issues
+  - Added missing Python dependencies (pyyaml, requests) for validation scripts
+  - Updated to modern softprops/action-gh-release@v1 action
+  - Fixed GITHUB_TOKEN usage for standard GitHub Actions integration
+  - Streamlined asset upload process for faster releases
+
 ## [0.1.0] - 2025-01-25
 
 ### Added

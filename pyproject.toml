@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "code-conductor"
-version = "0.1.0"
+version = "0.1.1"
 description = "Agent coordination for Conductor, Warp, and Claude Code"
 authors = ["Ryan Mac <ryan@updoot.co>"]
 readme = "README.md"
