@@ -41,7 +41,7 @@ class TestStackDetection:
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup.detect_project_info()
+            setup._detect_project_info()
         
         # Verify detection
         assert len(setup.detected_stack) > 0
@@ -66,7 +66,7 @@ redis==5.0.0
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup.detect_project_info()
+            setup._detect_project_info()
         
         # Verify detection
         assert len(setup.detected_stack) > 0
@@ -92,7 +92,7 @@ jupyter==1.0.0
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup.detect_project_info()
+            setup._detect_project_info()
         
         # Verify detection
         assert len(setup.detected_stack) > 0
@@ -122,7 +122,7 @@ require (
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup.detect_project_info()
+            setup._detect_project_info()
         
         # Verify detection
         assert len(setup.detected_stack) > 0
@@ -150,7 +150,7 @@ dependencies:
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup.detect_project_info()
+            setup._detect_project_info()
         
         # Verify detection
         assert len(setup.detected_stack) > 0
@@ -178,7 +178,7 @@ dependencies:
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup.detect_project_info()
+            setup._detect_project_info()
         
         # Verify detection
         assert len(setup.detected_stack) > 0
@@ -208,7 +208,7 @@ dependencies:
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
-            setup.detect_project_info()
+            setup._detect_project_info()
         
         # Verify multiple stacks detected
         assert len(setup.detected_stack) >= 2
