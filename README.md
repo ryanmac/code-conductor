@@ -117,6 +117,52 @@ python setup.py
 
 **That's it.** Now create a GitHub Issue with `conductor:task` label, launch an agent via [Conductor.build](https://conductor.build) (macOS only as of 2024-07-22) or terminal workflow (all platforms), and watch it work.
 
+## 🔄 **Upgrading Code Conductor**
+
+**Keep your Code Conductor installation up-to-date with the latest features!**
+
+### **Automatic Upgrade Detection**
+
+Simply run the same installation command in your project:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+```
+
+The installer will:
+- ✅ Detect your existing installation and version
+- ✅ Prompt to upgrade, reinstall, or cancel
+- ✅ Preserve your configurations and customizations
+- ✅ Update only core scripts and workflows
+- ✅ Show what's new after upgrading
+
+### **What Gets Updated**
+- `.conductor/scripts/` - Core conductor commands
+- `.conductor/roles/` - Latest role definitions
+- `.github/workflows/` - Updated GitHub Actions
+- `setup.py`, `requirements.txt` - Dependency updates
+
+### **What Gets Preserved**
+- `.conductor/config.yaml` - Your project configuration
+- `CLAUDE.md` - Your custom AI instructions
+- All existing tasks and work in progress
+- Git worktrees and agent states
+
+### **Using Claude Code for Upgrades**
+
+Copy this prompt into Claude Code:
+
+```
+I need you to upgrade Code Conductor to the latest version in this project.
+
+Please:
+1. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+2. When prompted about existing installation, choose option 1 (Upgrade)
+3. After upgrade completes, run: ./conductor status to verify everything is working
+```
+
+See [CLAUDE_CODE_PROMPT.md](CLAUDE_CODE_PROMPT.md) for more automation prompts.
+
 ## 🤖 **AI Agent Quick Start**
 
 **NEW: AI-first experience with automatic onboarding!**
