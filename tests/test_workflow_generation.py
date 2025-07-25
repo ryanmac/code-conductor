@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Test workflow generation uses correct GitHub token configuration."""
 
-import tempfile
 import shutil
 import sys
+import tempfile
 import pytest
 from pathlib import Path
 
-# Add the parent directory to the path so we can import setup
+# Add the parent directory to the path so we can import setup  # noqa: E402
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from setup import ConductorSetup
+from setup import ConductorSetup  # noqa: E402
 
 
 def test_generated_workflows_use_github_token():
@@ -40,10 +40,7 @@ def test_generated_workflows_use_github_token():
             setup = ConductorSetup()
             # Set up minimal config with code-reviewer role
             setup.config = {
-                "roles": {
-                    "default": "dev",
-                    "specialized": ["code-reviewer"]
-                }
+                "roles": {"default": "dev", "specialized": ["code-reviewer"]}
             }
             setup._create_github_workflows()
         finally:

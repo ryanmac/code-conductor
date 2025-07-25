@@ -8,26 +8,29 @@ import requests
 def test_python_version():
     """Test that we're running Python 3.9-3.12"""
     assert sys.version_info >= (3, 9), f"Python 3.9-3.12 required, got {sys.version}"
-    assert sys.version_info < (3, 13), f"Python 3.13+ not yet supported, got {sys.version}"
+    assert sys.version_info < (
+        3,
+        13,
+    ), f"Python 3.13+ not yet supported, got {sys.version}"
 
 
 def test_dependencies():
     """Test that core dependencies are available"""
     # Test PyYAML
-    assert hasattr(yaml, '__version__'), "PyYAML not available"
+    assert hasattr(yaml, "__version__"), "PyYAML not available"
     print(f"PyYAML version: {yaml.__version__}")
 
     # Test Requests
-    assert hasattr(requests, '__version__'), "Requests not available"
+    assert hasattr(requests, "__version__"), "Requests not available"
     print(f"Requests version: {requests.__version__}")
 
 
 def test_yaml_functionality():
     """Test basic YAML functionality"""
     test_data = {
-        'name': 'test',
-        'version': '1.0.0',
-        'dependencies': ['pyyaml', 'requests']
+        "name": "test",
+        "version": "1.0.0",
+        "dependencies": ["pyyaml", "requests"],
     }
 
     # Test YAML serialization
@@ -42,9 +45,9 @@ def test_yaml_functionality():
 def test_requests_functionality():
     """Test basic Requests functionality"""
     # Test that requests can be imported and has expected attributes
-    assert hasattr(requests, 'get')
-    assert hasattr(requests, 'post')
-    assert hasattr(requests, 'Session')
+    assert hasattr(requests, "get")
+    assert hasattr(requests, "post")
+    assert hasattr(requests, "Session")
 
 
 if __name__ == "__main__":
