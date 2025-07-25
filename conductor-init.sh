@@ -551,7 +551,51 @@ if [ "$IS_UPGRADE" = false ]; then
         EXISTING_TASKS=$(gh issue list -l 'conductor:task' --limit 10 --json number 2>/dev/null | jq length 2>/dev/null || echo "0")
         
         if [ "$EXISTING_TASKS" = "0" ]; then
-            echo "Creating demo GitHub Issues..."
+            echo "Creating initial tasks..."
+            
+            # Create critical documentation map task first
+            gh issue create \
+                --title "[INIT] Build documentation map and analyze codebase" \
+                --body "## Description
+This is the initial discovery task that analyzes the entire codebase to create a comprehensive documentation map. This map is essential for Code Conductor to understand the project structure and generate appropriate tasks.
+
+## Objective
+Create .conductor/documentation-map.yaml with:
+- Complete project analysis and structure mapping
+- Technology stack detection and validation
+- List of existing vs. missing documentation
+- Feature implementation status
+- Critical paths and dependencies
+- Proposed tasks based on project needs
+
+## Success Criteria
+- Documentation map created at .conductor/documentation-map.yaml
+- Project structure fully analyzed and documented
+- Technology stack properly identified
+- Missing documentation identified
+- Generate initial task proposals based on project state
+- Run generate-tasks-from-map.py to create follow-up tasks
+
+## Process
+1. Analyze entire codebase structure
+2. Detect all technologies, frameworks, and tools
+3. Identify existing documentation
+4. Map feature implementation status
+5. Create comprehensive YAML documentation map
+6. Generate missing documentation where possible
+7. Propose initial tasks based on findings
+
+## Priority
+This task has the highest priority as all other tasks depend on the documentation map for context.
+
+## Files to Create/Modify
+- .conductor/documentation-map.yaml (create)
+- .conductor/README.md (update if needed)
+- Project documentation files (as identified)" \
+                --label "conductor:task" \
+                --label "effort:large" \
+                --label "priority:high" \
+                2>/dev/null && echo "  ✅ Created critical task: [INIT] Build documentation map"
             
             # Create first demo task
             gh issue create \
