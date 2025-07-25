@@ -59,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🐛 Glob pattern support for .NET project detection (*.csproj)
 - 🔒 Code-reviewer role always included in auto-configuration
 - 📋 Demo tasks only created if none exist
+- 🔧 **GitHub Token Configuration**: Fixed workflow token issues for user projects
+  - User projects now correctly use `github.token` instead of `CONDUCTOR_GITHUB_TOKEN`
+  - Updated conductor-init.sh to not copy workflow files during installation
+  - setup.py now generates all necessary workflows including PR review workflow
+  - Prevents "Input required and not supplied: github-token" errors in user projects
 
 ## [2.0.0] - 2025-07-23
 
