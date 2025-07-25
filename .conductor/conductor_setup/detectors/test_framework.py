@@ -58,7 +58,7 @@ class TestFrameworkDetector(BaseDetector):
                 test_frameworks.append("pytest")
             elif self._check_file_contains("setup.cfg", "[tool:pytest]"):
                 test_frameworks.append("pytest")
-        elif self.glob_exists("test_*.py", "tests/test_*.py"):
+        elif self.glob_exists("test_*.py") or self.glob_exists("tests/test_*.py"):
             test_frameworks.append("pytest/unittest")
 
         if self.file_exists("tox.ini"):
