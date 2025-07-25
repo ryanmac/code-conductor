@@ -17,10 +17,18 @@ if conductor_path.exists():
         # Import from the conductor setup package
         from conductor_setup.detector import TechnologyDetector  # noqa: E402
         from conductor_setup.config_manager import ConfigurationManager  # noqa: E402
-        from conductor_setup.file_generators.config_files import ConfigFileGenerator  # noqa: E402
-        from conductor_setup.file_generators.role_files import RoleFileGenerator  # noqa: E402
-        from conductor_setup.file_generators.workflow_files import WorkflowFileGenerator  # noqa: E402
-        from conductor_setup.file_generators.script_files import ScriptFileGenerator  # noqa: E402
+        from conductor_setup.file_generators.config_files import (
+            ConfigFileGenerator,
+        )  # noqa: E402
+        from conductor_setup.file_generators.role_files import (
+            RoleFileGenerator,
+        )  # noqa: E402
+        from conductor_setup.file_generators.workflow_files import (
+            WorkflowFileGenerator,
+        )  # noqa: E402
+        from conductor_setup.file_generators.script_files import (
+            ScriptFileGenerator,
+        )  # noqa: E402
         from conductor_setup.github_integration import GitHubIntegration  # noqa: E402
         from conductor_setup.discovery_task import DiscoveryTaskCreator  # noqa: E402
         from conductor_setup.validator import SetupValidator  # noqa: E402
