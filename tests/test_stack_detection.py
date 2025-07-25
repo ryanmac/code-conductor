@@ -41,6 +41,7 @@ class TestStackDetection:
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
+            setup._project_root = self.project_root
             setup._detect_project_info()
         
         # Verify detection
@@ -66,6 +67,7 @@ redis==5.0.0
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
+            setup._project_root = self.project_root
             setup._detect_project_info()
         
         # Verify detection
@@ -92,6 +94,7 @@ jupyter==1.0.0
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
+            setup._project_root = self.project_root
             setup._detect_project_info()
         
         # Verify detection
@@ -122,6 +125,7 @@ require (
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
+            setup._project_root = self.project_root
             setup._detect_project_info()
         
         # Verify detection
@@ -150,6 +154,7 @@ dependencies:
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
+            setup._project_root = self.project_root
             setup._detect_project_info()
         
         # Verify detection
@@ -178,6 +183,7 @@ dependencies:
         # Run detection
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
+            setup._project_root = self.project_root
             setup._detect_project_info()
         
         # Verify detection
@@ -238,6 +244,7 @@ class TestAutoConfiguration:
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
             # Run the full setup process which includes auto configuration
+            setup._project_root = self.project_root
             setup._detect_project_info()
             setup._gather_configuration()
         
@@ -255,6 +262,7 @@ class TestAutoConfiguration:
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
             # Run the full setup process which includes auto configuration
+            setup._project_root = self.project_root
             setup._detect_project_info()
             setup._gather_configuration()
         
@@ -271,6 +279,7 @@ class TestAutoConfiguration:
         with patch('pathlib.Path.cwd', return_value=self.project_root):
             setup = ConductorSetup(auto_mode=True)
             # Run the full setup process which includes auto configuration
+            setup._project_root = self.project_root
             setup._detect_project_info()
             setup._gather_configuration()
         

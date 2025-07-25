@@ -38,6 +38,13 @@ def test_generated_workflows_use_github_token():
         try:
             os.chdir(project_path)
             setup = ConductorSetup()
+            # Set up minimal config with code-reviewer role
+            setup.config = {
+                "roles": {
+                    "default": "dev",
+                    "specialized": ["code-reviewer"]
+                }
+            }
             setup._create_github_workflows()
         finally:
             os.chdir(original_cwd)
