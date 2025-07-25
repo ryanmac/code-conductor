@@ -12,9 +12,9 @@ I need to move faster. Install Code Conductor into this project so we can run mu
 This will transform our development workflow from single-threaded to massively parallel. Instead of one AI doing tasks sequentially, we'll have specialized agents working simultaneously—frontend, backend, testing, DevOps—all coordinated through GitHub Issues.
 
 Please install Code Conductor now:
-1. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
-2. When prompted, select options that match our tech stack
-3. After installation, run: ./conductor start dev
+1. Run: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
+2. Wait for the PR to be created and auto-merge
+3. After the PR merges, run: ./conductor start dev
 4. Complete the [INIT] task to map our entire codebase
 5. Submit with: ./conductor complete
 
@@ -33,8 +33,8 @@ Our current setup is good, but the latest version includes:
 - Better error recovery and diagnostics
 
 Upgrade now:
-1. Run: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
-2. Choose option 1 (Upgrade) when prompted
+1. Run: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --upgrade --create-pr --auto-merge
+2. Wait for the upgrade PR to be created and auto-merge
 3. Review what's new in the upgrade summary
 4. Verify with: ./conductor status
 5. If any issues: ./conductor diagnose
@@ -55,17 +55,16 @@ I want you to:
 
 Execute this transformation:
 
-# Install Code Conductor
-bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
+# Install Code Conductor with automatic PR creation
+curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
 
-# Installation choices:
-- Existing installation? Choose 2 (Reinstall)
-- Copy examples? Press Enter (Yes)
-- Agent roles? Select all that apply to our stack, then 0
-- Demo tasks? Type n (No - we'll generate real ones)
-- Auto-commit? Press Enter (Yes)
-- Environment? Choose 3 (IDE)
-- Start agent? Press Enter (Yes)
+# The installer will automatically:
+- Configure based on detected tech stack
+- Create all necessary files
+- Commit changes
+- Create and push a PR
+- Enable auto-merge
+- Complete installation once PR merges
 
 After installation:
 1. Claim the [INIT] discovery task automatically
@@ -83,8 +82,8 @@ In under 5 minutes, we'll have a fully mapped codebase with prioritized tasks re
 ```
 Level up our IDE workflow with agentic development. Install Code Conductor to enable parallel AI agents in our familiar environment.
 
-Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
-Choose: Option 3 (IDE) for seamless integration
+Execute: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
+Automatic: Configures for IDE integration and creates PR
 Launch: ./conductor start [role] to unleash specialized agents
 
 Transform your IDE into a multi-agent powerhouse.
@@ -94,8 +93,8 @@ Transform your IDE into a multi-agent powerhouse.
 ```
 Command-line mastery meets agentic development. Set up Code Conductor for terminal-based parallel execution.
 
-Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)  
-Choose: Option 2 (Terminal) for CLI excellence
+Execute: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
+Automatic: Configures for terminal workflow and creates PR
 Launch: ./conductor start [role] to deploy your agent army
 
 Because the best interface is no interface—just results.
@@ -105,8 +104,8 @@ Because the best interface is no interface—just results.
 ```
 Experience the future of development with the native Conductor app. One-click agent orchestration.
 
-Execute: bash <(curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh)
-Choose: Option 1 (Conductor) for the premium experience  
+Execute: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
+Automatic: Configures for Conductor app and creates PR  
 Launch: Open Conductor.app and add this project as a workspace
 
 Visual agent management. Real-time progress. Pure productivity.

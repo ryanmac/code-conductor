@@ -39,11 +39,16 @@ The installer auto-detects your stack (React, Python, Go, etc.) and configures e
 curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto
 ```
 
+**With automatic PR creation and auto-merge:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
+```
+
 **Or paste this prompt into Claude Code:**
 ```
 I need to move faster. Install Code Conductor into this project so we can run multiple Claude Code agents at once.
 
-Execute: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto
+Execute: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
 ```
 
 ## See It In Action
