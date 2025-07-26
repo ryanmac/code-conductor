@@ -176,9 +176,6 @@ cython_debug/
 #  - .idea/uiDesigner.xml
 #  - .idea/render.experimental.xml
 
-# VS Code
-.vscode/
-
 # macOS
 .DS_Store
 
