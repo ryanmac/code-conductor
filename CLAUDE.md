@@ -326,6 +326,17 @@ For detailed setup instructions and troubleshooting, see [.conductor/GITHUB_TOKE
 2. Add patterns for new frameworks/languages
 3. Update role recommendations based on stack
 
+### Uninstalling Code Conductor
+To remove Code Conductor from a project:
+```bash
+python uninstall.py              # Interactive removal
+python uninstall.py --force      # Remove without confirmation
+python uninstall.py --dry-run    # Preview what will be removed
+```
+
+The uninstaller safely removes all conductor components while preserving user files.
+See `uninstall.py` for implementation details.
+
 ## Important Notes
 
 - Always use GitHub CLI commands for state changes to ensure consistency

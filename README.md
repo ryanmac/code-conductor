@@ -51,6 +51,33 @@ I need to move faster. Install Code Conductor into this project so we can run mu
 Execute: curl -fsSL https://raw.githubusercontent.com/ryanmac/code-conductor/main/conductor-init.sh | bash -s -- --auto --create-pr --auto-merge
 ```
 
+## Uninstalling
+
+Need to remove Code Conductor? We've got you covered with a safe, interactive uninstaller:
+
+```bash
+python uninstall.py
+```
+
+**What it removes:**
+- ✅ `.conductor/` directory and all configuration
+- ✅ `conductor` wrapper script
+- ✅ GitHub workflows (only conductor-specific ones)
+- ✅ Git worktrees created by conductor
+- ✅ Conductor section from CLAUDE.md
+
+**What it preserves:**
+- ✅ Your own GitHub workflows
+- ✅ Your code and project files
+- ✅ GitHub issues and labels (manual cleanup if desired)
+
+**Options:**
+```bash
+python uninstall.py --dry-run  # See what would be removed
+python uninstall.py --force    # Skip confirmation prompt
+python uninstall.py --verbose  # Detailed output
+```
+
 ## See It In Action
 
 ```bash
